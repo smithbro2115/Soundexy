@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\Josh\Documents\SoundLibrarys\New_New.ui'
+# Form implementation generated from reading ui file 'C:\Users\Josh\Documents\SoundLibrarys\NewWaveformAttempt.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.3
 #
@@ -202,10 +202,17 @@ class Ui_MainWindow(object):
         self.playerAlbumImageLbl.setSizeIncrement(QtCore.QSize(64, 0))
         self.playerAlbumImageLbl.setText("")
         self.playerAlbumImageLbl.setObjectName("playerAlbumImageLbl")
-        self.gridLayout_2.addWidget(self.playerAlbumImageLbl, 0, 1, 1, 1)
-        self.waveform = QtWidgets.QGraphicsView(self.player)
+        self.gridLayout_2.addWidget(self.playerAlbumImageLbl, 0, 0, 1, 1)
+        self.waveform = QtWidgets.QSlider(self.player)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.waveform.sizePolicy().hasHeightForWidth())
+        self.waveform.setSizePolicy(sizePolicy)
+        self.waveform.setCursor(QtGui.QCursor(QtCore.Qt.IBeamCursor))
+        self.waveform.setOrientation(QtCore.Qt.Horizontal)
         self.waveform.setObjectName("waveform")
-        self.gridLayout_2.addWidget(self.waveform, 0, 2, 1, 1)
+        self.gridLayout_2.addWidget(self.waveform, 0, 1, 1, 1)
         self.gridLayout.addWidget(self.player, 5, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)

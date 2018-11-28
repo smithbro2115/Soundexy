@@ -13,9 +13,14 @@ import os
 from Wave import make_waveform
 
 
+# TODO finish cursor
+# TODO get website audio to play and generate waveform
+
 class Gui(GUI.Ui_MainWindow):
     def __init__(self):
         self.freesound_thread_pool = QThreadPool()
+        self.cursor_pixmap = QtGui.QPixmap('Waveforms/Cursor.png')
+        self.cursor_graphic = QtWidgets.QGraphicsPixmapItem()
         self.waveform_thread_pool = QThreadPool()
         self.play_sound_thread_pool = QThreadPool()
         self.local_search_thread_pool = QThreadPool()
@@ -64,12 +69,10 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTableModel.setColumnCount(6)
         self.searchResultsTable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
-        self.waveform.setStyleSheet('background-color: #232629;'
-                                    'border: 1px solid #76797c;')
-        self.waveform.setScene(self.waveform_scene)
-        # cursor_pixmap = QtGui.QPixmap('Waveforms/Cursor.png')
-        # self.cursor.setPixmap(cursor_pixmap)
-        # self.cursor.move(30, 0)
+        self.waveform.setStyleSheet(""
+                                    "QSlider::groove:horizontal {height: 100px; margin: 0 0; background-color: #00ffffff}\n"
+                                    "QSlider::handle:horizontal {background-color: black;"
+                                    " border: 1px; height: 40px; width: 40px; margin: 0 0;}\n""")
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
@@ -128,6 +131,20 @@ class Gui(GUI.Ui_MainWindow):
         # self.cursor.move(amount)
         # while self.audio_player.is_playing:
 
+    def resize_cursor(self):
+        '''
+        pixmap = self.cursor_pixmap
+        waveform_height = self.waveform.height()
+        pixmap_original_pixel_height = pixmap.height()
+        pixmap_original_qt_height = pixmap.heightMM()
+        pixmap_height_conversion = pixmap_original_pixel_height/pixmap_original_qt_height
+        pixmap_resized = pixmap.scaledToHeight()
+        self.cursor_pixmap = pixmap_resized
+        self.cursor_graphic = QtWidgets.QGraphicsPixmapItem(self.cursor_pixmap)
+        self.waveform_scene.addItem(self.cursor_graphic)
+        '''
+        print(self.waveform.frameGeometry())
+
     def freesound_set_url(self, url):
         self.freesound_url = url
 
@@ -148,9 +165,7 @@ class Gui(GUI.Ui_MainWindow):
         print(self.pixel_time_conversion_rate)
 
     def resize_waveform_image_to_waveform(self):
-        print('test')
         self.waveform.fitInView(self.waveform_scene.sceneRect())
-        self.waveform.fitInView(self.waveform_graphic)
 
     @staticmethod
     def calculate_px_time_conversion_rate(waveform_width, sound_duration):
@@ -161,6 +176,9 @@ class Gui(GUI.Ui_MainWindow):
         return self.waveform.width() - horizontal_margin
 
     def add_waveform_to_label(self):
+        self.waveform.setStyleSheet("QSlider {background-color: #232629; border: 1px solid #76797c; border-width: 0px;"
+                                    "border-image: url(Waveforms/waveform.png);}")
+        '''
         if self.waveform_active:
             self.waveform_scene.removeItem(self.waveform_graphic)
         pixmap = QtGui.QPixmap('Waveforms/waveform.png')
@@ -168,6 +186,7 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform_scene.addItem(self.waveform_graphic)
         self.waveform_active = True
         self.resize_waveform_image_to_waveform()
+        '''
 
     def change_local_state(self):
         self.search_state_local = self.topbarLibraryLocalCheckbox.checkState()

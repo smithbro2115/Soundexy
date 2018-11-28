@@ -5,6 +5,8 @@ import SearchResults
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
 
 
+# TODO add the rest of the websites
+
 class WebsiteSigs(QObject):
     sig_amount_of_pages = pyqtSignal(int)
     sig_url = pyqtSignal(str)
