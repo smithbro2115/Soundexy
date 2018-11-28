@@ -67,6 +67,7 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform.setStyleSheet('background-color: #232629;'
                                     'border: 1px solid #76797c;')
         self.waveform.setScene(self.waveform_scene)
+        print('test')
         # cursor_pixmap = QtGui.QPixmap('Waveforms/Cursor.png')
         # self.cursor.setPixmap(cursor_pixmap)
         # self.cursor.move(30, 0)
