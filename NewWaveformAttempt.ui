@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>../../../smith/Desktop/Downloads/Player_-_Audio_Full-512.png</normaloff>../../../smith/Desktop/Downloads/Player_-_Audio_Full-512.png</iconset>
+    <normaloff>../../smith/Desktop/Downloads/Player_-_Audio_Full-512.png</normaloff>../../smith/Desktop/Downloads/Player_-_Audio_Full-512.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -449,6 +449,9 @@
          </property>
          <property name="cursor">
           <cursorShape>IBeamCursor</cursorShape>
+         </property>
+         <property name="maximum">
+          <number>500</number>
          </property>
          <property name="orientation">
           <enum>Qt::Horizontal</enum>

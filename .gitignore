@@ -54,3 +54,4 @@ fabric.properties
 # Editor-based Rest Client
 .idea/httpRequests
 
+/obj/local_index.pkl

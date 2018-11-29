@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\Josh\Documents\SoundLibrarys\NewWaveformAttempt.ui'
+# Form implementation generated from reading ui file 'D:\Programming\Soundexy\NewWaveformAttempt.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.3
 #
@@ -13,7 +13,7 @@ class Ui_MainWindow(object):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1346, 751)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("../../../smith/Desktop/Downloads/Player_-_Audio_Full-512.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("../../smith/Desktop/Downloads/Player_-_Audio_Full-512.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -210,6 +210,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.waveform.sizePolicy().hasHeightForWidth())
         self.waveform.setSizePolicy(sizePolicy)
         self.waveform.setCursor(QtGui.QCursor(QtCore.Qt.IBeamCursor))
+        self.waveform.setMaximum(500)
         self.waveform.setOrientation(QtCore.Qt.Horizontal)
         self.waveform.setObjectName("waveform")
         self.gridLayout_2.addWidget(self.waveform, 0, 1, 1, 1)

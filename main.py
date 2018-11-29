@@ -4,7 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThreadPool, QRunnable, pyqtSignal, pyqtSlot, QObject
 import SearchResults
 import re
-from AudioPlayer import Sound as SoundPlayer
+from AudioPlayer import SoundPlayer, WaveformSlider
 import WebScrapers
 import LocalFileHandler
 import traceback
@@ -49,6 +49,7 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTableModel = QtGui.QStandardItemModel()
         self.cache_thread_pool = QThreadPool()
         self.current_results = {}
+        self.waveform = WaveformSlider()
 
     def setup_ui_additional(self, MainWindow):
         self.search_state_free = self.topbarLibraryFreeCheckbox.checkState()
@@ -69,10 +70,11 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTableModel.setColumnCount(6)
         self.searchResultsTable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
-        self.waveform.setStyleSheet(""
-                                    "QSlider::groove:horizontal {height: 100px; margin: 0 0; background-color: #00ffffff}\n"
-                                    "QSlider::handle:horizontal {background-color: black;"
-                                    " border: 1px; height: 40px; width: 40px; margin: 0 0;}\n""")
+        # self.audio_player.signals.played_for_10_ms.connect(self.waveform.move_to_current_time)
+        self.play_sound_thread_pool.start(self.audio_player)
+        self.player.layout().addWidget(self.waveform, 0, 1)
+        self.waveform.setStyleSheet(self.waveform.style_sheet_local)
+        # addWidget(self.waveform)
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
@@ -85,8 +87,13 @@ class Gui(GUI.Ui_MainWindow):
                 make_waveform_worker = Worker(make_waveform, sound.path)
                 make_waveform_worker.signals.finished.connect(self.add_waveform_to_label)
                 self.waveform_thread_pool.start(make_waveform_worker)
-                self.play_sound(result)
                 self.current_result = result
+                self.pixel_time_conversion_rate = self.calculate_px_time_conversion_rate(self.waveform.maximum(),
+                                                                                         self.current_result.duration)
+                self.reset_cursor()
+                self.play_sound(result)
+            elif self.audio_player.ended and self.current_result == result:
+                self.play_sound(result)
             else:
                 self.audio_player.pause()
         elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
@@ -98,8 +105,7 @@ class Gui(GUI.Ui_MainWindow):
             except Exception as e:
                 print(e)
             self.cache_thread_pool.start(downloader)
-        # self.pixel_time_conversion_rate = self.calculate_px_time_conversion_rate(self.get_waveform_width_minus_margin(),
-                                                                                 # self.current_result.duration)
+
 
     @staticmethod
     def clear_cache():
@@ -122,28 +128,13 @@ class Gui(GUI.Ui_MainWindow):
         busy = self.audio_player.get_busy()
         if busy:
             self.audio_player.stop()
-        self.audio_player.load(sound_result.path, sound_result.duration)
+        self.reset_cursor()
+        self.audio_player.load(sound_result.path, sound_result.duration, self.pixel_time_conversion_rate)
         self.audio_player.loop = True
         self.audio_player.play()
 
-    def move_cursor(self, amount):
-        pass
-        # self.cursor.move(amount)
-        # while self.audio_player.is_playing:
-
     def resize_cursor(self):
-        '''
-        pixmap = self.cursor_pixmap
-        waveform_height = self.waveform.height()
-        pixmap_original_pixel_height = pixmap.height()
-        pixmap_original_qt_height = pixmap.heightMM()
-        pixmap_height_conversion = pixmap_original_pixel_height/pixmap_original_qt_height
-        pixmap_resized = pixmap.scaledToHeight()
-        self.cursor_pixmap = pixmap_resized
-        self.cursor_graphic = QtWidgets.QGraphicsPixmapItem(self.cursor_pixmap)
-        self.waveform_scene.addItem(self.cursor_graphic)
-        '''
-        print(self.waveform.frameGeometry())
+        pass
 
     def freesound_set_url(self, url):
         self.freesound_url = url
@@ -158,14 +149,14 @@ class Gui(GUI.Ui_MainWindow):
     def resize_event(self):
         if self.current_result is not None:
             self.pixel_time_conversion_rate = (
-                self.calculate_px_time_conversion_rate(self.get_waveform_width_minus_margin(),
+                self.calculate_px_time_conversion_rate(self.waveform.maximum(),
                                                        self.current_result.duration))
         if self.waveform_active:
             self.resize_waveform_image_to_waveform()
         print(self.pixel_time_conversion_rate)
 
     def resize_waveform_image_to_waveform(self):
-        self.waveform.fitInView(self.waveform_scene.sceneRect())
+        pass
 
     @staticmethod
     def calculate_px_time_conversion_rate(waveform_width, sound_duration):
@@ -176,17 +167,9 @@ class Gui(GUI.Ui_MainWindow):
         return self.waveform.width() - horizontal_margin
 
     def add_waveform_to_label(self):
-        self.waveform.setStyleSheet("QSlider {background-color: #232629; border: 1px solid #76797c; border-width: 0px;"
-                                    "border-image: url(Waveforms/waveform.png);}")
-        '''
-        if self.waveform_active:
-            self.waveform_scene.removeItem(self.waveform_graphic)
-        pixmap = QtGui.QPixmap('Waveforms/waveform.png')
-        self.waveform_graphic = QtWidgets.QGraphicsPixmapItem(pixmap)
-        self.waveform_scene.addItem(self.waveform_graphic)
+        self.waveform_stylesheet = self.waveform_stylesheet + "QSlider {border-image: url(Waveforms/waveform.png);}"
+        self.waveform.setStyleSheet(self.waveform_stylesheet)
         self.waveform_active = True
-        self.resize_waveform_image_to_waveform()
-        '''
 
     def change_local_state(self):
         self.search_state_local = self.topbarLibraryLocalCheckbox.checkState()
@@ -214,7 +197,7 @@ class Gui(GUI.Ui_MainWindow):
 
             title_cell = QtGui.QStandardItem(str(result.title))
             description_cell = QtGui.QStandardItem(str(result.description))
-            duration = result.duration
+            duration = result.duration/1000
             minutes = duration // 60
             seconds = duration % 60
             duration_cell = QtGui.QStandardItem('%02d:%02d' % (minutes, seconds))
