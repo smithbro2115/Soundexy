@@ -74,7 +74,7 @@ class Gui(GUI.Ui_MainWindow):
         self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 0, 1)
         # self.waveform.setStyleSheet(self.waveform.style_sheet_local)
-        print(self.waveform)
+        print(self.audio_player)
         # addWidget(self.waveform)
 
     def double_clicked_row(self, signal):
