@@ -2,8 +2,6 @@ from tinytag import TinyTag
 import soundfile as sf
 import os
 
-# TODO make sure free duration is in ms
-
 
 class Local:
     def __init__(self):
@@ -28,10 +26,14 @@ class Local:
         self.library = self.get_library(path)
         self.keywords = self.get_words()
         if self.file_type.lower() == '.wav':
-            f = sf.SoundFile(path)
-            self.duration = (len(f)/f.samplerate)*1000
-            self.channels = f.channels
-            print(self.channels)
+            try:
+                f = sf.SoundFile(path)
+            except RuntimeError:
+                print('Unrecognized file type')
+            else:
+                self.duration = len(f)/f.samplerate
+                self.channels = f.channels
+                print(self.channels)
         else:
             try:
                 f = TinyTag.get(path)
@@ -41,7 +43,7 @@ class Local:
                 self.description = f.disc_total
                 self.bitrate = f.bitrate
                 if f.duration is not None:
-                    self.duration = round(f.duration*1000)
+                    self.duration = round(f.duration)
                 else:
                     self.duration = 1
                 self.channels = f.channels
