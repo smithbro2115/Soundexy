@@ -11,6 +11,7 @@ import traceback
 import Downloader
 import os
 from Wave import make_waveform
+from functools import partial
 
 
 # TODO finish cursor
@@ -50,6 +51,15 @@ class Gui(GUI.Ui_MainWindow):
         self.cache_thread_pool = QThreadPool()
         self.current_results = {}
         self.waveform = WaveformSlider()
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.waveform.sizePolicy().hasHeightForWidth())
+        self.waveform.setSizePolicy(sizePolicy)
+        self.waveform.setCursor(QtGui.QCursor(QtCore.Qt.IBeamCursor))
+        self.waveform.setMaximum(10000)
+        self.waveform.setOrientation(QtCore.Qt.Horizontal)
+        self.waveform.setObjectName("waveform")
 
     def setup_ui_additional(self, MainWindow):
         self.search_state_free = self.topbarLibraryFreeCheckbox.checkState()
@@ -63,6 +73,7 @@ class Gui(GUI.Ui_MainWindow):
         # self.topbarLibraryFreeCheckbox.stateChanged.connect(self.search)
         # self.topbarLibraryPaidCheckbox.stateChanged.connect(self.search)
         self.actionSearch.triggered.connect(self.start_search)
+        self.actionPlay.triggered.connect(partial(self.audio_player.handle, self.current_result))
         self.searchResultsTable.setModel(self.searchResultsTableModel)
         headers = sorted(self.row_order, key=self.row_order.get)
         self.searchResultsTableModel.headers = headers
@@ -70,12 +81,11 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTableModel.setColumnCount(6)
         self.searchResultsTable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
-        # self.audio_player.signals.played_for_10_ms.connect(self.waveform.move_to_current_time)
+        self.audio_player.signals.move_cursor.connect(self.waveform.move_to_current_time)
+        self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.play_sound_thread_pool.start(self.audio_player)
+        self.actionPlay.triggered.connect(self.audio_player.handle, )
         self.player.layout().addWidget(self.waveform, 0, 1)
-        # self.waveform.setStyleSheet(self.waveform.style_sheet_local)
-        print(self.audio_player)
-        # addWidget(self.waveform)
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
@@ -86,17 +96,12 @@ class Gui(GUI.Ui_MainWindow):
             result = self.current_results[sound_id]
             if not self.current_result == result or not self.audio_player.get_busy():
                 make_waveform_worker = Worker(make_waveform, sound.path)
-                make_waveform_worker.signals.finished.connect(self.add_waveform_to_label)
+                make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
                 self.waveform_thread_pool.start(make_waveform_worker)
                 self.current_result = result
-                self.pixel_time_conversion_rate = self.calculate_px_time_conversion_rate(self.waveform.maximum(),
-                                                                                         self.current_result.duration)
-                self.reset_cursor()
-                self.play_sound(result)
-            elif self.audio_player.ended and self.current_result == result:
-                self.play_sound(result)
+                self.audio_player.handle(result)
             else:
-                self.audio_player.pause()
+                self.audio_player.handle(result)
         elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
             url = self.current_results[sound_id].preview
             downloader = Downloader.Downloader(url, sound_id)
@@ -121,7 +126,7 @@ class Gui(GUI.Ui_MainWindow):
 
     def downloaded_ready_for_preview(self, sound_path):
         make_waveform_worker = Worker(make_waveform, sound_path)
-        make_waveform_worker.signals.finished.connect(self.add_waveform_to_label)
+        make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
         self.waveform_thread_pool.start(make_waveform_worker)
         self.play_sound(sound_path)
 
@@ -129,13 +134,13 @@ class Gui(GUI.Ui_MainWindow):
         busy = self.audio_player.get_busy()
         if busy:
             self.audio_player.stop()
-        self.reset_cursor()
+        self.waveform.reset_cursor()
         self.audio_player.load(sound_result.path, sound_result.duration, self.pixel_time_conversion_rate)
         self.audio_player.loop = True
         self.audio_player.play()
 
-    def resize_cursor(self):
-        pass
+    def reset_cursor(self):
+        self.waveform.reset_cursor()
 
     def freesound_set_url(self, url):
         self.freesound_url = url
@@ -150,27 +155,12 @@ class Gui(GUI.Ui_MainWindow):
     def resize_event(self):
         if self.current_result is not None:
             self.pixel_time_conversion_rate = (
-                self.calculate_px_time_conversion_rate(self.waveform.maximum(),
-                                                       self.current_result.duration))
-        if self.waveform_active:
-            self.resize_waveform_image_to_waveform()
-        print(self.pixel_time_conversion_rate)
-
-    def resize_waveform_image_to_waveform(self):
-        pass
-
-    @staticmethod
-    def calculate_px_time_conversion_rate(waveform_width, sound_duration):
-        return waveform_width/sound_duration
+                self.audio_player.calculate_px_time_conversion_rate(self.waveform.maximum(),
+                                                                    self.current_result.duration))
 
     def get_waveform_width_minus_margin(self):
         horizontal_margin = self.waveform.contentsMargins().left() + self.waveform.contentsMargins().right()
         return self.waveform.width() - horizontal_margin
-
-    def add_waveform_to_label(self):
-        self.waveform_stylesheet = self.waveform_stylesheet + "QSlider {border-image: url(Waveforms/waveform.png);}"
-        self.waveform.setStyleSheet(self.waveform_stylesheet)
-        self.waveform_active = True
 
     def change_local_state(self):
         self.search_state_local = self.topbarLibraryLocalCheckbox.checkState()

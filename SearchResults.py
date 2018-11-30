@@ -28,12 +28,11 @@ class Local:
         if self.file_type.lower() == '.wav':
             try:
                 f = sf.SoundFile(path)
+                self.duration = (len(f) / f.samplerate)*1000
+                print(self.duration)
+                self.channels = f.channels
             except RuntimeError:
                 print('Unrecognized file type')
-            else:
-                self.duration = len(f)/f.samplerate
-                self.channels = f.channels
-                print(self.channels)
         else:
             try:
                 f = TinyTag.get(path)
@@ -43,7 +42,7 @@ class Local:
                 self.description = f.disc_total
                 self.bitrate = f.bitrate
                 if f.duration is not None:
-                    self.duration = round(f.duration)
+                    self.duration = round(f.duration*1000)
                 else:
                     self.duration = 1
                 self.channels = f.channels

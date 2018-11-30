@@ -4,7 +4,6 @@ import time
 from random import random
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
 from PyQt5.QtWidgets import QSlider
-from PyQt5 import QtCore
 
 
 class PlaysoundException(Exception):
@@ -12,7 +11,8 @@ class PlaysoundException(Exception):
 
 
 class SoundSigs(QObject):
-    played_for_10_ms = pyqtSignal(float)
+    move_cursor = pyqtSignal(float)
+    reset_cursor = pyqtSignal()
 
 
 class SoundPlayer(QRunnable):
@@ -20,7 +20,9 @@ class SoundPlayer(QRunnable):
         super(SoundPlayer, self).__init__()
         self.path = ''
         self.is_playing = False
+        self.is_paused = False
         self.signals = SoundSigs()
+        self.current_result = None
         self.filetype = ''
         self.alias = ''
         self.windll_list = ['.wav']
@@ -33,16 +35,33 @@ class SoundPlayer(QRunnable):
         self.loop = False
         self.pixel_time_conversion_rate = 0
 
+    def handle(self, result):
+        print('test')
+        if not self.current_result == result or not self.get_busy():
+            self.current_result = result
+            self.pixel_time_conversion_rate = self.calculate_px_time_conversion_rate(self.waveform.maximum(),
+                                                                                     self.current_result.duration)
+            self.waveform.load_result(result)
+            self.preload(result)
+        elif self.audio_player.ended and self.current_result == result:
+            self.preload(result)
+        elif self.audio_player.is_paused:
+            self.audio_player.unpause()
+        else:
+            self.audio_player.pause()
+
     @pyqtSlot()
     def run(self):
         while True:
             while self.is_playing and not self.ended:
+                start_time = time.time()
                 rate = 1/self.pixel_time_conversion_rate
                 sleep_time = rate/1000
-                print(self.current_time)
                 time.sleep(sleep_time)
-                self.current_time = self.current_time + rate
-                self.signals.played_for_10_ms.emit(self.current_time)
+                stop_time = time.time()
+                time_elapsed = (stop_time - start_time)*1000
+                self.current_time = self.current_time + time_elapsed
+                self.signals.move_cursor.emit(self.current_time)
                 if self.current_time >= self.length:
                     self.ended = True
 
@@ -62,7 +81,15 @@ class SoundPlayer(QRunnable):
             raise PlaysoundException(exceptionMessage)
         return buf.value
 
+    def preload(self, result):
+        busy = self.get_busy()
+        if busy:
+            self.stop()
+        self.load(result.path, result.duration, self.pixel_time_conversion_rate)
+        self.play()
+
     def load(self, path, length, pixel_time_rate, block=False):
+        self.signals.reset_cursor.emit()
         self.path = path
         self.current_time = 0
         self.filetype = os.path.splitext(path)[1].lower()
@@ -90,6 +117,7 @@ class SoundPlayer(QRunnable):
             pygame.mixer.music.pause()
             self.current_time = time.time() - self.time_started + self.current_time
         self.is_playing = False
+        self.is_paused = True
 
     def play(self, play_from=-1):
         self.ended = False
@@ -123,8 +151,13 @@ class SoundPlayer(QRunnable):
                 pygame.mixer.music.unpause()
         self.time_started = time.time()
         self.is_playing = True
+        self.is_paused = False
 
     unpause = play
+
+    @staticmethod
+    def calculate_px_time_conversion_rate(waveform_width, sound_duration):
+        return waveform_width/sound_duration
 
     def get_current_time(self):
         import time
@@ -172,13 +205,19 @@ class WaveformSlider(QSlider):
         self.current_result = None
         self.waveform_active = False
         self.style_sheet_local = ("""
-                                     .QSlider {background-color: #232629; 
+                                     QSlider {background-color: #232629; 
                                      border: 1px solid #76797c; border-width: 0px;}\n
-                                     .QSlider::groove:horizontal {height: 200px; margin: 0 0;
+                                     QSlider::groove:horizontal {height: 200px; margin: 0 0;
                                      background-color: #00ffffff; border: 0px;}\n
-                                     .QSlider::handle:horizontal {background-color: white;
+                                     QSlider::handle:horizontal {background-color: white;
                                       border: 0px; height: 100px; width: 1px; margin: 0 0;}
                                      """)
+        self.setStyleSheet(self.style_sheet_local)
+
+    def load_result(self, result):
+        self.reset_cursor()
+        self.current_result = result
+        self.current_sound_duration = result.duration
 
     def move_to_current_time(self, current_time):
         sound_duration = self.current_sound_duration
@@ -186,14 +225,12 @@ class WaveformSlider(QSlider):
         self.setSliderPosition(self.maximum()*progress)
 
     def reset_cursor(self):
-        self.waveform.setSliderPosition(0)
+        self.setSliderPosition(0)
 
     def add_waveform_to_background(self):
-        self.waveform_style_sheet = self.style_sheet + "QSlider {border-image: url(Waveforms/waveform.png);}"
-        self.setStyleSheet(self.style_sheet)
+        self.style_sheet_local = self.style_sheet_local + "QSlider {border-image: url(Waveforms/waveform.png);}"
+        self.setStyleSheet(self.style_sheet_local)
         self.waveform_active = True
-
-
 
 
 def test():
