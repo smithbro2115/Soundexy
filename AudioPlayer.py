@@ -172,11 +172,11 @@ class WaveformSlider(QSlider):
         self.current_result = None
         self.waveform_active = False
         self.style_sheet_local = ("""
-                                     QSlider {background-color: #232629; 
+                                     .QSlider {background-color: #232629; 
                                      border: 1px solid #76797c; border-width: 0px;}\n
-                                     QSlider::groove:horizontal {height: 200px; margin: 0 0;
+                                     .QSlider::groove:horizontal {height: 200px; margin: 0 0;
                                      background-color: #00ffffff; border: 0px;}\n
-                                     QSlider::handle:horizontal {background-color: white;
+                                     .QSlider::handle:horizontal {background-color: white;
                                       border: 0px; height: 100px; width: 1px; margin: 0 0;}
                                      """)
 

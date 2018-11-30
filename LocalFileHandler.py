@@ -86,4 +86,4 @@ class LocalSearch(QRunnable):
             self.signals.finished.emit()
 
 
-add_to_index('D:\Audio Dramas\Adventures in Odyssey')
+add_to_index('C:\\Users\Josh\Downloads')
