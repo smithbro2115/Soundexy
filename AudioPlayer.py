@@ -2,7 +2,7 @@ import pygame
 import os
 import time
 from random import random
-from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
+from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot, QThreadPool
 from PyQt5.QtWidgets import QSlider
 
 
@@ -22,7 +22,7 @@ class SoundPlayer(QRunnable):
         self.is_playing = False
         self.is_paused = False
         self.signals = SoundSigs()
-        self.current_result = None
+        self.current_result = ''
         self.filetype = ''
         self.alias = ''
         self.windll_list = ['.wav']
@@ -35,20 +35,16 @@ class SoundPlayer(QRunnable):
         self.loop = False
         self.pixel_time_conversion_rate = 0
 
-    def handle(self, result):
-        print('test')
+    def handle(self, result, conversion_rate):
         if not self.current_result == result or not self.get_busy():
             self.current_result = result
-            self.pixel_time_conversion_rate = self.calculate_px_time_conversion_rate(self.waveform.maximum(),
-                                                                                     self.current_result.duration)
-            self.waveform.load_result(result)
-            self.preload(result)
-        elif self.audio_player.ended and self.current_result == result:
-            self.preload(result)
-        elif self.audio_player.is_paused:
-            self.audio_player.unpause()
+            self.preload(result, conversion_rate)
+        elif self.ended and self.current_result == result:
+            self.preload(result, conversion_rate)
+        elif self.is_paused:
+            self.unpause()
         else:
-            self.audio_player.pause()
+            self.pause()
 
     @pyqtSlot()
     def run(self):
@@ -81,11 +77,11 @@ class SoundPlayer(QRunnable):
             raise PlaysoundException(exceptionMessage)
         return buf.value
 
-    def preload(self, result):
+    def preload(self, result, conversion_rate):
         busy = self.get_busy()
         if busy:
             self.stop()
-        self.load(result.path, result.duration, self.pixel_time_conversion_rate)
+        self.load(result.path, result.duration, conversion_rate)
         self.play()
 
     def load(self, path, length, pixel_time_rate, block=False):
@@ -133,7 +129,10 @@ class SoundPlayer(QRunnable):
                 self.win_command('play', self.alias)
         elif self.filetype in self.pygame_list:
             if not self.started:
-                pygame.mixer.music.play()
+                try:
+                    pygame.mixer.music.play()
+                except Exception as e:
+                    print(e)
                 self.started = True
             elif play_from >= 0:
                 if self.filetype == '.mp3':
@@ -227,10 +226,19 @@ class WaveformSlider(QSlider):
     def reset_cursor(self):
         self.setSliderPosition(0)
 
-    def add_waveform_to_background(self):
-        self.style_sheet_local = self.style_sheet_local + "QSlider {border-image: url(Waveforms/waveform.png);}"
+    def clear_waveform(self):
+        self.style_sheet_local = self.style_sheet_local.replace("Waveforms/waveform.png", '')
         self.setStyleSheet(self.style_sheet_local)
-        self.waveform_active = True
+
+    def add_waveform_to_background(self):
+        if not self.waveform_active:
+            self.style_sheet_local = self.style_sheet_local + "QSlider {border-image: url(Waveforms/waveform.png);}"
+            self.setStyleSheet(self.style_sheet_local)
+            self.waveform_active = True
+        else:
+            self.style_sheet_local = self.style_sheet_local.replace(
+                "QSlider {border-image: url();}", "QSlider {border-image: url(Waveforms/waveform.png);}")
+            self.setStyleSheet(self.style_sheet_local)
 
 
 def test():
@@ -243,3 +251,12 @@ def test():
     sound.load(
         "C:/Users\Josh\Downloads\Humvee-M998,Pavement,50-MPH,Pass-Bys-x2-Med-Fast,Approach-Pothole,5954_966759.wav", 63)
     sound.play()
+
+
+'''
+test_player = SoundPlayer()
+thread = QThreadPool()
+thread.start(test_player)
+test_player.load('C:\\Users\smith\Music\\020 Short Term Missions.mp3', 10000, .011951)
+test_player.play()
+'''

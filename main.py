@@ -14,7 +14,7 @@ from Wave import make_waveform
 from functools import partial
 
 
-# TODO finish cursor
+# TODO make cursor change time on seek
 # TODO get website audio to play and generate waveform
 
 class Gui(GUI.Ui_MainWindow):
@@ -60,6 +60,7 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform.setMaximum(10000)
         self.waveform.setOrientation(QtCore.Qt.Horizontal)
         self.waveform.setObjectName("waveform")
+        self.single_clicked_result = None
 
     def setup_ui_additional(self, MainWindow):
         self.search_state_free = self.topbarLibraryFreeCheckbox.checkState()
@@ -73,18 +74,18 @@ class Gui(GUI.Ui_MainWindow):
         # self.topbarLibraryFreeCheckbox.stateChanged.connect(self.search)
         # self.topbarLibraryPaidCheckbox.stateChanged.connect(self.search)
         self.actionSearch.triggered.connect(self.start_search)
-        self.actionPlay.triggered.connect(partial(self.audio_player.handle, self.current_result))
+        self.actionPlay.triggered.connect(self.spacebar)
         self.searchResultsTable.setModel(self.searchResultsTableModel)
         headers = sorted(self.row_order, key=self.row_order.get)
         self.searchResultsTableModel.headers = headers
         self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
         self.searchResultsTableModel.setColumnCount(6)
         self.searchResultsTable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
         self.audio_player.signals.move_cursor.connect(self.waveform.move_to_current_time)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.play_sound_thread_pool.start(self.audio_player)
-        self.actionPlay.triggered.connect(self.audio_player.handle, )
         self.player.layout().addWidget(self.waveform, 0, 1)
 
     def double_clicked_row(self, signal):
@@ -94,23 +95,29 @@ class Gui(GUI.Ui_MainWindow):
         sound = self.current_results[sound_id]
         if isinstance(sound, SearchResults.Local):
             result = self.current_results[sound_id]
-            if not self.current_result == result or not self.audio_player.get_busy():
-                make_waveform_worker = Worker(make_waveform, sound.path)
-                make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
-                self.waveform_thread_pool.start(make_waveform_worker)
-                self.current_result = result
-                self.audio_player.handle(result)
-            else:
-                self.audio_player.handle(result)
+            self.local_sound_init(result)
         elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
             url = self.current_results[sound_id].preview
             downloader = Downloader.Downloader(url, sound_id)
             try:
                 downloader.signals.downloaded.connect(self.downloaded_ready_for_preview)
-                downloader.signals.already_exists.connect(self.play_sound)
+                downloader.signals.already_exists.connect(self.audio_player.handle)
             except Exception as e:
                 print(e)
             self.cache_thread_pool.start(downloader)
+
+    def local_sound_init(self, result):
+        self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
+        if not self.current_result == result or not self.audio_player.get_busy():
+            self.waveform.clear_waveform()
+            make_waveform_worker = Worker(make_waveform, result.path)
+            make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
+            self.waveform_thread_pool.start(make_waveform_worker)
+            self.waveform.load_result(result)
+            self.audio_player.handle(result, self.pixel_time_conversion_rate)
+        else:
+            self.audio_player.handle(result, self.pixel_time_conversion_rate)
+        self.current_result = result
 
 
     @staticmethod
@@ -124,20 +131,26 @@ class Gui(GUI.Ui_MainWindow):
             except Exception as e:
                 print(e)
 
+    def single_clicked_row(self, signal):
+        row_index = signal.row()
+        id_column_index = self.row_order['Id']
+        sound_id = self.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
+        self.single_clicked_result = self.current_results[sound_id]
+
     def downloaded_ready_for_preview(self, sound_path):
         make_waveform_worker = Worker(make_waveform, sound_path)
         make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
         self.waveform_thread_pool.start(make_waveform_worker)
-        self.play_sound(sound_path)
+        # self.play_sound(sound_path)
 
-    def play_sound(self, sound_result):
-        busy = self.audio_player.get_busy()
-        if busy:
-            self.audio_player.stop()
-        self.waveform.reset_cursor()
-        self.audio_player.load(sound_result.path, sound_result.duration, self.pixel_time_conversion_rate)
-        self.audio_player.loop = True
-        self.audio_player.play()
+    def spacebar(self):
+        if self.current_result is not None:
+            if self.current_result != self.single_clicked_result:
+                self.local_sound_init(self.single_clicked_result)
+            else:
+                self.audio_player.handle(self.current_result, conversion_rate=self.pixel_time_conversion_rate)
+        elif self.single_clicked_result is not None:
+            self.local_sound_init(self.single_clicked_result)
 
     def reset_cursor(self):
         self.waveform.reset_cursor()
