@@ -3,6 +3,7 @@ import os
 import time
 from random import random
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot, QThreadPool
+from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtWidgets import QSlider
 
 
@@ -50,6 +51,7 @@ class SoundPlayer(QRunnable):
     def run(self):
         while True:
             while self.is_playing and not self.ended:
+                print(self.current_time)
                 start_time = time.time()
                 rate = 1/self.pixel_time_conversion_rate
                 sleep_time = rate/1000
@@ -117,35 +119,42 @@ class SoundPlayer(QRunnable):
 
     def play(self, play_from=-1):
         self.ended = False
+        if play_from > 0:
+            play_from_local = self.current_time
+        else:
+            play_from_local = play_from
+        print(play_from_local)
         if self.filetype in self.windll_list:
             if not self.started:
                 durationInMS = self.win_command('status', self.alias, 'length')
                 self.win_command('play', self.alias, 'from 0 to', durationInMS.decode())
                 self.started = True
-            if play_from >= 0:
+            if play_from_local >= 0:
                 durationInMS = self.win_command('status', self.alias, 'length')
-                self.win_command('play', self.alias, 'from', str(play_from), 'to', durationInMS.decode())
+                self.win_command('play', self.alias, 'from', str(play_from_local), 'to', durationInMS.decode())
             else:
                 self.win_command('play', self.alias)
         elif self.filetype in self.pygame_list:
             if not self.started:
                 try:
                     pygame.mixer.music.play()
+                    pygame.mixer.music.pause()
                 except Exception as e:
                     print(e)
                 self.started = True
-            elif play_from >= 0:
+            if play_from_local >= 0:
                 if self.filetype == '.mp3':
+                    print(play_from_local)
                     pygame.mixer.music.rewind()
-                    pygame.mixer.music.set_pos(play_from/1000)
+                    pygame.mixer.music.set_pos(play_from_local / 1000)
                     pygame.mixer.music.unpause()
                 elif self.filetype == '.ogg':
-                    pygame.mixer.music.set_pos(play_from / 1000)
+                    pygame.mixer.music.set_pos(play_from_local / 1000)
                     pygame.mixer.music.unpause()
                 elif self.filetype == '.flac':
-                    pygame.mixer.music.set_pos(play_from/1000)
+                    pygame.mixer.music.set_pos(play_from_local / 1000)
                     pygame.mixer.music.unpause()
-                self.current_time = play_from/1000
+                # self.current_time = play_from_local / 1000
             else:
                 pygame.mixer.music.unpause()
         self.time_started = time.time()
@@ -194,10 +203,16 @@ class SoundPlayer(QRunnable):
         self.current_time = 0
         self.started = False
 
+    def goto(self, position):
+        goto = position/self.pixel_time_conversion_rate
+        print(goto)
+        self.current_time = goto
+
 
 class WaveformSlider(QSlider):
-    def __init__(self):
+    def __init__(self, audio_player):
         super(WaveformSlider, self).__init__()
+        self.audio_player = audio_player
         self.current_time = 0
         self.previous_time = 0
         self.current_sound_duration = 0
@@ -212,6 +227,12 @@ class WaveformSlider(QSlider):
                                       border: 0px; height: 100px; width: 1px; margin: 0 0;}
                                      """)
         self.setStyleSheet(self.style_sheet_local)
+
+    def mousePressEvent(self, event):
+        if self.waveform_active:
+            position = QtWidgets.QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.x(), self.width())
+            self.setValue(position)
+            self.audio_player.goto(position)
 
     def load_result(self, result):
         self.reset_cursor()

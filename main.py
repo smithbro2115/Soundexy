@@ -50,7 +50,7 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTableModel = QtGui.QStandardItemModel()
         self.cache_thread_pool = QThreadPool()
         self.current_results = {}
-        self.waveform = WaveformSlider()
+        self.waveform = WaveformSlider(self.audio_player)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
