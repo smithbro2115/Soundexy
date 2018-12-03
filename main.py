@@ -11,7 +11,6 @@ import traceback
 import Downloader
 import os
 from Wave import make_waveform
-import datetime
 
 
 # TODO get website audio to play and generate waveform
@@ -97,6 +96,8 @@ class Gui(GUI.Ui_MainWindow):
         if isinstance(sound, SearchResults.Local):
             result = self.current_results[sound_id]
             self.local_sound_init(result)
+            self.clear_album_image()
+            self.add_album_image_to_player(sound.album_image)
         elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
             url = self.current_results[sound_id].preview
             downloader = Downloader.Downloader(url, sound_id)
@@ -178,6 +179,21 @@ class Gui(GUI.Ui_MainWindow):
     @staticmethod
     def print_result():
         print('download started')
+
+    def clear_album_image(self):
+        pixmap = QtGui.QPixmap(1, 0)
+        self.playerAlbumImageLbl.setPixmap(pixmap)
+        self.metaAlbumImageLbl.setPixmap(pixmap)
+
+    def add_album_image_to_player(self, image):
+        if image is not None:
+            with open('graphics/temp_album_image.jpg', 'wb') as f:
+                f.write(image)
+            pixmap = QtGui.QPixmap('C:\\Users\Josh\PycharmProjects\Soundexy\graphics\\temp_album_image.jpg')
+            pixmap_resized_meta = pixmap.scaled(100, 100, QtCore.Qt.KeepAspectRatio)
+            pixmap_resized_player = pixmap.scaled(180, 180, QtCore.Qt.KeepAspectRatio)
+            self.metaAlbumImageLbl.setPixmap(pixmap_resized_meta)
+            self.playerAlbumImageLbl.setPixmap(pixmap_resized_player)
 
     def resize_event(self):
         if self.current_result is not None:

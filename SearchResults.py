@@ -16,6 +16,7 @@ class Local:
         self.path = ''
         self.bitrate = None
         self.keywords = []
+        self.album_image = None
 
     def populate(self, path, identification_number):
         print(path)
@@ -35,10 +36,12 @@ class Local:
                 print('Unrecognized file type')
         else:
             try:
-                f = TinyTag.get(path)
+                f = TinyTag.get(path, image=True)
             except Exception as e:
                 print(e)
             else:
+                self.album_image = f.get_image()
+                print(self.album_image)
                 self.description = f.disc_total
                 self.bitrate = f.bitrate
                 if f.duration is not None:

@@ -309,9 +309,15 @@
          <attribute name="title">
           <string>Metadata</string>
          </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
-          <item>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
            <widget class="QLabel" name="metaAlbumImageLbl">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
               <width>100</width>
@@ -324,6 +330,12 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="sizeIncrement">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
             <property name="baseSize">
              <size>
               <width>0</width>
@@ -331,11 +343,14 @@
              </size>
             </property>
             <property name="text">
-             <string>Album Image</string>
+             <string/>
+            </property>
+            <property name="scaledContents">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
-          <item>
+          <item row="1" column="0">
            <widget class="QListView" name="metaList"/>
           </item>
          </layout>
@@ -441,6 +456,9 @@
            </property>
            <property name="text">
             <string/>
+           </property>
+           <property name="scaledContents">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
