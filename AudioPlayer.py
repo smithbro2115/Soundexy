@@ -22,6 +22,7 @@ class SoundPlayer(QRunnable):
         self.path = ''
         self.is_playing = False
         self.is_paused = False
+        self.time_changed_time_pause = False
         self.signals = SoundSigs()
         self.current_result = ''
         self.filetype = ''
@@ -51,7 +52,6 @@ class SoundPlayer(QRunnable):
     def run(self):
         while True:
             while self.is_playing and not self.ended:
-                print(self.current_time)
                 start_time = time.time()
                 rate = 1/self.pixel_time_conversion_rate
                 sleep_time = rate/1000
@@ -120,41 +120,42 @@ class SoundPlayer(QRunnable):
     def play(self, play_from=-1):
         self.ended = False
         if play_from > 0:
-            play_from_local = self.current_time
-        else:
-            play_from_local = play_from
-        print(play_from_local)
+            self.current_time = play_from
+        elif self.time_changed_time_pause:
+            play_from = self.current_time
         if self.filetype in self.windll_list:
             if not self.started:
                 durationInMS = self.win_command('status', self.alias, 'length')
                 self.win_command('play', self.alias, 'from 0 to', durationInMS.decode())
                 self.started = True
-            if play_from_local >= 0:
+            if play_from >= 0:
                 durationInMS = self.win_command('status', self.alias, 'length')
-                self.win_command('play', self.alias, 'from', str(play_from_local), 'to', durationInMS.decode())
+                self.win_command('play', self.alias, 'from', str(round(play_from)), 'to', durationInMS.decode())
             else:
                 self.win_command('play', self.alias)
         elif self.filetype in self.pygame_list:
             if not self.started:
                 try:
-                    pygame.mixer.music.play()
-                    pygame.mixer.music.pause()
+                    if play_from > 0:
+                        pygame.mixer.music.play(start=play_from/1000)
+                    else:
+                        print(play_from)
+                        pygame.mixer.music.play()
                 except Exception as e:
                     print(e)
                 self.started = True
-            if play_from_local >= 0:
+            elif play_from >= 0:
                 if self.filetype == '.mp3':
-                    print(play_from_local)
                     pygame.mixer.music.rewind()
-                    pygame.mixer.music.set_pos(play_from_local / 1000)
+                    pygame.mixer.music.set_pos(play_from/1000)
                     pygame.mixer.music.unpause()
                 elif self.filetype == '.ogg':
-                    pygame.mixer.music.set_pos(play_from_local / 1000)
+                    pygame.mixer.music.set_pos(play_from / 1000)
                     pygame.mixer.music.unpause()
                 elif self.filetype == '.flac':
-                    pygame.mixer.music.set_pos(play_from_local / 1000)
+                    pygame.mixer.music.set_pos(play_from/1000)
                     pygame.mixer.music.unpause()
-                # self.current_time = play_from_local / 1000
+                # self.current_time = play_from/1000
             else:
                 pygame.mixer.music.unpause()
         self.time_started = time.time()
@@ -205,7 +206,13 @@ class SoundPlayer(QRunnable):
 
     def goto(self, position):
         goto = position/self.pixel_time_conversion_rate
-        print(goto)
+        if self.ended:
+            self.play(play_from=goto)
+        elif self.is_playing:
+            self.pause()
+            self.play(play_from=goto)
+        elif self.is_paused:
+            self.time_changed_time_pause = True
         self.current_time = goto
 
 
@@ -221,7 +228,7 @@ class WaveformSlider(QSlider):
         self.style_sheet_local = ("""
                                      QSlider {background-color: #232629; 
                                      border: 1px solid #76797c; border-width: 0px;}\n
-                                     QSlider::groove:horizontal {height: 200px; margin: 0 0;
+                                     QSlider::groove:horizontal {height: 400px; margin: 0 0;
                                      background-color: #00ffffff; border: 0px;}\n
                                      QSlider::handle:horizontal {background-color: white;
                                       border: 0px; height: 100px; width: 1px; margin: 0 0;}
@@ -274,10 +281,9 @@ def test():
     sound.play()
 
 
-'''
-test_player = SoundPlayer()
-thread = QThreadPool()
-thread.start(test_player)
-test_player.load('C:\\Users\smith\Music\\020 Short Term Missions.mp3', 10000, .011951)
-test_player.play()
-'''
+
+# test_player = SoundPlayer()
+# thread = QThreadPool()
+# thread.start(test_player)
+# test_player.load('G:\Campground Caper Foley RV\Audio Files\Camper_02.wav', 10000, .011951)
+# test_player.play(play_from=2000)

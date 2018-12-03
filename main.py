@@ -61,6 +61,8 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform.setOrientation(QtCore.Qt.Horizontal)
         self.waveform.setObjectName("waveform")
         self.single_clicked_result = None
+        self.play_button_graphic = QtGui.QIcon('graphics/play_button_graphic.png')
+        self.pause_button_graphic = QtGui.QIcon('graphics/pause_button_graphic.png')
 
     def setup_ui_additional(self, MainWindow):
         self.search_state_free = self.topbarLibraryFreeCheckbox.checkState()
@@ -87,6 +89,8 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 0, 1)
+        self.playButton.setIcon(self.play_button_graphic)
+        self.playButton.setIconSize(QtCore.QSize(24, 24))
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
