@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'D:\Programming\Soundexy\NewWaveformAttempt.ui'
+# Form implementation generated from reading ui file 'C:\Users\Josh\PycharmProjects\Soundexy\NewWaveformAttempt.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.3
 #
@@ -206,13 +206,9 @@ class Ui_MainWindow(object):
         self.playerAlbumImageLbl.setText("")
         self.playerAlbumImageLbl.setObjectName("playerAlbumImageLbl")
         self.verticalLayout.addWidget(self.playerAlbumImageLbl)
-        self.playButton = QtWidgets.QPushButton(self.player)
-        self.playButton.setText("")
-        self.playButton.setObjectName("playButton")
-        self.verticalLayout.addWidget(self.playButton)
-        self.label = QtWidgets.QLabel(self.player)
-        self.label.setObjectName("label")
-        self.verticalLayout.addWidget(self.label)
+        self.currentTimeLabel = QtWidgets.QLabel(self.player)
+        self.currentTimeLabel.setObjectName("currentTimeLabel")
+        self.verticalLayout.addWidget(self.currentTimeLabel)
         self.gridLayout_2.addLayout(self.verticalLayout, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.player, 5, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
@@ -278,7 +274,7 @@ class Ui_MainWindow(object):
         self.playlistAddBtn.setText(_translate("MainWindow", "Add"))
         self.playlistDeleteBtn.setText(_translate("MainWindow", "Delete"))
         self.sidebar.setTabText(self.sidebar.indexOf(self.playlistsTab), _translate("MainWindow", "Playlists"))
-        self.label.setText(_translate("MainWindow", "Current Time: "))
+        self.currentTimeLabel.setText(_translate("MainWindow", "Current Time: 00:00:000"))
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.menuEdit.setTitle(_translate("MainWindow", "Edit"))
         self.menuHelp.setTitle(_translate("MainWindow", "Help"))

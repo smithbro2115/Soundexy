@@ -12,7 +12,7 @@ class PlaysoundException(Exception):
 
 
 class SoundSigs(QObject):
-    move_cursor = pyqtSignal(float)
+    time_changed = pyqtSignal(float)
     reset_cursor = pyqtSignal()
 
 
@@ -59,7 +59,7 @@ class SoundPlayer(QRunnable):
                 stop_time = time.time()
                 time_elapsed = (stop_time - start_time)*1000
                 self.current_time = self.current_time + time_elapsed
-                self.signals.move_cursor.emit(self.current_time)
+                self.signals.time_changed.emit(self.current_time)
                 if self.current_time >= self.length:
                     self.ended = True
 
@@ -214,6 +214,7 @@ class SoundPlayer(QRunnable):
         elif self.is_paused:
             self.time_changed_time_pause = True
         self.current_time = goto
+        self.signals.time_changed.emit(self.current_time)
 
 
 class WaveformSlider(QSlider):

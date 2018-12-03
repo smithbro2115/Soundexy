@@ -11,10 +11,9 @@ import traceback
 import Downloader
 import os
 from Wave import make_waveform
-from functools import partial
+import datetime
 
 
-# TODO make cursor change time on seek
 # TODO get website audio to play and generate waveform
 
 class Gui(GUI.Ui_MainWindow):
@@ -85,12 +84,10 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
-        self.audio_player.signals.move_cursor.connect(self.waveform.move_to_current_time)
+        self.audio_player.signals.time_changed.connect(self.time_changed)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 0, 1)
-        self.playButton.setIcon(self.play_button_graphic)
-        self.playButton.setIconSize(QtCore.QSize(24, 24))
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
@@ -155,6 +152,19 @@ class Gui(GUI.Ui_MainWindow):
                 self.audio_player.handle(self.current_result, conversion_rate=self.pixel_time_conversion_rate)
         elif self.single_clicked_result is not None:
             self.local_sound_init(self.single_clicked_result)
+
+    @staticmethod
+    def get_formatted_time_from_milliseconds(milliseconds):
+        minutes = milliseconds // 60000
+        seconds = (milliseconds / 1000) % 60
+        milliseconds = milliseconds % 1000
+        formatted_time = '%02d:%02d:%03d' % (minutes, seconds, milliseconds)
+        return formatted_time
+
+    def time_changed(self, current_time):
+        string = 'Current Time: ' + self.get_formatted_time_from_milliseconds(current_time)
+        self.currentTimeLabel.setText(string)
+        self.waveform.move_to_current_time(current_time)
 
     def reset_cursor(self):
         self.waveform.reset_cursor()
