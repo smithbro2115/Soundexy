@@ -245,14 +245,19 @@ class WaveformSlider(QSlider):
         self.current_sound_duration = 0
         self.current_result = None
         self.waveform_active = False
+        self.background_active = False
+        self.is_busy = False
         self.style_sheet_local = ("""
-                                     QSlider {background-color: #232629; 
+                                     QSlider {background-color: #232629; background-repeat: no-repeat; 
+                                     background-position: center;
                                      border: 1px solid #76797c; border-width: 0px;}\n
                                      QSlider::groove:horizontal {height: 400px; margin: 0 0;
                                      background-color: #00ffffff; border: 0px;}\n
                                      QSlider::handle:horizontal {background-color: white;
                                       border: 0px; height: 100px; width: 1px; margin: 0 0;}
                                      """)
+
+        self.busy_indicator = QtGui.QMovie('graphics/busy_indicator.gif')
         self.setStyleSheet(self.style_sheet_local)
 
     def mousePressEvent(self, event):
@@ -274,19 +279,54 @@ class WaveformSlider(QSlider):
     def reset_cursor(self):
         self.setSliderPosition(0)
 
+    def start_busy_indicator_waveform(self):
+        self.is_busy = True
+        self.busy_indicator.frameChanged.connect(self.change_frame_busy_indicator_waveform)
+        self.busy_indicator.start()
+
+    def change_frame_busy_indicator_waveform(self):
+        current_frame = self.busy_indicator.currentPixmap()
+        current_frame.save('graphics/current_frame.png', "PNG")
+        self.add_file_too_background('graphics/current_frame.png')
+
+    def stop__busy_indicator_waveform(self):
+        self.clear_busy_indicator()
+        self.busy_indicator.stop()
+        self.is_busy = False
+
+    def clear_busy_indicator(self):
+        self.style_sheet_local = self.style_sheet_local.replace('graphics/current_frame.png', '')
+
     def clear_waveform(self):
         self.style_sheet_local = self.style_sheet_local.replace("Waveforms/waveform.png", '')
         self.setStyleSheet(self.style_sheet_local)
 
-    def add_waveform_to_background(self):
+    def add_file_too_background(self, file):
+        if not self.background_active:
+            self.style_sheet_local = self.style_sheet_local + "QSlider {background-image: url(" + file + ");}"
+            self.setStyleSheet(self.style_sheet_local)
+            self.background_active = True
+        else:
+            self.style_sheet_local = self.style_sheet_local.replace(
+                "QSlider {background-image: url();}",
+                "QSlider {background-image: url(" + file + ");}")
+            self.setStyleSheet(self.style_sheet_local)
+
+    def add_file_too_border(self, file):
         if not self.waveform_active:
-            self.style_sheet_local = self.style_sheet_local + "QSlider {border-image: url(Waveforms/waveform.png);}"
+            self.style_sheet_local = self.style_sheet_local + "QSlider {border-image: url(" + file + ");}"
             self.setStyleSheet(self.style_sheet_local)
             self.waveform_active = True
         else:
             self.style_sheet_local = self.style_sheet_local.replace(
-                "QSlider {border-image: url();}", "QSlider {border-image: url(Waveforms/waveform.png);}")
+                "QSlider {border-image: url();}",
+                "QSlider {border-image: url(" + file + ");}")
             self.setStyleSheet(self.style_sheet_local)
+
+    def add_waveform_to_background(self):
+        if self.is_busy:
+            self.stop__busy_indicator_waveform()
+        self.add_file_too_border("Waveforms/waveform.png")
 
 
 def test():

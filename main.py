@@ -119,6 +119,7 @@ class Gui(GUI.Ui_MainWindow):
         else:
             if not self.current_result == result or not self.audio_player.get_busy():
                 self.waveform.clear_waveform()
+                self.waveform.start_busy_indicator_waveform()
                 make_waveform_worker = Worker(make_waveform, result.path)
                 make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
                 self.waveform_thread_pool.start(make_waveform_worker)
