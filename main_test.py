@@ -1,51 +1,27 @@
-from PyQt5 import QtWidgets
+import sys
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget
+from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import QSize
 
-class Test(QtWidgets.QDialog):
-    """A sample widget to show dyanmic properties with stylesheets"""
+class MainWindow(QMainWindow):
     def __init__(self):
-        # Do the usual
-        super(Test, self).__init__()
-        self.setWindowTitle('Style Sheet Test')
-        layout = QtWidgets.QVBoxLayout(self)
+        QMainWindow.__init__(self)
 
-        # Set the stylesheet
-        self.setStyleSheet("""
-            QPushButton[Test=true] {
-                border: 2px solid #8f8f91;
-                border-radius: 6px;
-                background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                      stop: 0 #f6f7fa, stop: 1 #dadbde);
-                min-width: 80px;
-            }
+        self.setMinimumSize(QSize(300, 200))
+        self.setWindowTitle("PyQt messagebox example - pythonprogramminglanguage.com")
 
-            QPushButton#StyledButton[Test=true] {
-                color: #F00;
-                background-color: #000;
-            }
-                           """)
+        pybutton = QPushButton('Show messagebox', self)
+        pybutton.clicked.connect(self.clickMethod)
+        pybutton.resize(200,64)
+        pybutton.move(50, 50)
 
-        # Create the button
-        btn = QtWidgets.QPushButton('Click Me')
-        btn.setProperty('Test', True)
-        btn.setObjectName('StyledButton')
-        btn.clicked.connect(lambda: self.toggle(btn))
-        layout.addWidget(btn)
+    def clickMethod(self):
+        QMessageBox.about(self, "Title", "Message")
 
-        btn2 = QtWidgets.QPushButton('Click Me')
-        btn2.setProperty('Test', True)
-        btn2.clicked.connect(lambda: self.toggle(btn2))
-        layout.addWidget(btn2)
-
-    def toggle(self, widget):
-        # Query the attribute
-        isTest = widget.property('Test')
-        widget.setProperty('Test', not isTest)
-
-        # Update the style
-        widget.setStyle(widget.style())
-
-if __name__ == '__main__':
-    app = QtWidgets.QApplication([])
-    dlg = Test()
-    dlg.show()
-    app.exec_()
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    mainWin = MainWindow()
+    mainWin.show()
+    sys.exit( app.exec_() )

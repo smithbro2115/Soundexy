@@ -62,8 +62,10 @@ class Gui(GUI.Ui_MainWindow):
         self.single_clicked_result = None
         self.play_button_graphic = QtGui.QIcon('graphics/play_button_graphic.png')
         self.pause_button_graphic = QtGui.QIcon('graphics/pause_button_graphic.png')
+        self.window = None
 
     def setup_ui_additional(self, MainWindow):
+        self.window = MainWindow
         self.search_state_free = self.topbarLibraryFreeCheckbox.checkState()
         self.search_state_local = self.topbarLibraryLocalCheckbox.checkState()
         self.search_state_paid = self.topbarLibraryPaidCheckbox.checkState()
@@ -110,17 +112,21 @@ class Gui(GUI.Ui_MainWindow):
             self.cache_thread_pool.start(downloader)
 
     def local_sound_init(self, result):
-        self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
-        if not self.current_result == result or not self.audio_player.get_busy():
-            self.waveform.clear_waveform()
-            make_waveform_worker = Worker(make_waveform, result.path)
-            make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
-            self.waveform_thread_pool.start(make_waveform_worker)
-            self.waveform.load_result(result)
-            self.audio_player.handle(result, self.pixel_time_conversion_rate)
+        try:
+            self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
+        except ZeroDivisionError as e:
+            self.show_error("This sound can't be played because it has no duration")
         else:
-            self.audio_player.handle(result, self.pixel_time_conversion_rate)
-        self.current_result = result
+            if not self.current_result == result or not self.audio_player.get_busy():
+                self.waveform.clear_waveform()
+                make_waveform_worker = Worker(make_waveform, result.path)
+                make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
+                self.waveform_thread_pool.start(make_waveform_worker)
+                self.waveform.load_result(result)
+                self.audio_player.handle(result, self.pixel_time_conversion_rate)
+            else:
+                self.audio_player.handle(result, self.pixel_time_conversion_rate)
+            self.current_result = result
 
 
     @staticmethod
@@ -180,6 +186,10 @@ class Gui(GUI.Ui_MainWindow):
     @staticmethod
     def print_result():
         print('download started')
+
+    def show_error(self, error):
+        msg_box = QtWidgets.QMessageBox()
+        msg_box.about(self.window, "ERROR", str(error))
 
     def clear_album_image(self):
         pixmap = QtGui.QPixmap(1, 0)

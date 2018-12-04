@@ -6,7 +6,7 @@ import os
 class Local:
     def __init__(self):
         self.title = ''
-        self.duration = None
+        self.duration = 0
         self.description = ''
         self.id = None
         self.author = ''
