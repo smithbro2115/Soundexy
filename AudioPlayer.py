@@ -36,6 +36,7 @@ class SoundPlayer(QRunnable):
         self.length = 0
         self.loop = False
         self.pixel_time_conversion_rate = 0
+        pygame.mixer.pre_init(48000, -16, 1, 512)
 
     def handle(self, result, conversion_rate):
         if not self.current_result == result or not self.get_busy():
@@ -108,6 +109,21 @@ class SoundPlayer(QRunnable):
             pygame.mixer.init()
             pygame.mixer.music.load(self.path)
 
+    def reload(self, block=False):
+        if self.filetype in self.windll_list:
+            from time import sleep
+
+            print('open "' + self.path + '" alias', self.alias)
+            self.win_command('open "' + self.path + '" alias', self.alias)
+            self.win_command('set', self.alias, 'time format milliseconds')
+            durationInMS = self.win_command('status', self.alias, 'length')
+
+            if block:
+                sleep(float(durationInMS) / 1000.0)
+        elif self.filetype in self.pygame_list:
+            pygame.mixer.init()
+            pygame.mixer.music.load(self.path)
+
     def pause(self):
         if self.filetype in self.windll_list:
             self.win_command('pause', self.alias)
@@ -118,7 +134,6 @@ class SoundPlayer(QRunnable):
         self.is_paused = True
 
     def play(self, play_from=-1):
-        self.ended = False
         if play_from > 0:
             self.current_time = play_from
         elif self.time_changed_time_pause:
@@ -139,12 +154,11 @@ class SoundPlayer(QRunnable):
                     if play_from > 0:
                         pygame.mixer.music.play(start=play_from/1000)
                     else:
-                        print(play_from)
                         pygame.mixer.music.play()
                 except Exception as e:
                     print(e)
                 self.started = True
-            elif play_from >= 0:
+            elif play_from >= 0 and not self.ended:
                 if self.filetype == '.mp3':
                     pygame.mixer.music.rewind()
                     pygame.mixer.music.set_pos(play_from/1000)
@@ -156,8 +170,13 @@ class SoundPlayer(QRunnable):
                     pygame.mixer.music.set_pos(play_from/1000)
                     pygame.mixer.music.unpause()
                 # self.current_time = play_from/1000
+            elif self.ended:
+                self.reload()
+                pygame.mixer.music.play(start=play_from / 1000)
             else:
                 pygame.mixer.music.unpause()
+
+        self.ended = False
         self.time_started = time.time()
         self.is_playing = True
         self.is_paused = False

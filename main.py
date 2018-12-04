@@ -10,6 +10,7 @@ import LocalFileHandler
 import traceback
 import Downloader
 import os
+import time
 from Wave import make_waveform
 
 
@@ -95,6 +96,7 @@ class Gui(GUI.Ui_MainWindow):
         sound = self.current_results[sound_id]
         if isinstance(sound, SearchResults.Local):
             result = self.current_results[sound_id]
+            print(result.duration)
             self.local_sound_init(result)
             self.clear_album_image()
             self.add_album_image_to_player(sound.album_image)
