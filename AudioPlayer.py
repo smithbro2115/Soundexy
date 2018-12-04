@@ -158,21 +158,21 @@ class SoundPlayer(QRunnable):
                 except Exception as e:
                     print(e)
                 self.started = True
-            elif play_from >= 0 and not self.ended:
-                if self.filetype == '.mp3':
-                    pygame.mixer.music.rewind()
-                    pygame.mixer.music.set_pos(play_from/1000)
-                    pygame.mixer.music.unpause()
-                elif self.filetype == '.ogg':
-                    pygame.mixer.music.set_pos(play_from / 1000)
-                    pygame.mixer.music.unpause()
-                elif self.filetype == '.flac':
-                    pygame.mixer.music.set_pos(play_from/1000)
-                    pygame.mixer.music.unpause()
-                # self.current_time = play_from/1000
-            elif self.ended:
-                self.reload()
-                pygame.mixer.music.play(start=play_from / 1000)
+            elif play_from >= 0:
+                try:
+                    if self.filetype == '.mp3':
+                        pygame.mixer.music.rewind()
+                        pygame.mixer.music.set_pos(play_from/1000)
+                        pygame.mixer.music.unpause()
+                    elif self.filetype == '.ogg':
+                        pygame.mixer.music.set_pos(play_from / 1000)
+                        pygame.mixer.music.unpause()
+                    elif self.filetype == '.flac':
+                        pygame.mixer.music.set_pos(play_from/1000)
+                        pygame.mixer.music.unpause()
+                except pygame.error:
+                    self.reload()
+                    pygame.mixer.music.play(start=play_from / 1000)
             else:
                 pygame.mixer.music.unpause()
 
