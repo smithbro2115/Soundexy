@@ -36,7 +36,7 @@ class SoundPlayer(QRunnable):
         self.length = 0
         self.loop = False
         self.pixel_time_conversion_rate = 0
-        pygame.mixer.pre_init(48000, -16, 1, 512)
+        pygame.mixer.pre_init(44100, -16, 2, 512)
 
     def handle(self, result, conversion_rate):
         if not self.current_result == result or not self.get_busy():
