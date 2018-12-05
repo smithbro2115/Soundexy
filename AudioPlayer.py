@@ -51,6 +51,7 @@ class SoundPlayer(QRunnable):
 
     @pyqtSlot()
     def run(self):
+        pass
         while True:
             while self.is_playing and not self.ended:
                 start_time = time.time()
@@ -63,6 +64,8 @@ class SoundPlayer(QRunnable):
                 self.signals.time_changed.emit(self.current_time)
                 if self.current_time >= self.length:
                     self.ended = True
+            if not self.is_playing or self.ended:
+                time.sleep(.003)
 
     @staticmethod
     def win_command(*command):

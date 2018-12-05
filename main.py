@@ -40,6 +40,9 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player = SoundPlayer()
         self.current_result = None
         self.running_search = False
+        self.running_local_search = False
+        self.running_free_search = False
+        self.running_paid_search = False
         self.running_search_keywords = []
         self.running_search_librarys = {'Free': 0, 'Paid': 0, 'Local': 0}
         self.freesound_amount_of_pages = None
@@ -62,7 +65,10 @@ class Gui(GUI.Ui_MainWindow):
         self.single_clicked_result = None
         self.play_button_graphic = QtGui.QIcon('graphics/play_button_graphic.png')
         self.pause_button_graphic = QtGui.QIcon('graphics/pause_button_graphic.png')
+        self.busy_indicator_small = QtGui.QMovie('graphics/busy_indicator_small.gif')
         self.window = None
+        self.is_busy_searching = False
+        self.background_active_search_indicator = False
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
@@ -90,6 +96,11 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 0, 1)
+        print(self.searchLineEdit)
+        self.searchLineEdit.setStyleSheet("""
+                                        QLineEdit{background-repeat: no-repeat; 
+                                        background-position: center;}
+                                        """)
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
@@ -235,6 +246,7 @@ class Gui(GUI.Ui_MainWindow):
             page_number += 1
             freesound_scraper = WebScrapers.FreesoundScraper(keywords, page_number, url)
             freesound_scraper.signals.sig_results.connect(self.add_results_to_search_results_table)
+            freesound_scraper.signals.sig_finished.connect(lambda: self.finished_search(2))
             self.freesound_thread_pool.start(freesound_scraper)
 
     def add_results_to_search_results_table(self, results):
@@ -282,6 +294,7 @@ class Gui(GUI.Ui_MainWindow):
             self.run_search(excluded_words)
 
     def run_search(self, excluded_words):
+        self.start_busy_indicator_search()
         local = self.search_state_local
         free = self.search_state_free
         paid = self.search_state_paid
@@ -296,17 +309,64 @@ class Gui(GUI.Ui_MainWindow):
         self.cache_thread_pool.start(clear_cache_worker)
         self.current_results = {}
         if local:
+            self.running_local_search = True
             local = LocalFileHandler.LocalSearch(keywords, excluded_words)
             local.signals.batch_found.connect(self.add_results_to_search_results_table)
+            local.signals.finished.connect(lambda: self.finished_search(1))
             self.local_search_thread_pool.start(local)
         if free:
+            self.running_free_search = True
             freesound_site = WebScrapers.Freesound(keywords)
             freesound_site.signals.sig_url.connect(self.freesound_set_url)
             freesound_site.signals.sig_amount_of_pages.connect(self.freesound_set_amount_of_pages)
             freesound_site.signals.sig_finished.connect(self.freesound_scrape)
             self.freesound_thread_pool.start(freesound_site)
         if paid:
+            self.running_paid_search = True
             print('test paid ' + str(keywords))
+
+    def finished_search(self, search):
+        if search == 1:
+            self.running_local_search = False
+        elif search == 2:
+            if self.freesound_thread_pool.activeThreadCount() == 0:
+                self.running_free_search = False
+        elif search == 3:
+            self.running_paid_search = False
+        if not self.running_paid_search and not self.running_free_search and not self.running_local_search:
+            self.stop__busy_indicator_search()
+
+    def start_busy_indicator_search(self):
+        print('started')
+        self.is_busy_searching = True
+        self.busy_indicator_small.frameChanged.connect(self.change_frame_busy_indicator_search)
+        self.busy_indicator_small.start()
+
+    def change_frame_busy_indicator_search(self):
+        current_frame = self.busy_indicator_small.currentPixmap()
+        current_frame.save('graphics/current_frame_small.png', "PNG")
+        self.add_file_too_background('graphics/current_frame_small.png')
+
+    def stop__busy_indicator_search(self):
+        print('stopped')
+        self.clear_busy_indicator()
+        self.busy_indicator_small.stop()
+        self.is_busy_searching = False
+
+    def clear_busy_indicator(self):
+        self.searchLineEdit.setStyleSheet(self.searchLineEdit.styleSheet().replace(
+            'graphics/current_frame_small.png', ''))
+
+    def add_file_too_background(self, file):
+        if not self.background_active_search_indicator:
+            style_sheet_local = self.searchLineEdit.styleSheet() + "QLineEdit {background-image: url(" + file + ");}"
+            self.searchLineEdit.setStyleSheet(style_sheet_local)
+            self.background_active_search_indicator = True
+        else:
+            style_sheet_local = self.searchLineEdit.styleSheet().replace(
+                "QLineEdit {background-image: url();}",
+                "QLineEdit {background-image: url(" + file + ");}")
+            self.searchLineEdit.setStyleSheet(style_sheet_local)
 
 
 class Window(QtWidgets.QMainWindow):
