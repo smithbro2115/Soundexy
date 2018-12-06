@@ -43,8 +43,10 @@ class Local:
                 print(e)
             else:
                 self.album_image = f.get_image()
-                print(self.album_image)
-                self.description = f.disc_total
+                if f.albumartist is not None:
+                    self.author = f.albumartist
+                if f.disc_total is not None:
+                    self.description = f.disc_total
                 self.bitrate = f.bitrate
                 self.sample_rate = f.samplerate
                 if f.duration is not None:
@@ -105,7 +107,7 @@ class Free:
     def __init__(self):
         self.title = ''
         self.preview = ''
-        self.duration = None
+        self.duration = 0
         self.description = ''
         self.id = None
         self.author = ''

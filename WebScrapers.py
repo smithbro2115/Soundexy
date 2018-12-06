@@ -62,7 +62,7 @@ class FreesoundScraper(Scraper):
                                      str(raw_result.find('a', {'class': 'mp3_file'}).get('href'))
                     result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
                                          .find('a', {'class': 'title'}).get('title')))
-                    result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text) / 1000)
+                    result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text))
                     result.description = raw_result.find('div', {'class': 'sound_description'}).find('p').text
                     result.library = 'Freesound'
                     result.author = raw_result.find('a', {'class': 'user'}).text

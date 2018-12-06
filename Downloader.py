@@ -7,7 +7,7 @@ class DownloaderSigs(QObject):
     download_started = pyqtSignal()
     downloaded = pyqtSignal(str)
     already_exists = pyqtSignal(str)
-    download_done = pyqtSignal()
+    download_done = pyqtSignal(str)
 
 
 class Downloader(QRunnable):
@@ -40,4 +40,5 @@ class Downloader(QRunnable):
                 self.signals.downloaded.emit(file_path)
                 emitted_ready_for_preview = True
         fd.close()
-        self.signals.download_done.emit()
+        self.signals.download_done.emit(file_path)
+        print('download done')

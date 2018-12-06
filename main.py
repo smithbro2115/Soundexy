@@ -112,14 +112,7 @@ class Gui(GUI.Ui_MainWindow):
             self.clear_album_image()
             self.add_album_image_to_player(sound.album_image)
         elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
-            url = self.current_results[sound_id].preview
-            downloader = Downloader.Downloader(url, sound_id)
-            try:
-                downloader.signals.downloaded.connect(self.downloaded_ready_for_preview)
-                downloader.signals.already_exists.connect(self.audio_player.handle)
-            except Exception as e:
-                print(e)
-            self.cache_thread_pool.start(downloader)
+            self.remote_sound_init(self.current_results[sound_id], sound_id)
 
     def local_sound_init(self, result):
         try:
@@ -128,17 +121,30 @@ class Gui(GUI.Ui_MainWindow):
             self.show_error("This sound can't be played because it has no duration")
         else:
             if not self.current_result == result or not self.audio_player.get_busy():
-                self.waveform.clear_waveform()
-                self.waveform.start_busy_indicator_waveform()
-                make_waveform_worker = Worker(make_waveform, result.path)
-                make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
-                self.waveform_thread_pool.start(make_waveform_worker)
+                self.make_waveform(result.path)
                 self.waveform.load_result(result)
                 self.audio_player.handle(result, self.pixel_time_conversion_rate)
             else:
                 self.audio_player.handle(result, self.pixel_time_conversion_rate)
             self.current_result = result
 
+    def remote_sound_init(self, result, sound_id):
+        if self.current_result == result:
+            self.audio_player.handle(result, self.pixel_time_conversion_rate)
+        else:
+            self.current_result = result
+            try:
+                print(result)
+                self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
+            except ZeroDivisionError:
+                self.show_error("This sound can't be played because it has no duration")
+            else:
+                url = result.preview
+                downloader = Downloader.Downloader(url, sound_id)
+                downloader.signals.downloaded.connect(self.downloaded_ready_for_preview)
+                downloader.signals.already_exists.connect(self.download_already_exists)
+                downloader.signals.download_done.connect(self.make_waveform)
+                self.cache_thread_pool.start(downloader)
 
     @staticmethod
     def clear_cache():
@@ -157,11 +163,20 @@ class Gui(GUI.Ui_MainWindow):
         sound_id = self.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
         self.single_clicked_result = self.current_results[sound_id]
 
+    def download_already_exists(self, path):
+        self.waveform.load_result(self.current_result),
+        self.audio_player.handle(self.current_result, self.pixel_time_conversion_rate, path=path)
+
     def downloaded_ready_for_preview(self, sound_path):
+        self.waveform.load_result(self.current_result)
+        self.audio_player.handle(self.current_result, self.pixel_time_conversion_rate, sound_path)
+
+    def make_waveform(self, sound_path):
+        self.waveform.clear_waveform()
+        self.waveform.start_busy_indicator_waveform()
         make_waveform_worker = Worker(make_waveform, sound_path)
         make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
         self.waveform_thread_pool.start(make_waveform_worker)
-        # self.play_sound(sound_path)
 
     def spacebar(self):
         if self.current_result is not None:

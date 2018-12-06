@@ -38,8 +38,12 @@ class SoundPlayer(QRunnable):
         self.pixel_time_conversion_rate = 0
         pygame.mixer.pre_init(48000, -16, 2, 512)
 
-    def handle(self, result, conversion_rate):
+    def handle(self, result, conversion_rate, path=None):
         if not self.current_result == result or not self.get_busy():
+            if path is not None:
+                self.path = path
+            else:
+                self.path = result.path
             self.current_result = result
             self.preload(result, conversion_rate)
         elif self.ended and self.current_result == result:
@@ -87,7 +91,11 @@ class SoundPlayer(QRunnable):
         busy = self.get_busy()
         if busy:
             self.stop()
-        self.load(result.path, result.duration, conversion_rate, result.sample_rate)
+        try:
+            self.load(self.path, result.duration, conversion_rate, result.sample_rate)
+        except AttributeError:
+            print('testingg')
+            self.load(self.path, result.duration, conversion_rate, 48000)
         self.play()
 
     def load(self, path, length, pixel_time_rate, sample_rate, block=False):
