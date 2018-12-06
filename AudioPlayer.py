@@ -36,6 +36,7 @@ class SoundPlayer(QRunnable):
         self.length = 0
         self.loop = False
         self.pixel_time_conversion_rate = 0
+        pygame.mixer.pre_init(48000, -16, 2, 512)
 
     def handle(self, result, conversion_rate):
         if not self.current_result == result or not self.get_busy():
@@ -86,11 +87,10 @@ class SoundPlayer(QRunnable):
         busy = self.get_busy()
         if busy:
             self.stop()
-        pygame.mixer.pre_init(result.bitrate, -16, 2, 512)
-        self.load(result.path, result.duration, conversion_rate)
+        self.load(result.path, result.duration, conversion_rate, result.sample_rate)
         self.play()
 
-    def load(self, path, length, pixel_time_rate, block=False):
+    def load(self, path, length, pixel_time_rate, sample_rate, block=False):
         self.signals.reset_cursor.emit()
         self.path = path
         self.current_time = 0
@@ -109,7 +109,9 @@ class SoundPlayer(QRunnable):
             if block:
                 sleep(float(durationInMS) / 1000.0)
         elif self.filetype in self.pygame_list:
-            pygame.mixer.init()
+            frequency = int(sample_rate)
+            pygame.mixer.quit()
+            pygame.mixer.init(frequency, -16, 2, 512)
             pygame.mixer.music.load(self.path)
 
     def reload(self, block=False):

@@ -86,4 +86,4 @@ class LocalSearch(QRunnable):
             self.signals.finished.emit()
 
 
-add_to_index('D:\Audio Dramas\Focus on the Family')
+add_to_index('C:\\Users\\smith\\Downloads')

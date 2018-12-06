@@ -96,7 +96,6 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 0, 1)
-        print(self.searchLineEdit)
         self.searchLineEdit.setStyleSheet("""
                                         QLineEdit{background-repeat: no-repeat; 
                                         background-position: center;}

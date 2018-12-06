@@ -17,6 +17,7 @@ class Local:
         self.bitrate = None
         self.keywords = []
         self.album_image = None
+        self.sample_rate = 48000
 
     def populate(self, path, identification_number):
         print(path)
@@ -30,6 +31,7 @@ class Local:
             try:
                 f = sf.SoundFile(path)
                 self.duration = (len(f) / f.samplerate)*1000
+                self.sample_rate = f.samplerate
                 print(self.duration)
                 self.channels = f.channels
             except RuntimeError:
@@ -44,6 +46,7 @@ class Local:
                 print(self.album_image)
                 self.description = f.disc_total
                 self.bitrate = f.bitrate
+                self.sample_rate = f.samplerate
                 if f.duration is not None:
                     self.duration = round(f.duration*1000)
                 else:
