@@ -62,7 +62,7 @@ class FreesoundScraper(Scraper):
                 if self.check_attribution(raw_result):
                     result = SearchResults.Free()
                     result.preview = 'https://freesound.org/' + \
-                                     str(raw_result.find('a', {'class': 'mp3_file'}).get('href'))
+                                     str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
                     result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
                                          .find('a', {'class': 'title'}).get('title')))
                     result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text))

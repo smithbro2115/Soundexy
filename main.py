@@ -148,8 +148,9 @@ class Gui(GUI.Ui_MainWindow):
                 self.waveform.clear_waveform()
                 self.audio_player.stop()
                 self.waveform.start_busy_indicator_waveform()
+                downloader.signals.downloaded.connect(self.downloaded_ready_for_preview)
                 downloader.signals.already_exists.connect(self.download_already_exists)
-                downloader.signals.download_done.connect(self.downloaded_ready_for_preview)
+                downloader.signals.download_done.connect(self.download_done)
                 self.cache_thread_pool.start(downloader)
                 self.current_downloader = downloader
 
@@ -176,9 +177,15 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.handle(self.current_result, self.pixel_time_conversion_rate, path=path)
 
     def downloaded_ready_for_preview(self, sound_path):
-        self.make_waveform(sound_path)
+        # self.make_waveform(sound_path)
         self.waveform.load_result(self.current_result)
         self.audio_player.handle(self.current_result, self.pixel_time_conversion_rate, sound_path)
+
+    def download_done(self, path):
+        self.audio_player.pause()
+        self.audio_player.reload(path=path)
+        self.audio_player.play()
+        self.make_waveform(path)
 
     def make_waveform(self, sound_path):
         self.waveform.clear_waveform()

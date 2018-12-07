@@ -1,4 +1,5 @@
 import pygame
+from tinytag import TinyTag
 import os
 import time
 from random import random
@@ -24,6 +25,7 @@ class SoundPlayer(QRunnable):
         self.is_playing = False
         self.is_paused = False
         self.time_changed_time_pause = False
+        self.reloaded = False
         self.signals = SoundSigs()
         self.current_result = ''
         self.filetype = ''
@@ -96,7 +98,9 @@ class SoundPlayer(QRunnable):
         try:
             self.load(self.path, result.duration, conversion_rate, result.sample_rate)
         except AttributeError:
-            self.load(self.path, result.duration, conversion_rate, 48000)
+            f = TinyTag.get(self.path)
+            sample_rate = f.samplerate
+            self.load(self.path, result.duration, conversion_rate, sample_rate)
         self.play()
 
     def load(self, path, length, pixel_time_rate, sample_rate, block=False):
@@ -127,7 +131,9 @@ class SoundPlayer(QRunnable):
                 self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                         "Try downloading it again.")
 
-    def reload(self, block=False):
+    def reload(self, block=False, path=''):
+        if path != '':
+            self.path = path
         if self.filetype in self.windll_list:
             from time import sleep
 
@@ -141,6 +147,7 @@ class SoundPlayer(QRunnable):
         elif self.filetype in self.pygame_list:
             pygame.mixer.init()
             pygame.mixer.music.load(self.path)
+        self.reloaded = True
 
     def pause(self):
         if self.filetype in self.windll_list:
@@ -154,8 +161,9 @@ class SoundPlayer(QRunnable):
     def play(self, play_from=-1):
         if play_from > 0:
             self.current_time = play_from
-        elif self.time_changed_time_pause:
+        elif self.time_changed_time_pause or self.reloaded:
             play_from = self.current_time
+            self.reloaded = False
         if self.filetype in self.windll_list:
             if not self.started:
                 durationInMS = self.win_command('status', self.alias, 'length')
