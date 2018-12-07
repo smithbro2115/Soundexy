@@ -24,6 +24,7 @@ class SoundPlayer(QRunnable):
         self.path = ''
         self.is_playing = False
         self.is_paused = False
+        self.is_segment = False
         self.time_changed_time_pause = False
         self.reloaded = False
         self.signals = SoundSigs()
@@ -36,21 +37,24 @@ class SoundPlayer(QRunnable):
         self.current_time = 0
         self.ended = False
         self.started = False
+        self.outside_of_downloaded_range = False
+        self.outside_of_downloaded_range_playing = False
         self.length = 0
+        self.segment_length = 0
         self.loop = False
         self.pixel_time_conversion_rate = 0
         pygame.mixer.pre_init(48000, -16, 2, 512)
 
-    def handle(self, result, conversion_rate, path=None):
+    def handle(self, result, conversion_rate, path=None, segment=False):
         if not self.current_result == result or not self.get_busy():
             if path is not None:
                 self.path = path
             else:
                 self.path = result.path
             self.current_result = result
-            self.preload(result, conversion_rate)
+            self.preload(result, conversion_rate, segment=segment)
         elif self.ended and self.current_result == result:
-            self.preload(result, conversion_rate)
+            self.preload(result, conversion_rate, segment=segment)
         elif self.is_paused:
             self.unpause()
         else:
@@ -91,15 +95,18 @@ class SoundPlayer(QRunnable):
             raise PlaysoundException(exceptionMessage)
         return buf.value
 
-    def preload(self, result, conversion_rate):
+    def preload(self, result, conversion_rate, segment=False):
         busy = self.get_busy()
         if busy:
             self.stop()
         try:
             self.load(self.path, result.duration, conversion_rate, result.sample_rate)
-        except AttributeError:
+        except AttributeError:  # this is for remote sounds
             f = TinyTag.get(self.path)
             sample_rate = f.samplerate
+            if segment:
+                self.segment_length = f.duration
+                self.is_segment = True
             self.load(self.path, result.duration, conversion_rate, sample_rate)
         self.play()
 
@@ -131,7 +138,7 @@ class SoundPlayer(QRunnable):
                 self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                         "Try downloading it again.")
 
-    def reload(self, block=False, path=''):
+    def reload(self, block=False, path='', is_complete=False):
         if path != '':
             self.path = path
         if self.filetype in self.windll_list:
@@ -145,8 +152,12 @@ class SoundPlayer(QRunnable):
             if block:
                 sleep(float(durationInMS) / 1000.0)
         elif self.filetype in self.pygame_list:
+            if is_complete:
+                self.is_segment = False
             pygame.mixer.init()
             pygame.mixer.music.load(self.path)
+            if self.outside_of_downloaded_range_playing:
+                self.play()
         self.reloaded = True
 
     def pause(self):
@@ -252,7 +263,13 @@ class SoundPlayer(QRunnable):
 
     def goto(self, position):
         goto = position/self.pixel_time_conversion_rate
-        if self.ended:
+        if self.is_segment and goto > self.segment_length:
+            self.outside_of_downloaded_range = True
+            if self.is_playing:
+                self.outside_of_downloaded_range_playing = True
+                self.pause()
+            self.is_playing = False
+        elif self.ended:
             self.play(play_from=goto)
         elif self.is_playing:
             self.pause()

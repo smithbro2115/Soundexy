@@ -179,11 +179,11 @@ class Gui(GUI.Ui_MainWindow):
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)
         self.waveform.load_result(self.current_result)
-        self.audio_player.handle(self.current_result, self.pixel_time_conversion_rate, sound_path)
+        self.audio_player.handle(self.current_result, self.pixel_time_conversion_rate, sound_path, segment=True)
 
     def download_done(self, path):
         self.audio_player.pause()
-        self.audio_player.reload(path=path)
+        self.audio_player.reload(path=path, is_complete=True)
         self.audio_player.play()
         self.make_waveform(path)
 
