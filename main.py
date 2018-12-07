@@ -27,6 +27,7 @@ class Gui(GUI.Ui_MainWindow):
         self.local_search_thread_pool.setMaxThreadCount(1)
         self.play_sound_thread_pool.setMaxThreadCount(1)
         self.freesound_thread_pool.setMaxThreadCount(4)
+        self.current_downloader = None
         self.search_state_free = None
         self.search_state_local = None
         self.search_state_paid = None
@@ -94,6 +95,7 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
         self.audio_player.signals.time_changed.connect(self.time_changed)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
+        self.audio_player.signals.error.connect(self.show_error)
         self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 0, 1)
         self.searchLineEdit.setStyleSheet("""
@@ -134,18 +136,22 @@ class Gui(GUI.Ui_MainWindow):
         else:
             self.current_result = result
             try:
-                print(result)
                 self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
             except ZeroDivisionError:
                 self.show_error("This sound can't be played because it has no duration")
             else:
                 url = result.preview
+                if self.cache_thread_pool.activeThreadCount() > 0:
+                    self.current_downloader.cancel()
                 downloader = Downloader.Downloader(url, sound_id)
+                self.waveform.reset_cursor()
                 self.waveform.clear_waveform()
+                self.audio_player.stop()
                 self.waveform.start_busy_indicator_waveform()
                 downloader.signals.already_exists.connect(self.download_already_exists)
                 downloader.signals.download_done.connect(self.downloaded_ready_for_preview)
                 self.cache_thread_pool.start(downloader)
+                self.current_downloader = downloader
 
     @staticmethod
     def clear_cache():
@@ -165,7 +171,8 @@ class Gui(GUI.Ui_MainWindow):
         self.single_clicked_result = self.current_results[sound_id]
 
     def download_already_exists(self, path):
-        self.waveform.load_result(self.current_result),
+        self.make_waveform(path)
+        self.waveform.load_result(self.current_result)
         self.audio_player.handle(self.current_result, self.pixel_time_conversion_rate, path=path)
 
     def downloaded_ready_for_preview(self, sound_path):

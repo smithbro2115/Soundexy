@@ -14,6 +14,7 @@ class PlaysoundException(Exception):
 class SoundSigs(QObject):
     time_changed = pyqtSignal(float)
     reset_cursor = pyqtSignal()
+    error = pyqtSignal(str)
 
 
 class SoundPlayer(QRunnable):
@@ -64,8 +65,9 @@ class SoundPlayer(QRunnable):
                 time.sleep(sleep_time)
                 stop_time = time.time()
                 time_elapsed = (stop_time - start_time)*1000
-                self.current_time = self.current_time + time_elapsed
-                self.signals.time_changed.emit(self.current_time)
+                if self.is_playing:
+                    self.current_time = self.current_time + time_elapsed
+                    self.signals.time_changed.emit(self.current_time)
                 if self.current_time >= self.length:
                     self.ended = True
             if not self.is_playing or self.ended:
@@ -94,7 +96,6 @@ class SoundPlayer(QRunnable):
         try:
             self.load(self.path, result.duration, conversion_rate, result.sample_rate)
         except AttributeError:
-            print('testingg')
             self.load(self.path, result.duration, conversion_rate, 48000)
         self.play()
 
@@ -120,7 +121,11 @@ class SoundPlayer(QRunnable):
             frequency = int(sample_rate)
             pygame.mixer.quit()
             pygame.mixer.init(frequency, -16, 2, 512)
-            pygame.mixer.music.load(self.path)
+            try:
+                pygame.mixer.music.load(self.path)
+            except pygame.error:
+                self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
+                                        "Try downloading it again.")
 
     def reload(self, block=False):
         if self.filetype in self.windll_list:
@@ -233,6 +238,7 @@ class SoundPlayer(QRunnable):
             self.win_command('stop', self.alias)
         elif self.filetype in self.pygame_list:
             pygame.mixer.music.stop()
+        self.is_playing = False
         self.current_time = 0
         self.started = False
 

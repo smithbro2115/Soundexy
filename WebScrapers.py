@@ -34,8 +34,11 @@ class Scraper(QRunnable):
 class FreesoundScraper(Scraper):
     @staticmethod
     def get_results(raw_html):
-        html = BeautifulSoup(raw_html, 'html.parser')
-        return html.find_all('div', {'class': 'sample_player_small'})
+        try:
+            html = BeautifulSoup(raw_html, 'html.parser')
+            return html.find_all('div', {'class': 'sample_player_small'})
+        except Exception:
+            print("Something didn't work!")
 
     @staticmethod
     def check_attribution(result):

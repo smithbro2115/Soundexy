@@ -16,6 +16,7 @@ class Downloader(QRunnable):
         self.signals = DownloaderSigs()
         self.url = url
         self.title = title
+        self.canceled = False
 
     @pyqtSlot()
     def run(self):
@@ -24,7 +25,8 @@ class Downloader(QRunnable):
         for root, dirs, files in os.walk(path):
             if name in files:
                 self.signals.already_exists.emit(os.path.join(root, name))
-        self.download_preview(self.url, self.title)
+            else:
+                self.download_preview(self.url, self.title)
 
     def download_preview(self, url, title):
         file_path = 'Cache/' + title + '.mp3'
@@ -34,11 +36,17 @@ class Downloader(QRunnable):
         r = requests.get(url, stream=True)
         self.signals.download_started.emit()
         for chunk in r.iter_content(amount):
+            if self.canceled:
+                fd.close()
+                os.remove(file_path)
+                break
             fd.write(chunk)
-            print('Downloaded some')
             if not emitted_ready_for_preview:
                 self.signals.downloaded.emit(file_path)
                 emitted_ready_for_preview = True
-        fd.close()
-        self.signals.download_done.emit(file_path)
-        print('download done')
+        if not self.canceled:
+            fd.close()
+            self.signals.download_done.emit(file_path)
+
+    def cancel(self):
+        self.canceled = True
