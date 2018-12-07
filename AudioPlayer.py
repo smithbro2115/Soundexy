@@ -107,13 +107,18 @@ class SoundPlayer(QRunnable):
             if segment:
                 self.segment_length = f.duration
                 self.is_segment = True
-            self.load(self.path, result.duration, conversion_rate, sample_rate)
+                self.load(self.path, result.duration, conversion_rate, sample_rate, current_time=self.current_time)
+            else:
+                self.load(self.path, result.duration, conversion_rate, sample_rate)
         self.play()
 
-    def load(self, path, length, pixel_time_rate, sample_rate, block=False):
-        self.signals.reset_cursor.emit()
+    def load(self, path, length, pixel_time_rate, sample_rate, block=False, current_time=0):
         self.path = path
-        self.current_time = 0
+        if current_time > 0:
+            self.current_time = current_time
+        else:
+            self.current_time = 0
+            self.signals.reset_cursor.emit()
         self.filetype = os.path.splitext(path)[1].lower()
         self.alias = 'playsound_' + str(random())
         self.length = length
@@ -158,6 +163,7 @@ class SoundPlayer(QRunnable):
             pygame.mixer.music.load(self.path)
             if self.outside_of_downloaded_range_playing:
                 self.play()
+                self.outside_of_downloaded_range_playing = False
         self.reloaded = True
 
     def pause(self):
@@ -321,6 +327,7 @@ class WaveformSlider(QSlider):
         self.setSliderPosition(self.maximum()*progress)
 
     def reset_cursor(self):
+        print('test')
         self.setSliderPosition(0)
 
     def start_busy_indicator_waveform(self):

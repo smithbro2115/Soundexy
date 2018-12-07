@@ -10,7 +10,6 @@ import LocalFileHandler
 import traceback
 import Downloader
 import os
-import time
 from Wave import make_waveform
 
 
@@ -144,7 +143,7 @@ class Gui(GUI.Ui_MainWindow):
                 if self.cache_thread_pool.activeThreadCount() > 0:
                     self.current_downloader.cancel()
                 downloader = Downloader.Downloader(url, sound_id)
-                self.waveform.reset_cursor()
+                self.waveform.load_result(self.current_result)
                 self.waveform.clear_waveform()
                 self.audio_player.stop()
                 self.waveform.start_busy_indicator_waveform()
@@ -178,7 +177,6 @@ class Gui(GUI.Ui_MainWindow):
 
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)
-        self.waveform.load_result(self.current_result)
         self.audio_player.handle(self.current_result, self.pixel_time_conversion_rate, sound_path, segment=True)
 
     def download_done(self, path):
