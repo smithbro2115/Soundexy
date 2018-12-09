@@ -47,11 +47,13 @@ class Downloader(QRunnable):
                 f = open(file_path, 'wb')
                 f.write(chunk)
                 f.close()
+                print('downloaded some')
                 self.signals.downloaded.emit(file_path)
                 emitted_ready_for_preview = True
 
         if not self.canceled:
             fd.close()
+            print('download done')
             self.signals.download_done.emit(file_downloader)
         else:
             fd.close()

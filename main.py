@@ -114,6 +114,7 @@ class Gui(GUI.Ui_MainWindow):
             self.add_album_image_to_player(sound.album_image)
         elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
             self.remote_sound_init(self.current_results[sound_id], sound_id)
+        self.single_clicked_result = None
 
     def local_sound_init(self, result):
         try:
@@ -139,6 +140,7 @@ class Gui(GUI.Ui_MainWindow):
             except ZeroDivisionError:
                 self.show_error("This sound can't be played because it has no duration")
             else:
+                self.audio_player.remote_sound(self.current_result, self.pixel_time_conversion_rate)
                 url = result.preview
                 if self.cache_thread_pool.activeThreadCount() > 0:
                     self.current_downloader.cancel()
@@ -195,11 +197,17 @@ class Gui(GUI.Ui_MainWindow):
     def spacebar(self):
         if self.current_result is not None:
             if self.current_result != self.single_clicked_result:
-                self.local_sound_init(self.single_clicked_result)
+                if isinstance(self.current_result, SearchResults.Local):
+                    self.local_sound_init(self.single_clicked_result)
+                else:
+                    self.remote_sound_init(self.single_clicked_result, self.single_clicked_result.id)
             else:
                 self.audio_player.handle(self.current_result, conversion_rate=self.pixel_time_conversion_rate)
         elif self.single_clicked_result is not None:
-            self.local_sound_init(self.single_clicked_result)
+            if isinstance(self.current_result, SearchResults.Local):
+                self.local_sound_init(self.single_clicked_result)
+            else:
+                self.remote_sound_init(self.single_clicked_result, self.single_clicked_result.id)
 
     @staticmethod
     def get_formatted_time_from_milliseconds(milliseconds):
