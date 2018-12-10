@@ -55,33 +55,43 @@ class SoundPlayer(QRunnable):
             self.is_remote = True
             self.is_segment = True
 
-    def new_sound_local(self):
+    def handle_new_sound_local(self):
         self.path = self.current_result.path
         self.preload(self.current_result, self.pixel_time_conversion_rate)
+        self.play()
 
-    def new_sound_remote(self, path, is_segment=False):
+    def handle_new_sound_remote(self, path):
         self.path = path
-        self.preload(self.current_result, self.pixel_time_conversion_rate, is_segment)
+        self.preload(self.current_result, self.pixel_time_conversion_rate)
+        self.play()
 
     def handle(self, result, conversion_rate, path=None, segment=False):
         if segment:
-            print('segment')
-            self.path = path
-            self.preload(result, conversion_rate, segment)
-            self.play()
-        if not self.current_result == result or not self.started:
+            self.handle_segment(path, result, conversion_rate)
+        elif not self.current_result == result or not self.started:
             self.pixel_time_conversion_rate = conversion_rate
             self.current_result = result
             if isinstance(result, SearchResults.Local):
-                self.new_sound_local()
+                self.handle_new_sound_local()
             else:
-                self.new_sound_remote(path, segment)
+                self.handle_new_sound_remote(path)
         elif self.ended and self.current_result == result:
+            print(self.current_result, result, self.ended)
             self.restart()
         elif self.is_paused:
             self.unpause()
         else:
             self.pause()
+
+    def handle_segment(self, path, result, conversion_rate):
+        self.pixel_time_conversion_rate = conversion_rate
+        self.current_result = result
+        self.path = path
+        self.preload(self.current_result, self.pixel_time_conversion_rate, True)
+        self.play()
+
+    def handle_download_complete(self, path):
+        self.reload(path=path, is_complete=True)
 
     @pyqtSlot()
     def run(self):
@@ -95,8 +105,7 @@ class SoundPlayer(QRunnable):
                 stop_time = time.time()
                 time_elapsed = (stop_time - start_time)*1000
                 if self.is_playing:
-                    self.current_time = self.current_time + time_elapsed
-                    self.signals.time_changed.emit(self.current_time)
+                    self.set_current_time(self.current_time + time_elapsed)
                 if self.current_time >= self.length:
                     self.ended = True
             if not self.is_playing or self.ended:
@@ -119,9 +128,17 @@ class SoundPlayer(QRunnable):
         return buf.value
 
     def restart(self):
-        self.pause()
-        self.goto(0)
-        self.play()
+        print('restart')
+        if self.filetype in self.windll_list:
+            self.stop()
+            self.load_into_windll()
+            self.goto(0)
+            self.play()
+        else:
+            self.stop()
+            self.reload_into_pygame()
+            self.goto(0)
+            self.play()
 
     def preload(self, result, conversion_rate, segment=False):
         busy = self.get_busy()
@@ -129,10 +146,10 @@ class SoundPlayer(QRunnable):
             self.stop()
         if not self.is_remote:
             self.load(self.path, result.duration, conversion_rate, result.sample_rate)
-            self.play()
         else:
             f = TinyTag.get(self.path)
             sample_rate = f.samplerate
+            print(sample_rate)
             if segment:
                 print('segment 2')
                 self.segment_length = f.duration
@@ -145,111 +162,129 @@ class SoundPlayer(QRunnable):
     def load(self, path, length, pixel_time_rate, sample_rate, block=False, current_time=0):
         self.path = path
         if current_time > 0:
-            self.current_time = current_time
+            self.set_current_time(current_time)
         else:
-            self.current_time = 0
+            self.set_current_time(0)
             self.signals.reset_cursor.emit()
         self.filetype = os.path.splitext(path)[1].lower()
-        self.alias = 'playsound_' + str(random())
         self.length = length
         self.pixel_time_conversion_rate = pixel_time_rate
         if self.filetype in self.windll_list:
-            from time import sleep
-
-            print('open "' + self.path + '" alias', self.alias)
-            self.win_command('open "' + self.path + '" alias', self.alias)
-            self.win_command('set', self.alias, 'time format milliseconds')
-            durationInMS = self.win_command('status', self.alias, 'length')
-
-            if block:
-                sleep(float(durationInMS) / 1000.0)
+            self.load_into_windll(block)
         elif self.filetype in self.pygame_list:
-            frequency = int(sample_rate)
-            pygame.mixer.quit()
-            pygame.mixer.init(frequency, -16, 2, 512)
-            try:
-                pygame.mixer.music.load(self.path)
-            except pygame.error:
-                self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
-                                        "Try downloading it again.")
+            self.load_into_pygame(sample_rate)
+
+    def load_into_windll(self, block=False):
+        from time import sleep
+
+        self.alias = 'playsound_' + str(random())
+        print('open "' + self.path + '" alias', self.alias)
+        self.win_command('open "' + self.path + '" alias', self.alias)
+        self.win_command('set', self.alias, 'time format milliseconds')
+        durationInMS = self.win_command('status', self.alias, 'length')
+
+        if block:
+            sleep(float(durationInMS) / 1000.0)
+
+    def load_into_pygame(self, sample_rate):
+        frequency = int(sample_rate)
+        pygame.mixer.quit()
+        pygame.mixer.init(frequency, -16, 2, 512)
+        try:
+            pygame.mixer.music.load(self.path)
+        except pygame.error:
+            self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
+                                    "Try downloading it again.")
 
     def reload(self, block=False, path='', is_complete=False):
+        print('reloaded')
+        self.reloaded = True
         if path != '':
             self.path = path
         if self.filetype in self.windll_list:
-            from time import sleep
-
-            print('open "' + self.path + '" alias', self.alias)
-            self.win_command('open "' + self.path + '" alias', self.alias)
-            self.win_command('set', self.alias, 'time format milliseconds')
-            durationInMS = self.win_command('status', self.alias, 'length')
-
-            if block:
-                sleep(float(durationInMS) / 1000.0)
+            self.reload_into_windll(block)
         elif self.filetype in self.pygame_list:
-            if is_complete:
-                self.is_segment = False
-            pygame.mixer.init()
+            self.reload_into_pygame(is_complete)
+
+    def reload_into_windll(self, block=False):
+        from time import sleep
+
+        print('open "' + self.path + '" alias', self.alias)
+        self.win_command('open "' + self.path + '" alias', self.alias)
+        self.win_command('set', self.alias, 'time format milliseconds')
+        durationInMS = self.win_command('status', self.alias, 'length')
+
+        if block:
+            sleep(float(durationInMS) / 1000.0)
+
+    def reload_into_pygame(self, is_complete=False):
+        if is_complete and self.is_segment:
+            self.is_segment = False
+        was_playing = False
+        if self.is_playing:
+            self.pause()
+            was_playing = True
+        pygame.mixer.init()
+        try:
             pygame.mixer.music.load(self.path)
-            if self.outside_of_downloaded_range_playing:
-                self.outside_of_downloaded_range_playing = False
-                self.play()
-        self.reloaded = True
+        except pygame.error:
+            self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
+                                    "Try downloading it again.")
+        if was_playing:
+            self.outside_of_downloaded_range_playing = False
+            self.play()
 
     def pause(self):
+        print('paused')
         if self.filetype in self.windll_list:
             self.win_command('pause', self.alias)
         elif self.filetype in self.pygame_list:
             pygame.mixer.music.pause()
-            # self.current_time = time.time() - self.time_started + self.current_time
         self.is_playing = False
         self.is_paused = True
 
+    def play_from_pygame(self, play_from):
+        if not self.started:
+            try:
+                pygame.mixer.music.play(start=play_from / 1000)
+            except Exception as e:
+                print(e)
+            self.started = True
+        elif play_from > 0:
+            try:
+                if self.filetype == '.mp3':
+                    pygame.mixer.music.rewind()
+                pygame.mixer.music.set_pos(play_from / 1000)
+                pygame.mixer.music.unpause()
+            except pygame.error:
+                print('error')
+                self.reload()
+                pygame.mixer.music.play(start=play_from / 1000)
+        else:
+            pygame.mixer.music.unpause()
+
+    def play_from_windll(self, play_from):
+        if not self.started:
+            durationInMS = self.win_command('status', self.alias, 'length')
+            self.win_command('play', self.alias, 'from 0 to', durationInMS.decode())
+            self.started = True
+        if play_from >= 0:
+            durationInMS = self.win_command('status', self.alias, 'length')
+            self.win_command('play', self.alias, 'from', str(round(play_from)), 'to', durationInMS.decode())
+        else:
+            self.win_command('play', self.alias)
+
     def play(self, play_from=-1):
+        print('played')
         if play_from > 0:
-            self.current_time = play_from
+            self.set_current_time(play_from)
         elif self.time_changed_time_pause or self.reloaded:
             play_from = self.current_time
             self.reloaded = False
         if self.filetype in self.windll_list:
-            if not self.started:
-                durationInMS = self.win_command('status', self.alias, 'length')
-                self.win_command('play', self.alias, 'from 0 to', durationInMS.decode())
-                self.started = True
-            if play_from >= 0:
-                durationInMS = self.win_command('status', self.alias, 'length')
-                self.win_command('play', self.alias, 'from', str(round(play_from)), 'to', durationInMS.decode())
-            else:
-                self.win_command('play', self.alias)
+            self.play_from_windll(play_from)
         elif self.filetype in self.pygame_list:
-            if not self.started:
-                try:
-                    if play_from > 0:
-                        pygame.mixer.music.play(start=play_from/1000)
-                    else:
-                        print('gakdg')
-                        pygame.mixer.music.play()
-                except Exception as e:
-                    print(e)
-                self.started = True
-            elif play_from > 0:
-                try:
-                    if self.filetype == '.mp3':
-                        pygame.mixer.music.rewind()
-                        pygame.mixer.music.set_pos(play_from/1000)
-                        pygame.mixer.music.unpause()
-                    elif self.filetype == '.ogg':
-                        pygame.mixer.music.set_pos(play_from / 1000)
-                        pygame.mixer.music.unpause()
-                    elif self.filetype == '.flac':
-                        pygame.mixer.music.set_pos(play_from/1000)
-                        pygame.mixer.music.unpause()
-                except pygame.error:
-                    self.reload()
-                    pygame.mixer.music.play(start=play_from / 1000)
-            else:
-                pygame.mixer.music.unpause()
-
+            self.play_from_pygame(play_from)
         self.ended = False
         self.time_started = time.time()
         self.is_playing = True
@@ -277,17 +312,22 @@ class SoundPlayer(QRunnable):
         else:
             return False
 
+    def set_current_time(self, current_time):
+        self.signals.time_changed.emit(current_time)
+        self.current_time = current_time
+
     def stop(self):
         if self.filetype in self.windll_list:
             self.win_command('stop', self.alias)
         elif self.filetype in self.pygame_list:
             pygame.mixer.music.stop()
         self.is_playing = False
-        self.current_time = 0
+        self.set_current_time(0)
         self.started = False
 
     def goto(self, position):
         goto = position/self.pixel_time_conversion_rate
+        print(goto)
         if self.is_segment and goto > self.segment_length:
             self.outside_of_downloaded_range = True
             if self.is_playing or not self.started:
@@ -301,8 +341,7 @@ class SoundPlayer(QRunnable):
         elif self.is_paused:
             if not self.outside_of_downloaded_range_playing:
                 self.time_changed_time_pause = True
-        self.current_time = goto
-        self.signals.time_changed.emit(self.current_time)
+        self.set_current_time(goto)
 
 
 class WaveformSlider(QSlider):
