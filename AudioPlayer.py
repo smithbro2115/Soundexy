@@ -40,6 +40,7 @@ class SoundPlayer(QRunnable):
         self.ended = False
         self.started = False
         self.outside_of_downloaded_range = False
+        self.downloading = False
         self.outside_of_downloaded_range_playing = False
         self.length = 0
         self.segment_length = 0
@@ -53,7 +54,9 @@ class SoundPlayer(QRunnable):
             self.pixel_time_conversion_rate = conversion_rate
             self.length = result.duration
             self.is_remote = True
-            self.is_segment = True
+            self.outside_of_downloaded_range = True
+            self.downloading = True
+            self.outside_of_downloaded_range_playing = True
 
     def handle_new_sound_local(self):
         self.path = self.current_result.path
@@ -61,14 +64,16 @@ class SoundPlayer(QRunnable):
         self.play()
 
     def handle_new_sound_remote(self, path):
+        self.downloading = False
         self.path = path
         self.preload(self.current_result, self.pixel_time_conversion_rate)
         self.play()
 
     def handle(self, result, conversion_rate, path=None, segment=False):
+        print(self.started)
         if segment:
             self.handle_segment(path, result, conversion_rate)
-        elif not self.current_result == result or not self.started:
+        elif not self.current_result == result:
             self.pixel_time_conversion_rate = conversion_rate
             self.current_result = result
             if isinstance(result, SearchResults.Local):
@@ -84,11 +89,14 @@ class SoundPlayer(QRunnable):
             self.pause()
 
     def handle_segment(self, path, result, conversion_rate):
+        self.downloading = False
         self.pixel_time_conversion_rate = conversion_rate
         self.current_result = result
         self.path = path
         self.preload(self.current_result, self.pixel_time_conversion_rate, True)
-        self.play()
+        if self.current_time < self.length and self.outside_of_downloaded_range_playing:
+            self.play()
+            self.outside_of_downloaded_range = False
 
     def handle_download_complete(self, path):
         self.reload(path=path, is_complete=True)
@@ -236,10 +244,13 @@ class SoundPlayer(QRunnable):
 
     def pause(self):
         print('paused')
-        if self.filetype in self.windll_list:
-            self.win_command('pause', self.alias)
-        elif self.filetype in self.pygame_list:
-            pygame.mixer.music.pause()
+        if not self.downloading:
+            if self.filetype in self.windll_list:
+                self.win_command('pause', self.alias)
+            elif self.filetype in self.pygame_list:
+                pygame.mixer.music.pause()
+        else:
+            self.outside_of_downloaded_range_playing = False
         self.is_playing = False
         self.is_paused = True
 
@@ -261,7 +272,10 @@ class SoundPlayer(QRunnable):
                 self.reload()
                 pygame.mixer.music.play(start=play_from / 1000)
         else:
-            pygame.mixer.music.unpause()
+            if not self.downloading:
+                pygame.mixer.music.unpause()
+            else:
+                self.outside_of_downloaded_range_playing = False
 
     def play_from_windll(self, play_from):
         if not self.started:
@@ -317,6 +331,7 @@ class SoundPlayer(QRunnable):
         self.current_time = current_time
 
     def stop(self):
+        print('stopped')
         if self.filetype in self.windll_list:
             self.win_command('stop', self.alias)
         elif self.filetype in self.pygame_list:
