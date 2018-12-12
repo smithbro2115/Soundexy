@@ -15,6 +15,7 @@ class PlaysoundException(Exception):
 
 class SoundSigs(QObject):
     time_changed = pyqtSignal(float)
+    set_current_time = pyqtSignal(float)
     reset_cursor = pyqtSignal()
     error = pyqtSignal(str)
 
@@ -23,6 +24,8 @@ class SoundPlayer(QRunnable):
     def __init__(self):
         super(SoundPlayer, self).__init__()
         self.path = ''
+        self.waveform = None
+        self.label = None
         self.is_playing = False
         self.is_paused = False
         self.is_segment = False
@@ -47,6 +50,12 @@ class SoundPlayer(QRunnable):
         self.loop = False
         self.pixel_time_conversion_rate = 0
         pygame.mixer.pre_init(48000, -16, 2, 512)
+
+    def set_waveform(self, waveform):
+        self.waveform = waveform
+
+    def set_label(self, label):
+        self.label = label
 
     def remote_sound(self, result, conversion_rate):
         if not self.current_result == result:
@@ -112,8 +121,13 @@ class SoundPlayer(QRunnable):
                 time.sleep(sleep_time)
                 stop_time = time.time()
                 time_elapsed = (stop_time - start_time)*1000
-                if self.is_playing:
-                    self.set_current_time(self.current_time + time_elapsed)
+                current_time = self.current_time + time_elapsed
+                if self.is_segment and current_time > self.segment_length*1000:
+                    self.outside_of_downloaded_range_playing = True
+                    self.outside_of_downloaded_range = True
+                    self.pause()
+                elif self.is_playing:
+                    self.set_current_time(current_time)
                 if self.current_time >= self.length:
                     self.ended = True
             if not self.is_playing or self.ended:
@@ -238,7 +252,8 @@ class SoundPlayer(QRunnable):
         except pygame.error:
             self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                     "Try downloading it again.")
-        if was_playing:
+        if was_playing or self.outside_of_downloaded_range_playing:
+            self.outside_of_downloaded_range = False
             self.outside_of_downloaded_range_playing = False
             self.play()
 
@@ -310,6 +325,18 @@ class SoundPlayer(QRunnable):
     def calculate_px_time_conversion_rate(waveform_width, sound_duration):
         return waveform_width/sound_duration
 
+    @staticmethod
+    def get_formatted_time_from_milliseconds(milliseconds):
+        minutes = milliseconds // 60000
+        seconds = (milliseconds / 1000) % 60
+        milliseconds = milliseconds % 1000
+        formatted_time = '%02d:%02d:%03d' % (minutes, seconds, milliseconds)
+        return formatted_time
+
+    def set_label_text(self, current_time):
+        string = 'Current Time: ' + self.get_formatted_time_from_milliseconds(current_time)
+        self.label.setText(string)
+
     def get_current_time(self):
         return self.current_time
 
@@ -327,8 +354,10 @@ class SoundPlayer(QRunnable):
             return False
 
     def set_current_time(self, current_time):
-        self.signals.time_changed.emit(current_time)
+        self.waveform.move_to_current_time(current_time)
         self.current_time = current_time
+        if current_time % 2:
+            self.set_label_text(current_time)
 
     def stop(self):
         print('stopped')
@@ -343,7 +372,7 @@ class SoundPlayer(QRunnable):
     def goto(self, position):
         goto = position/self.pixel_time_conversion_rate
         print(goto)
-        if self.is_segment and goto > self.segment_length:
+        if self.is_segment and goto > self.segment_length*1000:
             self.outside_of_downloaded_range = True
             if self.is_playing or not self.started:
                 self.outside_of_downloaded_range_playing = True

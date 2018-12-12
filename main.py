@@ -11,6 +11,7 @@ import traceback
 import Downloader
 import os
 from Wave import make_waveform
+import time
 
 
 # TODO get website audio to play and generate waveform
@@ -53,6 +54,7 @@ class Gui(GUI.Ui_MainWindow):
         self.cache_thread_pool = QThreadPool()
         self.current_results = {}
         self.waveform = WaveformSlider(self.audio_player)
+        self.audio_player.set_waveform(self.waveform)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -72,6 +74,7 @@ class Gui(GUI.Ui_MainWindow):
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
+        self.audio_player.set_label(self.currentTimeLabel)
         self.search_state_free = self.topbarLibraryFreeCheckbox.checkState()
         self.search_state_local = self.topbarLibraryLocalCheckbox.checkState()
         self.search_state_paid = self.topbarLibraryPaidCheckbox.checkState()
@@ -92,7 +95,6 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
-        self.audio_player.signals.time_changed.connect(self.time_changed)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.audio_player.signals.error.connect(self.show_error)
         self.play_sound_thread_pool.start(self.audio_player)
@@ -206,19 +208,6 @@ class Gui(GUI.Ui_MainWindow):
                 self.local_sound_init(self.single_clicked_result)
             else:
                 self.remote_sound_init(self.single_clicked_result, self.single_clicked_result.id)
-
-    @staticmethod
-    def get_formatted_time_from_milliseconds(milliseconds):
-        minutes = milliseconds // 60000
-        seconds = (milliseconds / 1000) % 60
-        milliseconds = milliseconds % 1000
-        formatted_time = '%02d:%02d:%03d' % (minutes, seconds, milliseconds)
-        return formatted_time
-
-    def time_changed(self, current_time):
-        string = 'Current Time: ' + self.get_formatted_time_from_milliseconds(current_time)
-        self.currentTimeLabel.setText(string)
-        self.waveform.move_to_current_time(current_time)
 
     def reset_cursor(self):
         self.waveform.reset_cursor()
