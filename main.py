@@ -96,6 +96,7 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
+        self.audio_player.signals.time_changed.connect(self.set_current_time)
         self.audio_player.signals.error.connect(self.show_error)
         self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 0, 1)
@@ -211,6 +212,24 @@ class Gui(GUI.Ui_MainWindow):
 
     def reset_cursor(self):
         self.waveform.reset_cursor()
+
+    @staticmethod
+    def get_formatted_time_from_milliseconds(milliseconds):
+        minutes = milliseconds // 60000
+        seconds = (milliseconds / 1000) % 60
+        milliseconds = milliseconds % 1000
+        formatted_time = '%02d:%02d:%03d' % (minutes, seconds, milliseconds)
+        return formatted_time
+
+    def set_label_text(self, current_time):
+        string = 'Current Time: ' + self.get_formatted_time_from_milliseconds(current_time)
+        self.currentTimeLabel.setText(string)
+
+    def set_current_time(self):
+        current_time = self.audio_player.current_time
+        self.waveform.move_to_current_time()
+        if current_time % 2:
+            self.set_label_text(current_time)
 
     def freesound_set_url(self, url):
         self.freesound_url = url

@@ -14,7 +14,7 @@ class PlaysoundException(Exception):
 
 
 class SoundSigs(QObject):
-    time_changed = pyqtSignal(float)
+    time_changed = pyqtSignal()
     set_current_time = pyqtSignal(float)
     reset_cursor = pyqtSignal()
     error = pyqtSignal(str)
@@ -115,21 +115,30 @@ class SoundPlayer(QRunnable):
         pass
         while True:
             while self.is_playing and not self.ended:
-                start_time = time.time()
+                # start_time = time.time()
                 rate = 1/self.pixel_time_conversion_rate
                 sleep_time = rate/1000
                 time.sleep(sleep_time)
-                stop_time = time.time()
-                time_elapsed = (stop_time - start_time)*1000
-                current_time = self.current_time + time_elapsed
-                if self.is_segment and current_time > self.segment_length*1000:
-                    self.outside_of_downloaded_range_playing = True
-                    self.outside_of_downloaded_range = True
-                    self.pause()
-                elif self.is_playing:
-                    self.set_current_time(current_time)
-                if self.current_time >= self.length:
-                    self.ended = True
+                # stop_time = time.time()
+                # time_elapsed = (stop_time - start_time)*1000
+                try:
+                    current_time = self.get_current_time(alias=self.alias)
+                except PlaysoundException as e:
+                    pass
+                else:
+                    print('test')
+                    # print(self.get_current_time())
+                    if self.is_segment and current_time > self.segment_length:
+                        self.outside_of_downloaded_range_playing = True
+                        self.outside_of_downloaded_range = True
+                        self.pause()
+                    elif self.is_playing:
+                        self.current_time = current_time
+                        self.signals.time_changed.emit()
+                        # print('player: ' + str(self.current_time))
+                        # self.set_current_time(current_time)
+                    if self.current_time >= self.length:
+                        self.ended = True
             if not self.is_playing or self.ended:
                 time.sleep(.003)
 
@@ -149,8 +158,10 @@ class SoundPlayer(QRunnable):
             raise PlaysoundException(exceptionMessage)
         return buf.value
 
+    def test(self):
+        print(self.get_current_time())
+
     def restart(self):
-        print('restart')
         if self.filetype in self.windll_list:
             self.stop()
             self.load_into_windll()
@@ -173,8 +184,7 @@ class SoundPlayer(QRunnable):
             sample_rate = f.samplerate
             print(sample_rate)
             if segment:
-                print('segment 2')
-                self.segment_length = f.duration
+                self.segment_length = f.duration*1000
                 self.is_segment = True
                 print(self.current_time)
                 self.load(self.path, result.duration, conversion_rate, sample_rate, current_time=self.current_time)
@@ -204,7 +214,6 @@ class SoundPlayer(QRunnable):
         self.win_command('open "' + self.path + '" alias', self.alias)
         self.win_command('set', self.alias, 'time format milliseconds')
         durationInMS = self.win_command('status', self.alias, 'length')
-
         if block:
             sleep(float(durationInMS) / 1000.0)
 
@@ -219,7 +228,6 @@ class SoundPlayer(QRunnable):
                                     "Try downloading it again.")
 
     def reload(self, block=False, path='', is_complete=False):
-        print('reloaded')
         self.reloaded = True
         if path != '':
             self.path = path
@@ -258,7 +266,6 @@ class SoundPlayer(QRunnable):
             self.play()
 
     def pause(self):
-        print('paused')
         if not self.downloading:
             if self.filetype in self.windll_list:
                 self.win_command('pause', self.alias)
@@ -283,7 +290,6 @@ class SoundPlayer(QRunnable):
                 pygame.mixer.music.set_pos(play_from / 1000)
                 pygame.mixer.music.unpause()
             except pygame.error:
-                print('error')
                 self.reload()
                 pygame.mixer.music.play(start=play_from / 1000)
         else:
@@ -293,6 +299,7 @@ class SoundPlayer(QRunnable):
                 self.outside_of_downloaded_range_playing = False
 
     def play_from_windll(self, play_from):
+        print(self.get_current_time(self.alias))
         if not self.started:
             durationInMS = self.win_command('status', self.alias, 'length')
             self.win_command('play', self.alias, 'from 0 to', durationInMS.decode())
@@ -304,7 +311,6 @@ class SoundPlayer(QRunnable):
             self.win_command('play', self.alias)
 
     def play(self, play_from=-1):
-        print('played')
         if play_from > 0:
             self.set_current_time(play_from)
         elif self.time_changed_time_pause or self.reloaded:
@@ -337,8 +343,12 @@ class SoundPlayer(QRunnable):
         string = 'Current Time: ' + self.get_formatted_time_from_milliseconds(current_time)
         self.label.setText(string)
 
-    def get_current_time(self):
-        return self.current_time
+    def get_current_time(self, alias=None):
+        if self.filetype in self.windll_list:
+            # print(self.win_command('status', self.alias, 'length'))
+            return float(self.win_command('status', alias, 'position'))
+        elif self.filetype in self.pygame_list:
+            return pygame.mixer.music.get_pos()
 
     def end(self):
         if self.loop:
@@ -354,13 +364,15 @@ class SoundPlayer(QRunnable):
             return False
 
     def set_current_time(self, current_time):
-        self.waveform.move_to_current_time(current_time)
         self.current_time = current_time
-        if current_time % 2:
-            self.set_label_text(current_time)
+        # print('player: ' + str(self.current_time))
+        self.signals.time_changed.emit()
+        # self.waveform.move_to_current_time(current_time)
+        # self.current_time = current_time
+        # if current_time % 2:
+        #     self.set_label_text(current_time)
 
     def stop(self):
-        print('stopped')
         if self.filetype in self.windll_list:
             self.win_command('stop', self.alias)
         elif self.filetype in self.pygame_list:
@@ -372,7 +384,7 @@ class SoundPlayer(QRunnable):
     def goto(self, position):
         goto = position/self.pixel_time_conversion_rate
         print(goto)
-        if self.is_segment and goto > self.segment_length*1000:
+        if self.is_segment and goto > self.segment_length:
             self.outside_of_downloaded_range = True
             if self.is_playing or not self.started:
                 self.outside_of_downloaded_range_playing = True
@@ -423,8 +435,10 @@ class WaveformSlider(QSlider):
         self.current_result = result
         self.current_sound_duration = result.duration
 
-    def move_to_current_time(self, current_time):
+    def move_to_current_time(self):
         sound_duration = self.current_sound_duration
+        current_time = self.audio_player.current_time
+        # print('main: ' + str(current_time))
         progress = current_time/sound_duration
         self.setSliderPosition(self.maximum()*progress)
 
