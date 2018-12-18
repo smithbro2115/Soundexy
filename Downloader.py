@@ -39,8 +39,8 @@ class Downloader(QRunnable):
         for chunk in r.iter_content(amount):
             if self.canceled:
                 fd.close()
-                os.remove(file_downloader)
-                os.remove(file_path)
+                self.remove(file_downloader)
+                self.remove(file_path)
                 break
             fd.write(chunk)
             if not emitted_ready_for_preview:
@@ -57,7 +57,13 @@ class Downloader(QRunnable):
             self.signals.download_done.emit(file_downloader)
         else:
             fd.close()
-            os.remove(file_path)
+            self.remove(file_path)
 
     def cancel(self):
         self.canceled = True
+
+    def remove(self, file_path):
+        try:
+            os.remove(file_path)
+        except (PermissionError, FileNotFoundError):
+            pass

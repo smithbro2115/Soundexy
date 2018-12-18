@@ -73,13 +73,14 @@ class SoundPlayer(QRunnable):
         self.play()
 
     def handle_new_sound_remote(self, path):
+        print('remote')
+        self.stop()
         self.downloading = False
         self.path = path
         self.preload(self.current_result, self.pixel_time_conversion_rate)
         self.play()
 
     def handle(self, result, conversion_rate, path=None, segment=False):
-        print(self.started)
         if segment:
             self.handle_segment(path, result, conversion_rate)
         elif not self.current_result == result:
@@ -90,7 +91,6 @@ class SoundPlayer(QRunnable):
             else:
                 self.handle_new_sound_remote(path)
         elif self.ended and self.current_result == result:
-            print(self.current_result, result, self.ended)
             self.restart()
         elif self.is_paused:
             self.unpause()
@@ -115,30 +115,22 @@ class SoundPlayer(QRunnable):
         pass
         while True:
             while self.is_playing and not self.ended:
-                # start_time = time.time()
                 rate = 1/self.pixel_time_conversion_rate
                 sleep_time = rate/1000
                 time.sleep(sleep_time)
-                # stop_time = time.time()
-                # time_elapsed = (stop_time - start_time)*1000
-                try:
-                    current_time = self.get_current_time(alias=self.alias)
-                except PlaysoundException as e:
-                    pass
-                else:
-                    print('test')
-                    # print(self.get_current_time())
-                    if self.is_segment and current_time > self.segment_length:
-                        self.outside_of_downloaded_range_playing = True
-                        self.outside_of_downloaded_range = True
-                        self.pause()
-                    elif self.is_playing:
-                        self.current_time = current_time
-                        self.signals.time_changed.emit()
-                        # print('player: ' + str(self.current_time))
-                        # self.set_current_time(current_time)
-                    if self.current_time >= self.length:
-                        self.ended = True
+                start_time = self.time_started
+                self.time_started = time.time()
+                stop_time = time.time()
+                time_elapsed = (stop_time - start_time)*1000
+                current_time = self.current_time + time_elapsed
+                if self.is_segment and current_time > self.segment_length:
+                    self.outside_of_downloaded_range_playing = True
+                    self.outside_of_downloaded_range = True
+                    self.pause()
+                elif self.is_playing:
+                    self.set_current_time(current_time)
+                if self.current_time >= self.length:
+                    self.ended = True
             if not self.is_playing or self.ended:
                 time.sleep(.003)
 
@@ -161,17 +153,15 @@ class SoundPlayer(QRunnable):
     def test(self):
         print(self.get_current_time())
 
-    def restart(self):
+    def restart(self, play_from=0):
         if self.filetype in self.windll_list:
             self.stop()
             self.load_into_windll()
-            self.goto(0)
-            self.play()
+            self.play(play_from)
         else:
             self.stop()
             self.reload_into_pygame()
-            self.goto(0)
-            self.play()
+            self.play(play_from)
 
     def preload(self, result, conversion_rate, segment=False):
         busy = self.get_busy()
@@ -299,7 +289,6 @@ class SoundPlayer(QRunnable):
                 self.outside_of_downloaded_range_playing = False
 
     def play_from_windll(self, play_from):
-        print(self.get_current_time(self.alias))
         if not self.started:
             durationInMS = self.win_command('status', self.alias, 'length')
             self.win_command('play', self.alias, 'from 0 to', durationInMS.decode())
@@ -311,6 +300,7 @@ class SoundPlayer(QRunnable):
             self.win_command('play', self.alias)
 
     def play(self, play_from=-1):
+        print('play')
         if play_from > 0:
             self.set_current_time(play_from)
         elif self.time_changed_time_pause or self.reloaded:
@@ -343,12 +333,8 @@ class SoundPlayer(QRunnable):
         string = 'Current Time: ' + self.get_formatted_time_from_milliseconds(current_time)
         self.label.setText(string)
 
-    def get_current_time(self, alias=None):
-        if self.filetype in self.windll_list:
-            # print(self.win_command('status', self.alias, 'length'))
-            return float(self.win_command('status', alias, 'position'))
-        elif self.filetype in self.pygame_list:
-            return pygame.mixer.music.get_pos()
+    def get_current_time(self):
+        return self.current_time
 
     def end(self):
         if self.loop:
@@ -365,32 +351,27 @@ class SoundPlayer(QRunnable):
 
     def set_current_time(self, current_time):
         self.current_time = current_time
-        # print('player: ' + str(self.current_time))
         self.signals.time_changed.emit()
-        # self.waveform.move_to_current_time(current_time)
-        # self.current_time = current_time
-        # if current_time % 2:
-        #     self.set_label_text(current_time)
 
     def stop(self):
         if self.filetype in self.windll_list:
             self.win_command('stop', self.alias)
         elif self.filetype in self.pygame_list:
             pygame.mixer.music.stop()
+            print('stopped')
         self.is_playing = False
         self.set_current_time(0)
         self.started = False
 
     def goto(self, position):
         goto = position/self.pixel_time_conversion_rate
-        print(goto)
         if self.is_segment and goto > self.segment_length:
             self.outside_of_downloaded_range = True
             if self.is_playing or not self.started:
                 self.outside_of_downloaded_range_playing = True
                 self.pause()
         elif self.ended:
-            self.play(play_from=goto)
+            self.restart(play_from=goto)
         elif self.is_playing:
             self.pause()
             self.play(play_from=goto)
@@ -439,8 +420,12 @@ class WaveformSlider(QSlider):
         sound_duration = self.current_sound_duration
         current_time = self.audio_player.current_time
         # print('main: ' + str(current_time))
-        progress = current_time/sound_duration
-        self.setSliderPosition(self.maximum()*progress)
+        try:
+            progress = current_time/sound_duration
+        except ZeroDivisionError:
+            pass
+        else:
+            self.setSliderPosition(self.maximum()*progress)
 
     def reset_cursor(self):
         self.setSliderPosition(0)

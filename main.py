@@ -143,15 +143,15 @@ class Gui(GUI.Ui_MainWindow):
             except ZeroDivisionError:
                 self.show_error("This sound can't be played because it has no duration")
             else:
+                self.audio_player.stop()
                 self.audio_player.remote_sound(self.current_result, self.pixel_time_conversion_rate)
                 url = result.preview
+                self.waveform.load_result(self.current_result)
+                self.waveform.clear_waveform()
+                self.waveform.start_busy_indicator_waveform()
                 if self.cache_thread_pool.activeThreadCount() > 0:
                     self.current_downloader.cancel()
                 downloader = Downloader.Downloader(url, sound_id)
-                self.waveform.load_result(self.current_result)
-                self.waveform.clear_waveform()
-                self.audio_player.stop()
-                self.waveform.start_busy_indicator_waveform()
                 downloader.signals.downloaded.connect(self.downloaded_ready_for_preview)
                 downloader.signals.already_exists.connect(self.download_already_exists)
                 downloader.signals.download_done.connect(self.download_done)
@@ -176,9 +176,10 @@ class Gui(GUI.Ui_MainWindow):
         self.single_clicked_result = self.current_results[sound_id]
 
     def download_already_exists(self, path):
-        self.make_waveform(path)
+        print('download already exists')
         self.waveform.load_result(self.current_result)
-        self.audio_player.handle(self.current_result, self.pixel_time_conversion_rate, path=path)
+        self.make_waveform(path)
+        self.audio_player.handle_new_sound_remote(path)
 
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)
@@ -228,8 +229,7 @@ class Gui(GUI.Ui_MainWindow):
     def set_current_time(self):
         current_time = self.audio_player.current_time
         self.waveform.move_to_current_time()
-        if current_time % 2:
-            self.set_label_text(current_time)
+        self.set_label_text(current_time)
 
     def freesound_set_url(self, url):
         self.freesound_url = url
