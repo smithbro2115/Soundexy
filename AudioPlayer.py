@@ -112,7 +112,6 @@ class SoundPlayer(QRunnable):
 
     @pyqtSlot()
     def run(self):
-        pass
         while True:
             while self.is_playing and not self.ended:
                 rate = 1/self.pixel_time_conversion_rate
