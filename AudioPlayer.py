@@ -73,7 +73,6 @@ class SoundPlayer(QRunnable):
         self.play()
 
     def handle_new_sound_remote(self, path):
-        print('remote')
         self.stop()
         self.downloading = False
         self.path = path
@@ -199,7 +198,12 @@ class SoundPlayer(QRunnable):
 
         self.alias = 'playsound_' + str(random())
         print('open "' + self.path + '" alias', self.alias)
-        self.win_command('open "' + self.path + '" alias', self.alias)
+        try:
+            self.win_command('open "' + self.path + '" alias', self.alias)
+        except PlaysoundException:
+            self.path = self.get_short_path_name(self.path)
+            self.load_into_windll()
+            pass
         self.win_command('set', self.alias, 'time format milliseconds')
         durationInMS = self.win_command('status', self.alias, 'length')
         if block:
@@ -228,12 +232,18 @@ class SoundPlayer(QRunnable):
         from time import sleep
 
         print('open "' + self.path + '" alias', self.alias)
-        self.win_command('open "' + self.path + '" alias', self.alias)
-        self.win_command('set', self.alias, 'time format milliseconds')
-        durationInMS = self.win_command('status', self.alias, 'length')
+        try:
+            self.win_command('open "' + self.path + '" alias', self.alias)
+        except PlaysoundException:
+            # self.path = self.path.encode('ascii')
+            # self.reload()
+            pass
+        else:
+            self.win_command('set', self.alias, 'time format milliseconds')
+            durationInMS = self.win_command('status', self.alias, 'length')
 
-        if block:
-            sleep(float(durationInMS) / 1000.0)
+            if block:
+                sleep(float(durationInMS) / 1000.0)
 
     def reload_into_pygame(self, is_complete=False):
         if is_complete and self.is_segment:
@@ -320,16 +330,24 @@ class SoundPlayer(QRunnable):
         return waveform_width/sound_duration
 
     @staticmethod
-    def get_formatted_time_from_milliseconds(milliseconds):
-        minutes = milliseconds // 60000
-        seconds = (milliseconds / 1000) % 60
-        milliseconds = milliseconds % 1000
-        formatted_time = '%02d:%02d:%03d' % (minutes, seconds, milliseconds)
-        return formatted_time
-
-    def set_label_text(self, current_time):
-        string = 'Current Time: ' + self.get_formatted_time_from_milliseconds(current_time)
-        self.label.setText(string)
+    def get_short_path_name(long_name):
+        from ctypes import wintypes
+        import ctypes
+        _GetShortPathNameW = ctypes.windll.kernel32.GetShortPathNameW
+        _GetShortPathNameW.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+        _GetShortPathNameW.restype = wintypes.DWORD
+        """
+        Gets the short path name of a given long path.
+        http://stackoverflow.com/a/23598461/200291
+        """
+        output_buf_size = 0
+        while True:
+            output_buf = ctypes.create_unicode_buffer(output_buf_size)
+            needed = _GetShortPathNameW(long_name, output_buf, output_buf_size)
+            if output_buf_size >= needed:
+                return output_buf.value
+            else:
+                output_buf_size = needed
 
     def get_current_time(self):
         return self.current_time
