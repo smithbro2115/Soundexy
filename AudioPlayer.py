@@ -112,7 +112,6 @@ class SoundPlayer(QRunnable):
 
     @pyqtSlot()
     def run(self):
-        pass
         while True:
             while self.is_playing and not self.ended:
                 rate = 1/self.pixel_time_conversion_rate
@@ -176,7 +175,6 @@ class SoundPlayer(QRunnable):
             if segment:
                 self.segment_length = f.duration*1000
                 self.is_segment = True
-                print(self.current_time)
                 self.load(self.path, result.duration, conversion_rate, sample_rate, current_time=self.current_time)
             else:
                 self.load(self.path, result.duration, conversion_rate, sample_rate)
@@ -251,6 +249,7 @@ class SoundPlayer(QRunnable):
             self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                     "Try downloading it again.")
         if was_playing or self.outside_of_downloaded_range_playing:
+            print(was_playing, self.outside_of_downloaded_range_playing)
             self.outside_of_downloaded_range = False
             self.outside_of_downloaded_range_playing = False
             self.play()
@@ -273,7 +272,7 @@ class SoundPlayer(QRunnable):
             except Exception as e:
                 print(e)
             self.started = True
-        elif play_from > 0:
+        elif play_from >= 0:
             try:
                 if self.filetype == '.mp3':
                     pygame.mixer.music.rewind()
@@ -300,7 +299,6 @@ class SoundPlayer(QRunnable):
             self.win_command('play', self.alias)
 
     def play(self, play_from=-1):
-        print('play')
         if play_from > 0:
             self.set_current_time(play_from)
         elif self.time_changed_time_pause or self.reloaded:
