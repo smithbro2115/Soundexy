@@ -86,4 +86,4 @@ class LocalSearch(QRunnable):
             self.signals.finished.emit()
 
 
-add_to_index('c:/Users/Josh/downloads')
+add_to_index('c:/Users/smith/downloads')

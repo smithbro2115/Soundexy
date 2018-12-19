@@ -71,6 +71,7 @@ class Gui(GUI.Ui_MainWindow):
         self.window = None
         self.is_busy_searching = False
         self.background_active_search_indicator = False
+        self.waveform_maker = None
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
@@ -190,10 +191,13 @@ class Gui(GUI.Ui_MainWindow):
         self.make_waveform(path)
 
     def make_waveform(self, sound_path):
+        if self.waveform_thread_pool.activeThreadCount() > 0 and self.waveform_maker is not None:
+            self.waveform_maker.interrupt = True
         self.waveform.clear_waveform()
         self.waveform.start_busy_indicator_waveform()
         make_waveform_worker = Worker(make_waveform, sound_path)
         make_waveform_worker.signals.finished.connect(self.waveform.add_waveform_to_background)
+        self.waveform_maker = make_waveform_worker
         self.waveform_thread_pool.start(make_waveform_worker)
 
     def spacebar(self):
@@ -468,6 +472,8 @@ class Worker(QRunnable):
         self.kwargs = kwargs
         self.signals = WorkerSignals()
 
+        self.interrupt = False
+
         # Add the callback to our kwargs
         self.kwargs['progress_callback'] = self.signals.progress
 
@@ -484,7 +490,8 @@ class Worker(QRunnable):
         else:
             self.signals.result.emit(result)  # Return the result of the processing
         finally:
-            self.signals.finished.emit()  # Done
+            if not self.interrupt:
+                self.signals.finished.emit()  # Done
 
 
 if __name__ == "__main__":
