@@ -8,6 +8,11 @@ from PyQt5 import QtGui, QtWidgets
 import SearchResults
 from PyQt5.QtWidgets import QSlider
 
+# TODO Implement selection of a portion
+# TODO Allow search results to be dragged on to player
+# TODO Allow sound to be dragged into an external program (maybe convert the file if its not a mp3 or wav
+# TODO Implement pitching and time shifting
+
 
 class PlaysoundException(Exception):
     pass

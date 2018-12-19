@@ -11,10 +11,12 @@ import traceback
 import Downloader
 import os
 from Wave import make_waveform
-import time
 
 
-# TODO get website audio to play and generate waveform
+# TODO Add metadata to the sidebar when a new sound starts playing
+# TODO Make the playlist functionality (it would be really cool if we can add remote sounds to a playlist)
+# FIXME Make sure that a running search stops and doesn't add it's results if a new search starts
+
 
 class Gui(GUI.Ui_MainWindow):
     def __init__(self):
