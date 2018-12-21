@@ -11,6 +11,7 @@ import traceback
 import Downloader
 import os
 from Wave import make_waveform
+from CustomPyQtWidgets import SearchResultsTable
 
 
 # TODO Add metadata to the sidebar when a new sound starts playing
@@ -50,11 +51,9 @@ class Gui(GUI.Ui_MainWindow):
         self.running_search_librarys = {'Free': 0, 'Paid': 0, 'Local': 0}
         self.freesound_amount_of_pages = None
         self.freesound_url = None
-        self.row_order = {'Title': 0, 'Description': 1, 'Duration': 2,
-                          'Library': 3, 'Author': 4, 'Id': 5}
-        self.searchResultsTableModel = QtGui.QStandardItemModel()
         self.cache_thread_pool = QThreadPool()
         self.current_results = {}
+        self.searchResultsTable = SearchResultsTable()
         self.waveform = WaveformSlider(self.audio_player)
         self.audio_player.set_waveform(self.waveform)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -92,12 +91,9 @@ class Gui(GUI.Ui_MainWindow):
         self.actionPlay.triggered.connect(self.spacebar)
         self.actionImport_Directory.triggered.connect(self.open_import_directory)
         self.actionImport_Audio_File.triggered.connect(self.open_import_audio_file)
-        self.searchResultsTable.setModel(self.searchResultsTableModel)
-        headers = sorted(self.row_order, key=self.row_order.get)
-        self.searchResultsTableModel.headers = headers
-        self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
-        self.searchResultsTableModel.setColumnCount(6)
-        self.searchResultsTable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        # self.searchResultsTable.setModel(self.searchResultsTableModel)
+        # self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
+        # self.searchResultsTableModel.setColumnCount(6)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
@@ -105,6 +101,7 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.signals.error.connect(self.show_error)
         self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 0, 1)
+        self.mainWidget.insertWidget(0, self.searchResultsTable)
         self.searchLineEdit.setStyleSheet("""
                                         QLineEdit{background-repeat: no-repeat; 
                                         background-position: center;}
@@ -112,16 +109,16 @@ class Gui(GUI.Ui_MainWindow):
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
-        id_column_index = self.row_order['Id']
-        sound_id = self.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
-        sound = self.current_results[sound_id]
+        id_column_index = self.searchResultsTable.row_order['Id']
+        sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
+        sound = self.searchResultsTable.current_results[sound_id]
         if isinstance(sound, SearchResults.Local):
-            result = self.current_results[sound_id]
+            result = self.searchResultsTable.current_results[sound_id]
             self.local_sound_init(result)
             self.clear_album_image()
             self.add_album_image_to_player(sound.album_image)
         elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
-            self.remote_sound_init(self.current_results[sound_id], sound_id)
+            self.remote_sound_init(self.searchResultsTable.current_results[sound_id], sound_id)
         self.single_clicked_result = None
 
     def local_sound_init(self, result):
@@ -176,19 +173,20 @@ class Gui(GUI.Ui_MainWindow):
 
     def single_clicked_row(self, signal):
         row_index = signal.row()
-        id_column_index = self.row_order['Id']
-        sound_id = self.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
-        self.single_clicked_result = self.current_results[sound_id]
+        id_column_index = self.searchResultsTable.row_order['Id']
+        sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
+        self.single_clicked_result = self.searchResultsTable.current_results[sound_id]
 
     def download_already_exists(self, path):
         print('download already exists')
-        self.waveform.load_result(self.current_result)
+        self.waveform.load_result(self.searchResultsTable.current_result)
         self.make_waveform(path)
         self.audio_player.handle_new_sound_remote(path)
 
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)
-        self.audio_player.handle_segment(sound_path, self.current_result, self.pixel_time_conversion_rate)
+        self.audio_player.handle_segment(sound_path, self.searchResultsTable.current_result,
+                                         self.pixel_time_conversion_rate)
 
     def download_done(self, path):
         self.audio_player.handle_download_complete(path)
@@ -322,7 +320,7 @@ class Gui(GUI.Ui_MainWindow):
 
     def add_results_to_search_results_table(self, results):
         for result in results:
-            self.current_results[result.id] = result
+            self.searchResultsTable.current_results[result.id] = result
 
             title_cell = QtGui.QStandardItem(str(result.title))
             description_cell = QtGui.QStandardItem(str(result.description))
@@ -336,7 +334,7 @@ class Gui(GUI.Ui_MainWindow):
             row = Row(self.row_order, title_cell, author_cell,
                       description_cell, duration_cell, library_cell, sound_id)
 
-            self.searchResultsTableModel.appendRow(row)
+            self.searchResultsTable.searchResultsTableModel.appendRow(row)
 
     def start_search(self):
         self.search_keywords = self.searchLineEdit
@@ -375,14 +373,14 @@ class Gui(GUI.Ui_MainWindow):
         self.running_search = True
         self.running_search_keywords = keywords
         self.running_search_librarys = {'Free': free, 'Paid': paid, 'Local': local}
-        self.searchResultsTableModel.setRowCount(0)
+        self.searchResultsTable.searchResultsTableModel.setRowCount(0)
         clear_cache_worker = Worker(self.clear_cache)
         self.cache_thread_pool.start(clear_cache_worker)
-        self.current_results = {}
+        self.searchResultsTable.current_results = {}
         if local:
             self.running_local_search = True
             local = LocalFileHandler.LocalSearch(keywords, excluded_words)
-            local.signals.batch_found.connect(self.add_results_to_search_results_table)
+            local.signals.batch_found.connect(self.searchResultsTable.add_results_to_search_results_table)
             local.signals.finished.connect(lambda: self.finished_search(1))
             self.local_search_thread_pool.start(local)
         if free:

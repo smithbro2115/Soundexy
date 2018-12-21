@@ -30,12 +30,13 @@ def add_to_index(path):
         index_paths = []
         for i in index:
             index_paths.append(i.path)
-        for root, dirs, files in os.walk(path):
-            for file in files:
-                file_path = os.path.join(root, file.title())
-                if determine_if_file_should_be_added_to_index(file_path, index_paths):
-                    append_to_index(index, file_path)
-            save_obj(index, 'local_index')
+        if os.path.isdir(path):
+            for root, dirs, files in os.walk(path):
+                for file in files:
+                    file_path = os.path.join(root, file.title())
+                    if determine_if_file_should_be_added_to_index(file_path, index_paths):
+                        append_to_index(index, file_path)
+                save_obj(index, 'local_index')
         else:
             if determine_if_file_should_be_added_to_index(path, index_paths):
                 append_to_index(index, path)
@@ -52,7 +53,7 @@ def append_to_index(index, file_path):
 
 def determine_if_file_should_be_added_to_index(file_path, index_paths):
     extension = os.path.splitext(file_path)[1]
-    if extension in excepted_file_types:
+    if extension.lower() in excepted_file_types:
         if file_path not in index_paths:
             return True
         else:
@@ -102,4 +103,4 @@ class LocalSearch(QRunnable):
             self.signals.finished.emit()
 
 
-# add_to_index('c:/Users/Josh/downloads')
+add_to_index('c:/Users/Josh/downloads')

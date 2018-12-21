@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\Josh\PycharmProjects\Soundexy\NewWaveformAttempt.ui'
+# Form implementation generated from reading ui file 'C:\Users\Josh\PycharmProjects\Soundexy\Gui.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.3
 #
@@ -119,19 +119,6 @@ class Ui_MainWindow(object):
         self.gridLayout.addLayout(self.horizontalLayout, 2, 0, 1, 1)
         self.mainWidget = QtWidgets.QHBoxLayout()
         self.mainWidget.setObjectName("mainWidget")
-        self.searchResultsTable = QtWidgets.QTableView(self.centralwidget)
-        self.searchResultsTable.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustIgnored)
-        self.searchResultsTable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.searchResultsTable.setProperty("showDropIndicator", False)
-        self.searchResultsTable.setDragEnabled(True)
-        self.searchResultsTable.setDragDropOverwriteMode(False)
-        self.searchResultsTable.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
-        self.searchResultsTable.setAlternatingRowColors(False)
-        self.searchResultsTable.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-        self.searchResultsTable.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.searchResultsTable.setSortingEnabled(True)
-        self.searchResultsTable.setObjectName("searchResultsTable")
-        self.mainWidget.addWidget(self.searchResultsTable)
         self.sidebar = QtWidgets.QTabWidget(self.centralwidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
