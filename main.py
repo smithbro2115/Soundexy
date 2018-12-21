@@ -91,11 +91,9 @@ class Gui(GUI.Ui_MainWindow):
         self.actionPlay.triggered.connect(self.spacebar)
         self.actionImport_Directory.triggered.connect(self.open_import_directory)
         self.actionImport_Audio_File.triggered.connect(self.open_import_audio_file)
-        # self.searchResultsTable.setModel(self.searchResultsTableModel)
-        # self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
-        # self.searchResultsTableModel.setColumnCount(6)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
+        self.searchResultsTable.signals.drop_sig.connect(LocalFileHandler.add_to_index)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.audio_player.signals.time_changed.connect(self.set_current_time)
         self.audio_player.signals.error.connect(self.show_error)
@@ -178,14 +176,13 @@ class Gui(GUI.Ui_MainWindow):
         self.single_clicked_result = self.searchResultsTable.current_results[sound_id]
 
     def download_already_exists(self, path):
-        print('download already exists')
         self.waveform.load_result(self.searchResultsTable.current_result)
         self.make_waveform(path)
         self.audio_player.handle_new_sound_remote(path)
 
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)
-        self.audio_player.handle_segment(sound_path, self.searchResultsTable.current_result,
+        self.audio_player.handle_segment(sound_path, self.current_result,
                                          self.pixel_time_conversion_rate)
 
     def download_done(self, path):
@@ -311,12 +308,15 @@ class Gui(GUI.Ui_MainWindow):
         amount_of_pages = self.freesound_amount_of_pages
         keywords = self.running_search_keywords
         page_number = 0
-        while page_number < amount_of_pages:
-            page_number += 1
-            freesound_scraper = WebScrapers.FreesoundScraper(keywords, page_number, url)
-            freesound_scraper.signals.sig_results.connect(self.add_results_to_search_results_table)
-            freesound_scraper.signals.sig_finished.connect(lambda: self.finished_search(2))
-            self.freesound_thread_pool.start(freesound_scraper)
+        if amount_of_pages > 0:
+            while page_number < amount_of_pages:
+                page_number += 1
+                freesound_scraper = WebScrapers.FreesoundScraper(keywords, page_number, url)
+                freesound_scraper.signals.sig_results.connect(self.add_results_to_search_results_table)
+                freesound_scraper.signals.sig_finished.connect(lambda: self.finished_search(2))
+                self.freesound_thread_pool.start(freesound_scraper)
+        else:
+            self.finished_search(2)
 
     def add_results_to_search_results_table(self, results):
         for result in results:
@@ -331,7 +331,7 @@ class Gui(GUI.Ui_MainWindow):
             author_cell = QtGui.QStandardItem(str(result.author))
             library_cell = QtGui.QStandardItem(str(result.library))
             sound_id = QtGui.QStandardItem(str(result.id))
-            row = Row(self.row_order, title_cell, author_cell,
+            row = Row(self.searchResultsTable.row_order, title_cell, author_cell,
                       description_cell, duration_cell, library_cell, sound_id)
 
             self.searchResultsTable.searchResultsTableModel.appendRow(row)
@@ -393,6 +393,8 @@ class Gui(GUI.Ui_MainWindow):
         if paid:
             self.running_paid_search = True
             print('test paid ' + str(keywords))
+        if 1 not in (local, free, paid):
+            self.finished_search(0)
 
     def finished_search(self, search):
         if search == 1:
@@ -402,7 +404,7 @@ class Gui(GUI.Ui_MainWindow):
                 self.running_free_search = False
         elif search == 3:
             self.running_paid_search = False
-        if not self.running_paid_search and not self.running_free_search and not self.running_local_search:
+        if 1 not in (self.running_paid_search, self.running_free_search, self.running_local_search):
             self.stop__busy_indicator_search()
 
     def start_busy_indicator_search(self):

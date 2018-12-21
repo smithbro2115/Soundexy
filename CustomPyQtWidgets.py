@@ -1,4 +1,9 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtCore import pyqtSignal
+
+
+class SearchResultSignals(QtCore.QObject):
+    drop_sig = pyqtSignal(str)
 
 
 class SearchResultsTable(QtWidgets.QTableView):
@@ -15,6 +20,7 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.searchResultsTableModel.setColumnCount(6)
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.current_results = {}
+        self.signals = SearchResultSignals()
 
     def add_results_to_search_results_table(self, results):
         for result in results:
@@ -37,14 +43,20 @@ class SearchResultsTable(QtWidgets.QTableView):
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
             event.accept()
-            print('test')
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls:
+            event.setDropAction(QtCore.Qt.LinkAction)
+            event.accept()
         else:
             event.ignore()
 
     def dropEvent(self, event):
         files = [u.toLocalFile() for u in event.mimeData().urls()]
         for f in files:
-            print(f)
+            self.signals.drop_sig.emit(f)
 
 
 class Row(list):

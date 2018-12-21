@@ -100,7 +100,4 @@ class LocalSearch(QRunnable):
                     results.append(index[i])
             if len(results) > 0:
                 self.signals.batch_found.emit(results)
-            self.signals.finished.emit()
-
-
-add_to_index('c:/Users/Josh/downloads')
+        self.signals.finished.emit()
