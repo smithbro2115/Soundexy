@@ -4,6 +4,9 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 from SearchResults import Local
 
 
+excepted_file_types = ['.mp3', '.wav', '.flac', '.ogg']
+
+
 def load_obj(name):
     with open('obj/' + name + '.pkl', 'rb') as f:
         return pickle.load(f)
@@ -24,23 +27,36 @@ def add_to_index(path):
         save_obj(index, 'local_index')
         print('Made New Index File')
     finally:
+        index_paths = []
+        for i in index:
+            index_paths.append(i.path)
         for root, dirs, files in os.walk(path):
             for file in files:
-                extension = os.path.splitext(file)[1]
-                excepted_file_types = ['.mp3', '.wav', '.flac', '.ogg']
-                if extension in excepted_file_types:
-                    file_path = os.path.join(root, file.title())
-                    index_paths = []
-                    for i in index:
-                        index_paths.append(i.path)
-
-                    if file_path not in index_paths:
-                        i = 'L%08d' % len(index)
-                        local_result = Local()
-                        local_result.populate(file_path, i)
-                        index.append(local_result)
-                        print('Added: ' + file_path + ' to local_index')
+                file_path = os.path.join(root, file.title())
+                if determine_if_file_should_be_added_to_index(file_path, index_paths):
+                    append_to_index(index, file_path)
             save_obj(index, 'local_index')
+        else:
+            if determine_if_file_should_be_added_to_index(path, index_paths):
+                append_to_index(index, path)
+                save_obj(index, 'local_index')
+
+
+def append_to_index(index, file_path):
+    i = 'L%08d' % len(index)
+    local_result = Local()
+    local_result.populate(file_path, i)
+    index.append(local_result)
+    print('Added: ' + file_path + ' to local_index')
+
+
+def determine_if_file_should_be_added_to_index(file_path, index_paths):
+    extension = os.path.splitext(file_path)[1]
+    if extension in excepted_file_types:
+        if file_path not in index_paths:
+            return True
+        else:
+            return False
 
 
 class LocalSearchSigs(QObject):
@@ -86,4 +102,4 @@ class LocalSearch(QRunnable):
             self.signals.finished.emit()
 
 
-add_to_index('c:/Users/Josh/downloads')
+# add_to_index('c:/Users/Josh/downloads')

@@ -90,6 +90,8 @@ class Gui(GUI.Ui_MainWindow):
         # self.topbarLibraryPaidCheckbox.stateChanged.connect(self.search)
         self.actionSearch.triggered.connect(self.start_search)
         self.actionPlay.triggered.connect(self.spacebar)
+        self.actionImport_Directory.triggered.connect(self.open_import_directory)
+        self.actionImport_Audio_File.triggered.connect(self.open_import_audio_file)
         self.searchResultsTable.setModel(self.searchResultsTableModel)
         headers = sorted(self.row_order, key=self.row_order.get)
         self.searchResultsTableModel.headers = headers
@@ -246,6 +248,27 @@ class Gui(GUI.Ui_MainWindow):
     @staticmethod
     def print_result():
         print('download started')
+
+    def open_directory(self):
+        name = QtWidgets.QFileDialog.getExistingDirectory(caption='Open File')
+        return name
+
+    def open_file(self):
+        name = QtWidgets.QFileDialog.getOpenFileName(caption='Open File')
+        return name[0]
+
+    def open_import_directory(self):
+        try:
+            LocalFileHandler.add_to_index(self.open_directory())
+        except TypeError:
+            pass
+
+    def open_import_audio_file(self):
+        try:
+            LocalFileHandler.add_to_index(self.open_file())
+        except TypeError:
+            print('error')
+            pass
 
     def show_error(self, error):
         msg_box = QtWidgets.QMessageBox()

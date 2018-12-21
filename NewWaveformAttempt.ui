@@ -489,6 +489,8 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionImport_Directory"/>
+    <addaction name="actionImport_Audio_File"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -536,6 +538,16 @@
    </property>
    <property name="shortcut">
     <string>Space</string>
+   </property>
+  </action>
+  <action name="actionImport_Directory">
+   <property name="text">
+    <string>Import Directory</string>
+   </property>
+  </action>
+  <action name="actionImport_Audio_File">
+   <property name="text">
+    <string>Import Audio File</string>
    </property>
   </action>
  </widget>
