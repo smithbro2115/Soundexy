@@ -30,6 +30,8 @@ class Gui(GUI.Ui_MainWindow):
         self.local_search_thread_pool.setMaxThreadCount(1)
         self.play_sound_thread_pool.setMaxThreadCount(1)
         self.freesound_thread_pool.setMaxThreadCount(4)
+        self.index_thread_pool = QThreadPool()
+        self.index_thread_pool.setMaxThreadCount(1)
         self.current_downloader = None
         self.search_state_free = None
         self.search_state_local = None
@@ -37,6 +39,7 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform_active = False
         self.waveform_scene = QtWidgets.QGraphicsScene()
         self.waveform_graphic = None
+        self.index_progress_dialog = None
         self.pixel_time_conversion_rate = 0
         self.previous_time = 0
         self.current_time = 0
@@ -89,11 +92,11 @@ class Gui(GUI.Ui_MainWindow):
         # self.topbarLibraryPaidCheckbox.stateChanged.connect(self.search)
         self.actionSearch.triggered.connect(self.start_search)
         self.actionPlay.triggered.connect(self.spacebar)
-        self.actionImport_Directory.triggered.connect(self.open_import_directory)
-        self.actionImport_Audio_File.triggered.connect(self.open_import_audio_file)
+        self.actionImport_Directory.triggered.connect(self.open_directory)
+        self.actionImport_Audio_File.triggered.connect(self.open_file)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
-        self.searchResultsTable.signals.drop_sig.connect(LocalFileHandler.add_to_index)
+        self.searchResultsTable.signals.drop_sig.connect(self.open_import_directory)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.audio_player.signals.time_changed.connect(self.set_current_time)
         self.audio_player.signals.error.connect(self.show_error)
@@ -189,6 +192,27 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.handle_download_complete(path)
         self.make_waveform(path)
 
+    def open_add_to_index_progress_dialog(self):
+        self.index_progress_dialog = QtWidgets.QProgressDialog()
+        button = QtWidgets.QPushButton()
+        button.setStyleSheet('QWidget {background-color: #00ffffff;}')
+        button.setDisabled(True)
+        self.index_progress_dialog.setWindowTitle('Indexing')
+        self.index_progress_dialog.setCancelButton(button)
+        self.index_progress_dialog.setStyleSheet("QWidget {background-color: #31363b; color: white;}\n"
+                                                 " QProgressBar {background-color: #232629;}")
+        self.index_progress_dialog.setAutoClose(True)
+        self.index_progress_dialog.setMaximum(0)
+        self.index_progress_dialog.setMinimum(0)
+        self.index_progress_dialog.setValue(0)
+        self.index_progress_dialog.show()
+
+    def add_to_index_progress_dialog(self, title):
+        self.index_progress_dialog.setLabelText(title)
+
+    def close_index_progress_dialog(self):
+        self.index_progress_dialog.cancel()
+
     def make_waveform(self, sound_path):
         if self.waveform_thread_pool.activeThreadCount() > 0 and self.waveform_maker is not None:
             self.waveform_maker.interrupt = True
@@ -246,21 +270,26 @@ class Gui(GUI.Ui_MainWindow):
 
     def open_directory(self):
         name = QtWidgets.QFileDialog.getExistingDirectory(caption='Open File')
-        return name
+        self.open_import_directory(name)
 
     def open_file(self):
         name = QtWidgets.QFileDialog.getOpenFileName(caption='Open File')
-        return name[0]
+        self.open_import_audio_file(name)
 
-    def open_import_directory(self):
+    def open_import_directory(self, path):
         try:
-            LocalFileHandler.add_to_index(self.open_directory())
+            indexer = LocalFileHandler.Indexer(path)
+            indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
+            indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
+            indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
+            self.index_thread_pool.start(indexer)
         except TypeError:
             pass
 
-    def open_import_audio_file(self):
+    def open_import_audio_file(self, path):
         try:
-            LocalFileHandler.add_to_index(self.open_file())
+            indexer = LocalFileHandler.Indexer(path)
+            self.index_thread_pool.start(indexer)
         except TypeError:
             print('error')
             pass

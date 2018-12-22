@@ -4,60 +4,73 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 from SearchResults import Local
 
 
-excepted_file_types = ['.mp3', '.wav', '.flac', '.ogg']
+class IndexerSigs(QObject):
+    started_adding_items = pyqtSignal()
+    added_item = pyqtSignal(str)
+    finished_adding_items = pyqtSignal()
 
 
-def load_obj(name):
-    with open('obj/' + name + '.pkl', 'rb') as f:
-        return pickle.load(f)
+class Indexer(QRunnable):
+    def __init__(self, path):
+        super(Indexer, self).__init__()
+        self.excepted_file_types = ['.mp3', '.wav', '.flac', '.ogg']
+        self.index_file_name = 'local_index'
+        self.signals = IndexerSigs()
+        self.path = path
 
+    @staticmethod
+    def load_obj(name):
+        with open('obj/' + name + '.pkl', 'rb') as f:
+            return pickle.load(f)
 
-def save_obj(obj, name):
-    with open('obj/' + name + '.pkl', 'wb') as f:
-        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+    @staticmethod
+    def save_obj(obj, name):
+        with open('obj/' + name + '.pkl', 'wb') as f:
+            pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
+    def run(self):
+        index = []
+        try:
+            index = self.load_obj(self.index_file_name)
+            for i in index:
+                print(i.title)
+        except FileNotFoundError:
+            self.save_obj(index, self.index_file_name)
+            print('Made New Index File')
+        finally:
+            index_paths = []
+            for i in index:
+                index_paths.append(i.path)
+            if os.path.isdir(self.path):
+                self.signals.started_adding_items.emit()
+                for root, dirs, files in os.walk(self.path):
+                    for file in files:
+                        file_path = os.path.join(root, file.title())
+                        if self.determine_if_file_should_be_added_to_index(file_path, index_paths):
+                            self.append_to_index(index, file_path)
+                            self.signals.added_item.emit(file_path)
+                    self.save_obj(index, self.index_file_name)
+                self.signals.finished_adding_items.emit()
+            else:
+                if self.determine_if_file_should_be_added_to_index(self.path, index_paths):
+                    self.append_to_index(index, self.path)
+                    self.save_obj(index, self.index_file_name)
 
-def add_to_index(path):
-    index = []
-    try:
-        index = load_obj('local_index')
-        for i in index:
-            print(i.title)
-    except FileNotFoundError:
-        save_obj(index, 'local_index')
-        print('Made New Index File')
-    finally:
-        index_paths = []
-        for i in index:
-            index_paths.append(i.path)
-        if os.path.isdir(path):
-            for root, dirs, files in os.walk(path):
-                for file in files:
-                    file_path = os.path.join(root, file.title())
-                    if determine_if_file_should_be_added_to_index(file_path, index_paths):
-                        append_to_index(index, file_path)
-                save_obj(index, 'local_index')
-        else:
-            if determine_if_file_should_be_added_to_index(path, index_paths):
-                append_to_index(index, path)
-                save_obj(index, 'local_index')
+    @staticmethod
+    def append_to_index(index, file_path):
+        i = 'L%08d' % len(index)
+        local_result = Local()
+        local_result.populate(file_path, i)
+        index.append(local_result)
+        print('Added: ' + file_path + ' to local_index')
 
-
-def append_to_index(index, file_path):
-    i = 'L%08d' % len(index)
-    local_result = Local()
-    local_result.populate(file_path, i)
-    index.append(local_result)
-    print('Added: ' + file_path + ' to local_index')
-
-
-def determine_if_file_should_be_added_to_index(file_path, index_paths):
-    extension = os.path.splitext(file_path)[1]
-    if extension.lower() in excepted_file_types:
-        if file_path not in index_paths:
-            return True
-        else:
-            return False
+    def determine_if_file_should_be_added_to_index(self, file_path, index_paths):
+        extension = os.path.splitext(file_path)[1]
+        if extension.lower() in self.excepted_file_types:
+            if file_path not in index_paths:
+                return True
+            else:
+                return False
 
 
 class LocalSearchSigs(QObject):
@@ -86,7 +99,7 @@ class LocalSearch(QRunnable):
     def run(self):
         results = []
         try:
-            index = load_obj(self.index_path)
+            index = Indexer.load_obj(self.index_path)
         except FileNotFoundError:
             print("File Not Found")
         else:
