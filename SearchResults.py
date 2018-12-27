@@ -102,6 +102,12 @@ class Local:
                 return True
         return False
 
+    def get_dict_of_all_attributes(self):
+        return {'Title': self.title, 'Duration': self.duration, 'Description': self.description, 'ID': self.id,
+                'Author': self.author, 'Library': self.library, 'Channels': self.channels,
+                'File Type': self.file_type, 'File Path': self.path, 'Bit Rate': self.bitrate,
+                'Keywords': self.keywords, 'Sample Rate': self.sample_rate}
+
 
 class Free:
     def __init__(self):
@@ -119,6 +125,11 @@ class Free:
         index = title.rfind('.')
         self.file_type = title[index:]
         self.title = title[:index]
+
+    def get_dict_of_all_attributes(self):
+        return {'Title': self.title, 'Duration': self.duration, 'Description': self.description, 'ID': self.id,
+                'Author': self.author, 'Library': self.library, 'Preview Link': self.preview,
+                'File Type': self.file_type, 'Download Link': self.link}
 
 
 class Paid:

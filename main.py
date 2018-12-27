@@ -107,19 +107,21 @@ class Gui(GUI.Ui_MainWindow):
                                         QLineEdit{background-repeat: no-repeat; 
                                         background-position: center;}
                                         """)
+        self.metaArea.setStyleSheet("""QWidget{background-color: #232629; overflow-y}""")
+        self.metaArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
         id_column_index = self.searchResultsTable.row_order['Id']
         sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
         sound = self.searchResultsTable.current_results[sound_id]
+        result = self.searchResultsTable.current_results[sound_id]
         if isinstance(sound, SearchResults.Local):
-            result = self.searchResultsTable.current_results[sound_id]
             self.local_sound_init(result)
             self.clear_album_image()
             self.add_album_image_to_player(sound.album_image)
         elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
-            self.remote_sound_init(self.searchResultsTable.current_results[sound_id], sound_id)
+            self.remote_sound_init(result, sound_id)
         self.single_clicked_result = None
 
     def local_sound_init(self, result):
@@ -129,6 +131,8 @@ class Gui(GUI.Ui_MainWindow):
             self.show_error("This sound can't be played because it has no duration")
         else:
             if not self.current_result == result or not self.audio_player.get_busy():
+                self.clear_meta_from_meta_tab()
+                self.add_metadata_to_meta_tab(result)
                 self.make_waveform(result.path)
                 self.waveform.load_result(result)
                 self.audio_player.handle(result, self.pixel_time_conversion_rate)
@@ -140,6 +144,8 @@ class Gui(GUI.Ui_MainWindow):
         if self.current_result == result:
             self.audio_player.handle(result, self.pixel_time_conversion_rate)
         else:
+            self.clear_meta_from_meta_tab()
+            self.add_metadata_to_meta_tab(result)
             self.current_result = result
             try:
                 self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
@@ -312,6 +318,25 @@ class Gui(GUI.Ui_MainWindow):
             pixmap_resized_player = pixmap.scaled(180, 180, QtCore.Qt.KeepAspectRatio)
             self.metaAlbumImageLbl.setPixmap(pixmap_resized_meta)
             self.playerAlbumImageLbl.setPixmap(pixmap_resized_player)
+
+    def clear_meta_from_meta_tab(self):
+        layout = self.metaAreaContents.layout()
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().setParent(None)
+
+    def add_metadata_to_meta_tab(self, result):
+        for t, v in result.get_dict_of_all_attributes().items():
+            if v is not None and v != '':
+                tl = QtWidgets.QLabel()
+                tl.setText(t)
+                tl.setStyleSheet("font-weight: bold; font-size: 12px; margin-bottom: 1px;")
+                self.metaAreaContents.layout().addWidget(tl)
+                vl = QtWidgets.QLabel()
+                vl.setText(str(v))
+                vl.setStyleSheet("margin-bottom: 10px;")
+                self.metaAreaContents.layout().addWidget(vl)
+                tl.show()
+                vl.show()
 
     def resize_event(self):
         if self.current_result is not None:

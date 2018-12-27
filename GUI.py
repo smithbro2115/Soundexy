@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'D:\Programming\Soundexy\Gui.ui'
+# Form implementation generated from reading ui file 'C:\Users\Josh\PycharmProjects\Soundexy\Gui.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.3
 #
@@ -149,9 +149,16 @@ class Ui_MainWindow(object):
         self.metaAlbumImageLbl.setScaledContents(True)
         self.metaAlbumImageLbl.setObjectName("metaAlbumImageLbl")
         self.gridLayout_4.addWidget(self.metaAlbumImageLbl, 0, 0, 1, 1)
-        self.metaList = QtWidgets.QListView(self.metaTab)
-        self.metaList.setObjectName("metaList")
-        self.gridLayout_4.addWidget(self.metaList, 1, 0, 1, 1)
+        self.metaArea = QtWidgets.QScrollArea(self.metaTab)
+        self.metaArea.setWidgetResizable(True)
+        self.metaArea.setObjectName("metaArea")
+        self.metaAreaContents = QtWidgets.QWidget()
+        self.metaAreaContents.setGeometry(QtCore.QRect(0, 0, 274, 287))
+        self.metaAreaContents.setObjectName("metaAreaContents")
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.metaAreaContents)
+        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.metaArea.setWidget(self.metaAreaContents)
+        self.gridLayout_4.addWidget(self.metaArea, 1, 0, 1, 1)
         self.sidebar.addTab(self.metaTab, "")
         self.playlistsTab = QtWidgets.QWidget()
         self.playlistsTab.setObjectName("playlistsTab")
