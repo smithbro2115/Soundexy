@@ -341,29 +341,12 @@ class Gui(GUI.Ui_MainWindow):
             while page_number < amount_of_pages:
                 page_number += 1
                 freesound_scraper = WebScrapers.FreesoundScraper(keywords, page_number, url)
-                freesound_scraper.signals.sig_results.connect(self.add_results_to_search_results_table)
+                freesound_scraper.signals.sig_results.connect(
+                    self.searchResultsTable.add_results_to_search_results_table)
                 freesound_scraper.signals.sig_finished.connect(lambda: self.finished_search(2))
                 self.freesound_thread_pool.start(freesound_scraper)
         else:
             self.finished_search(2)
-
-    def add_results_to_search_results_table(self, results):
-        for result in results:
-            self.searchResultsTable.current_results[result.id] = result
-
-            title_cell = QtGui.QStandardItem(str(result.title))
-            description_cell = QtGui.QStandardItem(str(result.description))
-            duration = result.duration/1000
-            minutes = duration // 60
-            seconds = duration % 60
-            duration_cell = QtGui.QStandardItem('%02d:%02d' % (minutes, seconds))
-            author_cell = QtGui.QStandardItem(str(result.author))
-            library_cell = QtGui.QStandardItem(str(result.library))
-            sound_id = QtGui.QStandardItem(str(result.id))
-            row = Row(self.searchResultsTable.row_order, title_cell, author_cell,
-                      description_cell, duration_cell, library_cell, sound_id)
-
-            self.searchResultsTable.searchResultsTableModel.appendRow(row)
 
     def start_search(self):
         self.search_keywords = self.searchLineEdit

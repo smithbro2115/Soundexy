@@ -21,6 +21,9 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.current_results = {}
         self.signals = SearchResultSignals()
+        self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.setSortingEnabled(True)
 
     def add_results_to_search_results_table(self, results):
         for result in results:
