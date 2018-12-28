@@ -68,7 +68,7 @@ class FreesoundScraper(Scraper):
                 if raw_result.has_attr('id'):
                     if self.check_attribution(raw_result):
                         result = SearchResults.Free()
-                        result.preview = 'https://freesound.org/' + \
+                        result.preview = 'https://freesound.org' + \
                                          str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
                         result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
                                              .find('a', {'class': 'title'}).get('title')))
@@ -76,7 +76,7 @@ class FreesoundScraper(Scraper):
                         result.description = raw_result.find('div', {'class': 'sound_description'}).find('p').text
                         result.library = 'Freesound'
                         result.author = raw_result.find('a', {'class': 'user'}).text
-                        result.link = 'https://freesound.org/' + \
+                        result.link = 'https://freesound.org' + \
                                       str(raw_result.find('div', {'class': 'sound_filename'})
                                           .find('a', {'class': 'title'}).get('href'))
                         result.id = raw_result.get('id')

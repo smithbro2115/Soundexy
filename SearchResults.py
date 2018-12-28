@@ -122,9 +122,12 @@ class Free:
         self.file_type = ''
 
     def set_title(self, title):
-        index = title.rfind('.')
-        self.file_type = title[index:]
-        self.title = title[:index]
+        index = title.find('.')
+        if index >= 0:
+            self.file_type = title[index:]
+            self.title = title[:index]
+        else:
+            self.title = title
 
     def get_dict_of_all_attributes(self):
         return {'Title': self.title, 'Duration': self.duration, 'Description': self.description, 'ID': self.id,
