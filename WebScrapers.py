@@ -25,10 +25,14 @@ class Scraper(QRunnable):
         self.signals = ScraperSigs()
         self.page_number = page_number
         self.url = url
+        self.canceled = False
 
     @staticmethod
     def get_results(raw_html):
         pass
+
+    def cancel(self):
+        self.canceled = True
 
 
 class FreesoundScraper(Scraper):
@@ -50,33 +54,36 @@ class FreesoundScraper(Scraper):
 
     @pyqtSlot()
     def run(self):
-        page_number = self.page_number
-        print(page_number)
-        url = self.url
-        raw_html = simple_get(url + '&page=' + str(page_number))
-        results = []
+        if not self.canceled:
+            page_number = self.page_number
+            print(page_number)
+            url = self.url
+            raw_html = simple_get(url + '&page=' + str(page_number))
+            results = []
 
-        raw_results = self.get_results(raw_html)
-        for raw_result in raw_results:
-            if raw_result.has_attr('id'):
-                if self.check_attribution(raw_result):
-                    result = SearchResults.Free()
-                    result.preview = 'https://freesound.org/' + \
-                                     str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
-                    result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
-                                         .find('a', {'class': 'title'}).get('title')))
-                    result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text))
-                    result.description = raw_result.find('div', {'class': 'sound_description'}).find('p').text
-                    result.library = 'Freesound'
-                    result.author = raw_result.find('a', {'class': 'user'}).text
-                    result.link = 'https://freesound.org/' + \
-                                  str(raw_result.find('div', {'class': 'sound_filename'})
-                                      .find('a', {'class': 'title'}).get('href'))
-                    result.id = raw_result.get('id')
+            raw_results = self.get_results(raw_html)
+            for raw_result in raw_results:
+                if self.canceled:
+                    break
+                if raw_result.has_attr('id'):
+                    if self.check_attribution(raw_result):
+                        result = SearchResults.Free()
+                        result.preview = 'https://freesound.org/' + \
+                                         str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
+                        result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
+                                             .find('a', {'class': 'title'}).get('title')))
+                        result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text))
+                        result.description = raw_result.find('div', {'class': 'sound_description'}).find('p').text
+                        result.library = 'Freesound'
+                        result.author = raw_result.find('a', {'class': 'user'}).text
+                        result.link = 'https://freesound.org/' + \
+                                      str(raw_result.find('div', {'class': 'sound_filename'})
+                                          .find('a', {'class': 'title'}).get('href'))
+                        result.id = raw_result.get('id')
 
-                    results.append(result)
+                        results.append(result)
 
-        self.signals.sig_results.emit(results)
+            self.signals.sig_results.emit(results)
         self.signals.sig_finished.emit()
 
 

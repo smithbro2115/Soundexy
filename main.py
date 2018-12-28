@@ -12,6 +12,7 @@ import Downloader
 import os
 from Wave import make_waveform
 from CustomPyQtWidgets import SearchResultsTable
+from Searches import FreesoundSearch
 
 
 # TODO Make the playlist functionality (it would be really cool if we can add remote sounds to a playlist)
@@ -75,6 +76,8 @@ class Gui(GUI.Ui_MainWindow):
         self.is_busy_searching = False
         self.background_active_search_indicator = False
         self.waveform_maker = None
+        self.local_search = None
+        self.free_search = None
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
@@ -269,12 +272,6 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform.move_to_current_time()
         self.set_label_text(current_time)
 
-    def freesound_set_url(self, url):
-        self.freesound_url = url
-
-    def freesound_set_amount_of_pages(self, amount):
-        self.freesound_amount_of_pages = amount
-
     @staticmethod
     def print_result():
         print('download started')
@@ -366,22 +363,6 @@ class Gui(GUI.Ui_MainWindow):
     def change_paid_state(self):
         self.search_state_paid = self.topbarLibraryPaidCheckbox.checkState()
 
-    def freesound_scrape(self):
-        url = self.freesound_url
-        amount_of_pages = self.freesound_amount_of_pages
-        keywords = self.running_search_keywords
-        page_number = 0
-        if amount_of_pages > 0:
-            while page_number < amount_of_pages:
-                page_number += 1
-                freesound_scraper = WebScrapers.FreesoundScraper(keywords, page_number, url)
-                freesound_scraper.signals.sig_results.connect(
-                    self.searchResultsTable.add_results_to_search_results_table)
-                freesound_scraper.signals.sig_finished.connect(lambda: self.finished_search(2))
-                self.freesound_thread_pool.start(freesound_scraper)
-        else:
-            self.finished_search(2)
-
     def start_search(self):
         self.search_keywords = self.searchLineEdit
         search_line = self.search_keywords.text()
@@ -424,18 +405,21 @@ class Gui(GUI.Ui_MainWindow):
         self.cache_thread_pool.start(clear_cache_worker)
         self.searchResultsTable.current_results = {}
         if local:
+            if self.running_local_search and self.local_search is not None:
+                self.local_search.cancel()
             self.running_local_search = True
-            local = LocalFileHandler.LocalSearch(keywords, excluded_words)
-            local.signals.batch_found.connect(self.searchResultsTable.add_results_to_search_results_table)
-            local.signals.finished.connect(lambda: self.finished_search(1))
-            self.local_search_thread_pool.start(local)
+            self.local_search = LocalFileHandler.LocalSearch(keywords, excluded_words)
+            self.local_search.signals.batch_found.connect(self.searchResultsTable.add_results_to_search_results_table)
+            self.local_search.signals.finished.connect(lambda: self.finished_search(1))
+            self.local_search_thread_pool.start(self.local_search)
         if free:
+            if self.running_free_search:
+                self.free_search.cancel()
             self.running_free_search = True
-            freesound_site = WebScrapers.Freesound(keywords)
-            freesound_site.signals.sig_url.connect(self.freesound_set_url)
-            freesound_site.signals.sig_amount_of_pages.connect(self.freesound_set_amount_of_pages)
-            freesound_site.signals.sig_finished.connect(self.freesound_scrape)
-            self.freesound_thread_pool.start(freesound_site)
+            self.free_search = FreesoundSearch(keywords, self.freesound_thread_pool)
+            self.free_search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
+            self.free_search.signals.finished.connect(lambda: self.finished_search(2))
+            self.free_search.run()
         if paid:
             self.running_paid_search = True
             print('test paid ' + str(keywords))

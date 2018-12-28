@@ -87,6 +87,7 @@ class LocalSearch(QRunnable):
         self.index_path = index_path
         self.batch_amount = batch_amount
         self.excluded_words = excluded_words
+        self.canceled = False
 
     @staticmethod
     def search(keywords, word):
@@ -94,6 +95,10 @@ class LocalSearch(QRunnable):
             if keyword.lower() in word.lower():
                 return True
         return False
+
+    def emit_batch(self, results):
+        if not self.canceled:
+            self.signals.batch_found.emit(results)
 
     @pyqtSlot()
     def run(self):
@@ -105,12 +110,17 @@ class LocalSearch(QRunnable):
         else:
             self.signals.started.emit()
             for i in range(len(index)):
+                if self.canceled:
+                    break
                 if len(results) >= self.batch_amount:
-                    self.signals.batch_found.emit(results)
+                    self.emit_batch(results)
                     results.clear()
                 if index[i].search(self.keywords, self.excluded_words):
                     print(index[i].title)
                     results.append(index[i])
             if len(results) > 0:
-                self.signals.batch_found.emit(results)
+                self.emit_batch(results)
         self.signals.finished.emit()
+
+    def cancel(self):
+        self.canceled = True
