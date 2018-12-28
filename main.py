@@ -14,7 +14,6 @@ from Wave import make_waveform
 from CustomPyQtWidgets import SearchResultsTable
 
 
-# TODO Add metadata to the sidebar when a new sound starts playing
 # TODO Make the playlist functionality (it would be really cool if we can add remote sounds to a playlist)
 # FIXME Make sure that a running search stops and doesn't add it's results if a new search starts
 
@@ -118,7 +117,6 @@ class Gui(GUI.Ui_MainWindow):
         result = self.searchResultsTable.current_results[sound_id]
         if isinstance(sound, SearchResults.Local):
             self.local_sound_init(result)
-            self.clear_album_image()
             self.add_album_image_to_player(sound.album_image)
         elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
             self.remote_sound_init(result, sound_id)
@@ -132,6 +130,7 @@ class Gui(GUI.Ui_MainWindow):
         else:
             if not self.current_result == result or not self.audio_player.get_busy():
                 self.clear_meta_from_meta_tab()
+                self.clear_album_image()
                 self.add_metadata_to_meta_tab(result)
                 self.make_waveform(result.path)
                 self.waveform.load_result(result)
@@ -145,6 +144,7 @@ class Gui(GUI.Ui_MainWindow):
             self.audio_player.handle(result, self.pixel_time_conversion_rate)
         else:
             self.clear_meta_from_meta_tab()
+            self.clear_album_image()
             self.add_metadata_to_meta_tab(result)
             self.current_result = result
             try:
@@ -313,7 +313,7 @@ class Gui(GUI.Ui_MainWindow):
         if image is not None:
             with open('graphics/temp_album_image.jpg', 'wb') as f:
                 f.write(image)
-            pixmap = QtGui.QPixmap('C:\\Users\Josh\PycharmProjects\Soundexy\graphics\\temp_album_image.jpg')
+            pixmap = QtGui.QPixmap('graphics\\temp_album_image.jpg')
             pixmap_resized_meta = pixmap.scaled(100, 100, QtCore.Qt.KeepAspectRatio)
             pixmap_resized_player = pixmap.scaled(180, 180, QtCore.Qt.KeepAspectRatio)
             self.metaAlbumImageLbl.setPixmap(pixmap_resized_meta)
@@ -330,11 +330,15 @@ class Gui(GUI.Ui_MainWindow):
                 tl = QtWidgets.QLabel()
                 tl.setText(t)
                 tl.setStyleSheet("font-weight: bold; font-size: 12px; margin-bottom: 1px;")
+                tl.setWordWrap(True)
+                tl.setMinimumWidth(self.metaArea.minimumSizeHint().width() + self.metaArea.verticalScrollBar().width())
                 self.metaAreaContents.layout().addWidget(tl)
                 vl = QtWidgets.QLabel()
                 vl.setText(str(v))
                 vl.setStyleSheet("margin-bottom: 10px;")
+                vl.setMinimumWidth(self.metaArea.minimumSizeHint().width() + self.metaArea.verticalScrollBar().width())
                 self.metaAreaContents.layout().addWidget(vl)
+                vl.setWordWrap(True)
                 tl.show()
                 vl.show()
 
