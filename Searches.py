@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QRunnable, QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QThreadPool, QObject, pyqtSignal, pyqtSlot
 import abc
 import WebScrapers
 
@@ -68,6 +68,10 @@ class FreesoundSearch(Search):
                 self.thread_pool.start(free_search)
         else:
             self.emit_finished()
+
+    def emit_finished(self):
+        if self.thread_pool.activeThreadCount() == 0:
+            self.signals.finished.emit()
 
     def cancel(self):
         super(FreesoundSearch, self).cancel()

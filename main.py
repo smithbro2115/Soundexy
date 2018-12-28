@@ -5,7 +5,6 @@ from PyQt5.QtCore import QThreadPool, QRunnable, pyqtSignal, pyqtSlot, QObject
 import SearchResults
 import re
 from AudioPlayer import SoundPlayer, WaveformSlider
-import WebScrapers
 import LocalFileHandler
 import traceback
 import Downloader
@@ -16,7 +15,6 @@ from Searches import FreesoundSearch
 
 
 # TODO Make the playlist functionality (it would be really cool if we can add remote sounds to a playlist)
-# FIXME Make sure that a running search stops and doesn't add it's results if a new search starts
 
 
 class Gui(GUI.Ui_MainWindow):
