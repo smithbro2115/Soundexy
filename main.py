@@ -341,6 +341,10 @@ class Gui(GUI.Ui_MainWindow):
                 vl.setMinimumWidth(self.metaArea.minimumSizeHint().width() + self.metaArea.verticalScrollBar().width())
                 self.metaAreaContents.layout().addWidget(vl)
                 vl.setWordWrap(True)
+                tl.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                tl.setCursor(QtCore.Qt.IBeamCursor)
+                vl.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                vl.setCursor(QtCore.Qt.IBeamCursor)
                 tl.show()
                 vl.show()
 
