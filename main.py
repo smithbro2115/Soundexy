@@ -208,12 +208,7 @@ class Gui(GUI.Ui_MainWindow):
         self.index_progress_dialog.setWindowTitle('Indexing')
         self.index_progress_dialog.setCancelButton(button)
         self.index_progress_dialog.setStyleSheet("QWidget {background-color: #31363b; color: white;}\n"
-                                                 " QProgressBar {border: 0px; border-radius: 0px;"
-                                                 " background-color: #232629;}\n"
-                                                 " QProgressBar::chunk {background: qlineargradient("
-                                                 "x1: 0, y1: 0.5, x2: 1, y2: 0.5, stop: 0 #232629,"
-                                                 " stop: 0.5 #3DAEE9, stop: 1 #232629)}")
-        self.index_progress_dialog.setMaximumWidth(500)
+                                                 " QProgressBar {background-color: #232629;}")
         self.index_progress_dialog.setAutoClose(True)
         self.index_progress_dialog.setMaximum(0)
         self.index_progress_dialog.setMinimum(0)
