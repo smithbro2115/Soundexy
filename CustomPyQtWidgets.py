@@ -2,9 +2,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal
 
 
-# TODO Make sure added results get added in the right order when they are sorted (this may take some time)
-
-
 class SearchResultSignals(QtCore.QObject):
     drop_sig = pyqtSignal(str)
 
