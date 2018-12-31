@@ -16,6 +16,7 @@ from Searches import FreesoundSearch
 
 # TODO Make sounds downloadable (need to implement a login system)
 # TODO Make the playlist functionality (it would be really cool if we can add remote sounds to a playlist)
+# TODO Make marking system
 
 
 class Gui(GUI.Ui_MainWindow):

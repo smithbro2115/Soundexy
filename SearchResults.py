@@ -103,7 +103,7 @@ class Local:
         return False
 
     def get_dict_of_all_attributes(self):
-        return {'Title': self.title, 'Duration': self.duration, 'Description': self.description, 'ID': self.id,
+        return {'Title': self.title, 'Duration': str(self.duration) + ' ms', 'Description': self.description, 'ID': self.id,
                 'Author': self.author, 'Library': self.library, 'Channels': self.channels,
                 'File Type': self.file_type, 'File Path': self.path, 'Bit Rate': self.bitrate,
                 'Keywords': self.keywords, 'Sample Rate': self.sample_rate}
@@ -130,7 +130,7 @@ class Free:
             self.title = title
 
     def get_dict_of_all_attributes(self):
-        return {'Title': self.title, 'Duration': self.duration, 'Description': self.description, 'ID': self.id,
+        return {'Title': self.title, 'Duration': str(self.duration) + ' ms', 'Description': self.description, 'ID': self.id,
                 'Author': self.author, 'Library': self.library, 'Preview Link': self.preview,
                 'File Type': self.file_type, 'Download Link': self.link}
 
