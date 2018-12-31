@@ -46,8 +46,11 @@ class SearchResultsTable(QtWidgets.QTableView):
                       description_cell, duration_cell, library_cell, sound_id)
 
             self.searchResultsTableModel.appendRow(row)
-            self.sortByColumn(self.horizontalHeader().sortIndicatorSection(),
-                              self.horizontalHeader().sortIndicatorOrder())
+            self.sort()
+
+    def sort(self):
+        self.sortByColumn(self.horizontalHeader().sortIndicatorSection(),
+                          self.horizontalHeader().sortIndicatorOrder())
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
