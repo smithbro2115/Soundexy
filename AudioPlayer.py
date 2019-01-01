@@ -7,6 +7,7 @@ from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot, QThreadPool
 from PyQt5 import QtGui, QtWidgets
 import SearchResults
 from PyQt5.QtWidgets import QSlider
+import traceback
 
 # TODO Implement selection of a portion
 # TODO Allow search results to be dragged on to player
@@ -173,15 +174,24 @@ class SoundPlayer(QRunnable):
         if not self.is_remote:
             self.load(self.path, result.duration, conversion_rate, result.sample_rate)
         else:
-            f = TinyTag.get(self.path)
-            sample_rate = f.samplerate
-            print(sample_rate)
-            if segment:
-                self.segment_length = f.duration*1000
-                self.is_segment = True
-                self.load(self.path, result.duration, conversion_rate, sample_rate, current_time=self.current_time)
+            try:
+                f = TinyTag.get(self.path)
+            except Exception as e:
+                with open(self.path) as file:
+                    print(file.buffer)
+                self.signals.error.emit(str(e))
             else:
-                self.load(self.path, result.duration, conversion_rate, sample_rate)
+                if f.samplerate != 96000:
+                    sample_rate = f.samplerate
+                else:
+                    sample_rate = 44100
+                print(sample_rate)
+                if segment:
+                    self.segment_length = f.duration*1000
+                    self.is_segment = True
+                    self.load(self.path, result.duration, conversion_rate, sample_rate, current_time=self.current_time)
+                else:
+                    self.load(self.path, result.duration, conversion_rate, sample_rate)
 
     def load(self, path, length, pixel_time_rate, sample_rate, block=False, current_time=0):
         self.path = path
