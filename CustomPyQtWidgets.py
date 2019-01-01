@@ -24,6 +24,7 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.setSortingEnabled(True)
+        self.verticalHeader().setVisible(False)
 
     def add_results_to_search_results_table(self, results):
         for result in results:
@@ -42,6 +43,11 @@ class SearchResultsTable(QtWidgets.QTableView):
                       description_cell, duration_cell, library_cell, sound_id)
 
             self.searchResultsTableModel.appendRow(row)
+            self.sort()
+
+    def sort(self):
+        self.sortByColumn(self.horizontalHeader().sortIndicatorSection(),
+                          self.horizontalHeader().sortIndicatorOrder())
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
