@@ -1,6 +1,5 @@
-from tinytag import TinyTag
-import soundfile as sf
-import os
+import MetaData
+import traceback
 
 
 class Local:
@@ -20,40 +19,24 @@ class Local:
         self.sample_rate = 48000
 
     def populate(self, path, identification_number):
-        print(path)
         self.id = identification_number
         self.path = path
-        self.title = os.path.basename(path)
-        self.file_type = os.path.splitext(path)[1]
         self.library = self.get_library(path)
         self.keywords = self.get_words()
-        if self.file_type.lower() == '.wav':
-            try:
-                f = sf.SoundFile(path)
-                self.duration = (len(f) / f.samplerate)*1000
-                self.sample_rate = f.samplerate
-                print(self.duration)
-                self.channels = f.channels
-            except RuntimeError:
-                print('Unrecognized file type')
-        else:
-            try:
-                f = TinyTag.get(path, image=True)
-            except Exception as e:
-                print(e)
-            else:
-                self.album_image = f.get_image()
-                if f.albumartist is not None:
-                    self.author = f.albumartist
-                if f.disc_total is not None:
-                    self.description = f.disc_total
-                self.bitrate = f.bitrate
-                self.sample_rate = f.samplerate
-                if f.duration is not None:
-                    self.duration = round(f.duration*1000)
-                else:
-                    self.duration = 1
-                self.channels = f.channels
+        try:
+            f = MetaData.get_meta_file(self.path)
+            self.title = f.title
+            self.file_type = f.file_type
+            self.sample_rate = f.sample_rate
+            self.duration = f.duration
+            self.channels = f.channels
+            self.album_image = f.album_image
+            self.author = f.artist
+            self.description = f.description
+            self.bitrate = f.bitrate
+        except AttributeError:
+            print(self.file_type)
+            pass
 
     def get_library(self, path):
         if 'Digital Juice' in path:

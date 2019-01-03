@@ -1,142 +1,196 @@
 import os
+import soundfile as sf
 import mutagen.easyid3
 from mutagen.oggvorbis import OggVorbis
 from mutagen.flac import FLAC
-from mutagen.mp3 import EasyMP3 as MP3
+from mutagen.mp3 import EasyMP3
 
 
-class MetadataFile:
-    def __init__(self, path):
-        self.bitrate = 44100
-        self.duration = 0
-        self.sample_rate = 24
-        self.artist = ''
-        self.title = ''
-        self.description = ''
-        self.channels = 0
-        self.file_type = ''
-        self.path = path
-        self.album_image = None
-
-    def populate(self):
-        self.file_type = os.path.splitext(self.path)[1]
-
-    def sample_rate(self):
-        return self.sample_rate
-
-    def title(self):
-        return self.title
-
-    def description(self):
-        return self.description
-
-    def duration(self):
-        return self.duration
-
-    def channels(self):
-        return self.channels
-
-    def path(self):
-        return self.path
-
-    def file_type(self):
-        return self.file_type
-
-    def album_image(self):
-        return self.album_image
-
-    def bitrate(self):
-        return self.bitrate
+def get_meta_file(path):
+    supported_file_types = {'.mp3': Mp3File, '.wav': WavFile,
+                            '.flac': FlacFile, '.ogg': OggFile}
+    filetype = os.path.splitext(path)[1].lower()
+    try:
+        return supported_file_types.get(filetype)(path)
+    except KeyError:
+        print(filetype)
+        raise AttributeError('File type not supported')
 
 
 class MutagenFile:
     def __init__(self, path):
         self.path = path
-        self.file = None
+        self._file = None
 
-    def get_sample_rate(self):
-        return self.file.info.sample_rate
+    @property
+    def sample_rate(self):
+        return self._file.info.sample_rate
 
-    def get_title(self):
+    @property
+    def filename(self):
         return os.path.basename(self.path)
 
-    def get_artist(self):
-        self.get_tag('artist')
+    @property
+    def title(self):
+        return self.get_tag('title')
 
-    def set_artist(self, artist):
+    @title.setter
+    def title(self, title):
+        self.set_tag('title', title)
+
+    @property
+    def artist(self):
+        return self.get_tag('artist')
+
+    @artist.setter
+    def artist(self, artist):
         self.set_tag('artist', artist)
 
-    def get_description(self):
+    @property
+    def url(self):
+        return self.get_tag('url')
+
+    @url.setter
+    def url(self, url):
+        self.set_tag('url', url)
+
+    @property
+    def description(self):
         return self.get_tag('description')
 
-    def set_description(self, description):
+    @description.setter
+    def description(self, description):
         self.set_tag('description', description)
 
-    def get_genre(self):
-        self.get_tag('genre')
+    @property
+    def genre(self):
+        return self.get_tag('genre')
 
-    def set_genre(self, genre):
+    @genre.setter
+    def genre(self, genre):
         self.set_tag('genre', genre)
 
-    def get_duration(self):
-        # in milliseconds
-        return round(self.file.info.length * 1000)
+    @property
+    def album(self):
+        return self.get_tag('album')
 
-    def get_channels(self):
-        return self.file.info.channels
+    @album.setter
+    def album(self, album):
+        self.set_tag('album', album)
 
-    def get_path(self):
-        return self.path
+    @property
+    def album_image(self):
+        return self.get_tag('cover')
 
-    def get_file_type(self):
+    @property
+    def duration(self):
+        """In milliseconds"""
+        try:
+            return round(self._file.info.length * 1000)
+        except AttributeError:
+            print('Sound has no length')
+
+    @property
+    def channels(self):
+        return self._file.info.channels
+
+    @property
+    def file_type(self):
         return os.path.splitext(self.path)[1]
 
-    def get_album_image(self):
-        return None
-
-    def get_bitrate(self):
-        return self.file.info.bitrate
+    @property
+    def bitrate(self):
+        return self._file.info.bitrate
 
     def get_tag(self, tag):
         try:
-            print('test')
-            return self.file[tag]
+            print(self._file)
+            return self._file[tag]
         except KeyError:
-            print('test')
             return None
 
     def set_tag(self, tag, value):
-        self.file[tag] = value
-        self.file.save()
+        self._file[tag] = value
+        self._file.save()
+
+
+class WavFile(MutagenFile):
+    def __init__(self, path):
+        super().__init__(path)
+        self._file = sf.SoundFile(path)
+
+    @property
+    def title(self):
+        return os.path.splitext(self.filename)[0]
+
+    @title.setter
+    def title(self, title):
+        new_dir = os.path.join(os.path.dirname(self.path), title + self.file_type)
+        try:
+            self._file.close()
+            os.rename(self.path, new_dir)
+            self.path = new_dir
+            self._file = sf.SoundFile(self.path)
+        except PermissionError:
+            print('Another application is using this file')
+
+    @property
+    def sample_rate(self):
+        return self._file.samplerate
+
+    @property
+    def duration(self):
+        """In milliseconds"""
+        try:
+            return (len(self._file) / self._file.samplerate)*1000
+        except AttributeError:
+            print('Sound has no length')
+
+    @property
+    def channels(self):
+        return self._file.channels
+
+    @property
+    def bitrate(self):
+        return None
+
+    def get_tag(self, tag):
+        return None
+
+    def set_tag(self, tag, value):
+        pass
 
 
 class OggFile(MutagenFile):
     def __init__(self, path):
         super().__init__(path)
-        self.file = OggVorbis(path)
+        self._file = OggVorbis(path)
 
 
 class FlacFile(MutagenFile):
     def __init__(self, path):
         super().__init__(path)
-        self.file = FLAC(path)
+        try:
+            self._file = FLAC(path)
+        except mutagen.flac.FLACNoHeaderError:
+            print('File could not be imported')
 
 
 class Mp3File(MutagenFile):
     def __init__(self, path):
         super().__init__(path)
-        self.file = MP3(path)
+        self._file = EasyMP3(path)
 
     def get_tag(self, tag):
         try:
-            print(tag)
-            return self.file[tag]
+            print(self._file)
+            return self._file[str(tag)]
         except mutagen.easyid3.EasyID3KeyError:
-            print('error')
             return None
+        except KeyError as e:
+            return self.get_tag(e)
 
 
-# test_ogg = OggFile("C:\\Users\\Josh\\Downloads\\133966_2451120-lq (1).ogg")
-# test_flac = FlacFile("C:\\Users\\Josh\Downloads\\454365__kyles__wind-medium-gusty-cold-winter-wind-swirly-blustery.flac")
-test_mp3 = Mp3File("C:\\Users\\Josh\\Downloads\\Sounddogs-Preview-10795957.mp3")
-print(test_mp3.get_artist())
+def _test():
+    test = Mp3File("C:\\Users\\Josh\\Downloads\\Camping Caper Rough Mix_2.mp3")
+    print(test.get_tag('artist'))
