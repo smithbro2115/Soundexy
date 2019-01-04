@@ -26,18 +26,25 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.setSortingEnabled(True)
         self.verticalHeader().setVisible(False)
 
+    @staticmethod
+    def convert_none_into_space(result):
+        if result is None:
+            return ''
+        else:
+            return result
+
     def add_results_to_search_results_table(self, results):
         for result in results:
             self.current_results[result.id] = result
 
-            title_cell = QtGui.QStandardItem(str(result.title))
-            description_cell = QtGui.QStandardItem(str(result.description))
+            title_cell = QtGui.QStandardItem(str(self.convert_none_into_space(result.title)))
+            description_cell = QtGui.QStandardItem(str(self.convert_none_into_space(result.description)))
             duration = result.duration/1000
             minutes = duration // 60
             seconds = duration % 60
             duration_cell = QtGui.QStandardItem('%02d:%02d' % (minutes, seconds))
-            author_cell = QtGui.QStandardItem(str(result.author))
-            library_cell = QtGui.QStandardItem(str(result.library))
+            author_cell = QtGui.QStandardItem(str(self.convert_none_into_space(result.author)))
+            library_cell = QtGui.QStandardItem(str(self.convert_none_into_space(result.library)))
             sound_id = QtGui.QStandardItem(str(result.id))
             row = Row(self.row_order, title_cell, author_cell,
                       description_cell, duration_cell, library_cell, sound_id)

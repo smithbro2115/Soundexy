@@ -104,9 +104,8 @@ class MutagenFile:
 
     def get_tag(self, tag):
         try:
-            print(self._file)
-            return self._file[tag]
-        except KeyError:
+            return self._file[tag][0]
+        except (KeyError, TypeError):
             return None
 
     def set_tag(self, tag, value):
@@ -183,14 +182,20 @@ class Mp3File(MutagenFile):
 
     def get_tag(self, tag):
         try:
-            print(self._file)
-            return self._file[str(tag)]
+            return self._file[str(tag)][0]
         except mutagen.easyid3.EasyID3KeyError:
             return None
         except KeyError as e:
-            return self.get_tag(e)
+            return self.get_tag_second_try(e)
+
+    def get_tag_second_try(self, tag):
+        try:
+            return self._file[str(tag)][0]
+        except KeyError:
+            return None
 
 
 def _test():
     test = Mp3File("C:\\Users\\Josh\\Downloads\\Camping Caper Rough Mix_2.mp3")
     print(test.get_tag('artist'))
+

@@ -25,7 +25,10 @@ class Local:
         self.keywords = self.get_words()
         try:
             f = MetaData.get_meta_file(self.path)
-            self.title = f.title
+            if f.title is not None:
+                self.title = f.title
+            else:
+                self.title = f.filename
             self.file_type = f.file_type
             self.sample_rate = f.sample_rate
             self.duration = f.duration
@@ -35,7 +38,6 @@ class Local:
             self.description = f.description
             self.bitrate = f.bitrate
         except AttributeError:
-            print(self.file_type)
             pass
 
     def get_library(self, path):
