@@ -210,6 +210,7 @@ class Gui(GUI.Ui_MainWindow):
         self.index_progress_dialog.setStyleSheet("QWidget {background-color: #31363b; color: white;}\n"
                                                  " QProgressBar {background-color: #232629;}")
         self.index_progress_dialog.setAutoClose(True)
+        self.index_progress_dialog.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.index_progress_dialog.setMaximum(0)
         self.index_progress_dialog.setMinimum(0)
         self.index_progress_dialog.setValue(0)

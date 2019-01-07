@@ -1,13 +1,12 @@
 import pygame
-from tinytag import TinyTag
+import MetaData
 import os
 import time
 from random import random
-from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot, QThreadPool
+from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
 from PyQt5 import QtGui, QtWidgets
 import SearchResults
 from PyQt5.QtWidgets import QSlider
-import traceback
 
 # TODO Implement selection of a portion
 # TODO Allow search results to be dragged on to player
@@ -154,9 +153,6 @@ class SoundPlayer(QRunnable):
             raise PlaysoundException(exceptionMessage)
         return buf.value
 
-    def test(self):
-        print(self.get_current_time())
-
     def restart(self, play_from=0):
         if self.filetype in self.windll_list:
             self.stop()
@@ -175,19 +171,16 @@ class SoundPlayer(QRunnable):
             self.load(self.path, result.duration, conversion_rate, result.sample_rate)
         else:
             try:
-                f = TinyTag.get(self.path)
+                f = MetaData.get_meta_file(self.path)
             except Exception as e:
                 with open(self.path) as file:
                     print(file.buffer)
                 self.signals.error.emit(str(e))
             else:
-                if f.samplerate != 96000:
-                    sample_rate = f.samplerate
-                else:
-                    sample_rate = 44100
+                sample_rate = f.sample_rate
                 print(sample_rate)
                 if segment:
-                    self.segment_length = f.duration*1000
+                    self.segment_length = f.duration
                     self.is_segment = True
                     self.load(self.path, result.duration, conversion_rate, sample_rate, current_time=self.current_time)
                 else:

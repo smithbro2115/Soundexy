@@ -141,7 +141,7 @@ class WavFile(MutagenFile):
     def duration(self):
         """In milliseconds"""
         try:
-            return (len(self._file) / self._file.samplerate)*1000
+            return round((len(self._file) / self._file.samplerate)*1000)
         except AttributeError:
             print('Sound has no length')
 
