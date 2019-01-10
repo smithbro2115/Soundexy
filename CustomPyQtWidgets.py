@@ -4,6 +4,20 @@ from PyQt5.QtCore import pyqtSignal
 
 class SearchResultSignals(QtCore.QObject):
     drop_sig = pyqtSignal(str)
+    meta_edit = pyqtSignal(dict)
+
+
+class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
+    def __init__(self, read_only_columns):
+        super(SelectiveReadOnlyColumnModel, self).__init__()
+        self.read_only_columns = read_only_columns
+
+    def flags(self, QModelIndex):
+        base_flags = QtGui.QStandardItemModel.flags(self, QModelIndex)
+        if QModelIndex.column() in self.read_only_columns:
+            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        else:
+            return base_flags
 
 
 class SearchResultsTable(QtWidgets.QTableView):
@@ -12,19 +26,27 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.row_order = {'Title': 0, 'Description': 1, 'Duration': 2,
                           'Library': 3, 'Author': 4, 'Id': 5}
         self.setAcceptDrops(True)
-        self.searchResultsTableModel = QtGui.QStandardItemModel()
+        self.searchResultsTableModel = SelectiveReadOnlyColumnModel([self.row_order['Duration'],
+                                                                     self.row_order['Library'],
+                                                                     self.row_order['Id']])
         self.setModel(self.searchResultsTableModel)
         headers = sorted(self.row_order, key=self.row_order.get)
         self.searchResultsTableModel.headers = headers
         self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
         self.searchResultsTableModel.setColumnCount(6)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.current_results = {}
         self.signals = SearchResultSignals()
         self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.setSortingEnabled(True)
+        self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers | QtWidgets.QAbstractItemView.SelectedClicked)
         self.verticalHeader().setVisible(False)
+
+    def closeEditor(self, *args, **kwargs):
+        row_id = self.get_id_from_row(self.currentIndex().row())
+        meta_label = self.searchResultsTableModel.horizontalHeaderItem(self.currentIndex().column()).text().lower()
+        self.signals.meta_edit.emit({row_id: {meta_label: args[0].text()}})
+        super().closeEditor(*args, **kwargs)
 
     @staticmethod
     def convert_none_into_space(result):
@@ -32,6 +54,12 @@ class SearchResultsTable(QtWidgets.QTableView):
             return ''
         else:
             return result
+
+    def change_result_meta(self, result, meta: dict):
+        result.
+
+    def get_id_from_row(self, row_number: int) -> str:
+        return self.searchResultsTableModel.index(row_number, self.row_order['Id']).data()
 
     def add_results_to_search_results_table(self, results):
         for result in results:
