@@ -2,12 +2,15 @@ import os
 import pickle
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 from SearchResults import Local
+import traceback
 
 
 class IndexerSigs(QObject):
     started_adding_items = pyqtSignal()
     added_item = pyqtSignal(str)
     finished_adding_items = pyqtSignal()
+    deleted_item = pyqtSignal(str)
+    error = pyqtSignal(str)
 
 
 class Indexer(QRunnable):
@@ -20,13 +23,21 @@ class Indexer(QRunnable):
 
     @staticmethod
     def load_obj(name):
-        with open('obj/' + name + '.pkl', 'rb') as f:
-            return pickle.load(f)
+        try:
+            with open('obj/' + name + '.pkl', 'rb') as f:
+                return pickle.load(f)
+        except EOFError:
+            return []
 
     @staticmethod
     def save_obj(obj, name):
         with open('obj/' + name + '.pkl', 'wb') as f:
-            pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+            try:
+                pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+            except TypeError:
+                for o in obj:
+                    print(o.path + '+')
+                raise AttributeError
 
     def run(self):
         index = []
@@ -60,9 +71,10 @@ class Indexer(QRunnable):
     def append_to_index(index, file_path):
         i = 'L%08d' % len(index)
         local_result = Local()
-        local_result.populate(file_path, i)
-        index.append(local_result)
-        print('Added: ' + file_path + ' to local_index')
+        if local_result.populate(file_path, i):
+            index.append(local_result)
+        else:
+            pass
 
     def determine_if_file_should_be_added_to_index(self, file_path, index_paths):
         extension = os.path.splitext(file_path)[1]
@@ -71,6 +83,19 @@ class Indexer(QRunnable):
                 return True
             else:
                 return False
+
+    def delete_from_index(self, result):
+        try:
+            index = self.load_obj(self.index_file_name)
+        except FileNotFoundError as e:
+            self.signals.error.emit(e)
+        else:
+            try:
+                index.pop(result)
+                self.save_obj(index, self.index_file_name)
+                self.signals.deleted_item(result)
+            except KeyError as e:
+                self.signals.error.emit(e)
 
 
 class LocalSearchSigs(QObject):

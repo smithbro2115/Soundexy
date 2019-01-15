@@ -1,5 +1,9 @@
 import MetaData
-import traceback
+from PyQt5.QtCore import pyqtSignal
+
+
+class LocalSigs:
+    failed_to_load_meta = pyqtSignal(str)
 
 
 class Local:
@@ -18,6 +22,7 @@ class Local:
         self.album_image = None
         self.sample_rate = 48000
         self.meta_file = None
+        self.signals = LocalSigs()
 
     def populate(self, path, identification_number):
         self.id = identification_number
@@ -26,20 +31,14 @@ class Local:
         self.keywords = self.get_words()
         try:
             self.meta_file = MetaData.get_meta_file(self.path)
-            if self.meta_file.title is not None:
-                self.title = self.meta_file.title
-            else:
-                self.title = self.meta_file.filename
+        except AttributeError:
+            return False
+        else:
             self.file_type = self.meta_file.file_type
             self.sample_rate = self.meta_file.sample_rate
             self.duration = self.meta_file.duration
             self.channels = self.meta_file.channels
-            self.album_image = self.meta_file.album_image
-            self.author = self.meta_file.artist
-            self.description = self.meta_file.description
-            self.bitrate = self.meta_file.bitrate
-        except AttributeError:
-            pass
+            return True
 
     def repopulate(self):
         self.populate(self.path, self.id)
@@ -92,6 +91,7 @@ class Local:
         return False
 
     def get_dict_of_all_attributes(self):
+        print(self.meta_file)
         return {'Title': self.title, 'Duration': str(self.duration) + ' ms', 'Description': self.description, 'ID': self.id,
                 'Author': self.author, 'Library': self.library, 'Channels': self.channels,
                 'File Type': self.file_type, 'File Path': self.path, 'Bit Rate': self.bitrate,
