@@ -5,6 +5,8 @@ from mutagen.oggvorbis import OggVorbis
 from mutagen.flac import FLAC
 from mutagen.mp3 import EasyMP3
 
+# TODO delete result from index when an error is encountered
+
 
 def get_meta_file(path):
     supported_file_types = {'.mp3': Mp3File, '.wav': WavFile,
@@ -178,7 +180,10 @@ class FlacFile(MutagenFile):
 class Mp3File(MutagenFile):
     def __init__(self, path):
         super().__init__(path)
-        self._file = EasyMP3(path)
+        try:
+            self._file = EasyMP3(path)
+        except mutagen.mp3.HeaderNotFoundError:
+            print('File Type Not Supported')
 
     def get_tag(self, tag):
         try:

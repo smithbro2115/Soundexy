@@ -8,9 +8,11 @@ class SearchResultSignals(QtCore.QObject):
 
 
 class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
-    def __init__(self, read_only_columns):
+    def __init__(self, table_view, read_only_columns):
         super(SelectiveReadOnlyColumnModel, self).__init__()
         self.read_only_columns = read_only_columns
+        self.current_results = {}
+        self.table_view = table_view
 
     def flags(self, QModelIndex):
         base_flags = QtGui.QStandardItemModel.flags(self, QModelIndex)
@@ -19,6 +21,29 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
         else:
             return base_flags
 
+    def setData(self, QModelIndex, Any, role=None):
+        row_id = self.get_id_from_row(QModelIndex.row())
+        meta_label = self.horizontalHeaderItem(QModelIndex.column()).text().lower()
+        if self.change_result_meta(self.table_view.current_results[row_id], {meta_label: Any}):
+            super(SelectiveReadOnlyColumnModel, self).setData(QModelIndex, Any, role)
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def change_result_meta(result, meta: dict):
+        for k, v in meta.items():
+            try:
+                result.meta_file.set_tag(k, v)
+                result.repopulate()
+                return True
+            except Exception as e:
+                print(e)
+                return False
+
+    def get_id_from_row(self, row_number: int) -> str:
+        return self.index(row_number, self.table_view.row_order['Id']).data()
+
 
 class SearchResultsTable(QtWidgets.QTableView):
     def __init__(self):
@@ -26,7 +51,8 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.row_order = {'Title': 0, 'Description': 1, 'Duration': 2,
                           'Library': 3, 'Author': 4, 'Id': 5}
         self.setAcceptDrops(True)
-        self.searchResultsTableModel = SelectiveReadOnlyColumnModel([self.row_order['Duration'],
+        self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self,
+                                                                    [self.row_order['Duration'],
                                                                      self.row_order['Library'],
                                                                      self.row_order['Id']])
         self.setModel(self.searchResultsTableModel)
@@ -42,24 +68,12 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers | QtWidgets.QAbstractItemView.SelectedClicked)
         self.verticalHeader().setVisible(False)
 
-    def closeEditor(self, *args, **kwargs):
-        row_id = self.get_id_from_row(self.currentIndex().row())
-        meta_label = self.searchResultsTableModel.horizontalHeaderItem(self.currentIndex().column()).text().lower()
-        self.signals.meta_edit.emit({row_id: {meta_label: args[0].text()}})
-        super().closeEditor(*args, **kwargs)
-
     @staticmethod
     def convert_none_into_space(result):
         if result is None:
             return ''
         else:
             return result
-
-    def change_result_meta(self, result, meta: dict):
-        result.
-
-    def get_id_from_row(self, row_number: int) -> str:
-        return self.searchResultsTableModel.index(row_number, self.row_order['Id']).data()
 
     def add_results_to_search_results_table(self, results):
         for result in results:

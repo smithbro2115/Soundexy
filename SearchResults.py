@@ -17,6 +17,7 @@ class Local:
         self.keywords = []
         self.album_image = None
         self.sample_rate = 48000
+        self.meta_file = None
 
     def populate(self, path, identification_number):
         self.id = identification_number
@@ -24,21 +25,24 @@ class Local:
         self.library = self.get_library(path)
         self.keywords = self.get_words()
         try:
-            f = MetaData.get_meta_file(self.path)
-            if f.title is not None:
-                self.title = f.title
+            self.meta_file = MetaData.get_meta_file(self.path)
+            if self.meta_file.title is not None:
+                self.title = self.meta_file.title
             else:
-                self.title = f.filename
-            self.file_type = f.file_type
-            self.sample_rate = f.sample_rate
-            self.duration = f.duration
-            self.channels = f.channels
-            self.album_image = f.album_image
-            self.author = f.artist
-            self.description = f.description
-            self.bitrate = f.bitrate
+                self.title = self.meta_file.filename
+            self.file_type = self.meta_file.file_type
+            self.sample_rate = self.meta_file.sample_rate
+            self.duration = self.meta_file.duration
+            self.channels = self.meta_file.channels
+            self.album_image = self.meta_file.album_image
+            self.author = self.meta_file.artist
+            self.description = self.meta_file.description
+            self.bitrate = self.meta_file.bitrate
         except AttributeError:
             pass
+
+    def repopulate(self):
+        self.populate(self.path, self.id)
 
     def get_library(self, path):
         if 'Digital Juice' in path:
