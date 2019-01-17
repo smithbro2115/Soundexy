@@ -48,8 +48,8 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
 class SearchResultsTable(QtWidgets.QTableView):
     def __init__(self):
         super(SearchResultsTable, self).__init__()
-        self.row_order = {'Title': 0, 'Description': 1, 'Duration': 2,
-                          'Library': 3, 'Author': 4, 'Id': 5}
+        self.row_order = {'Name': 0, 'Title': 1, 'Description': 2, 'Duration': 3,
+                          'Library': 4, 'Author': 5, 'Id': 6}
         self.setAcceptDrops(True)
         self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self,
                                                                     [self.row_order['Duration'],
@@ -59,7 +59,7 @@ class SearchResultsTable(QtWidgets.QTableView):
         headers = sorted(self.row_order, key=self.row_order.get)
         self.searchResultsTableModel.headers = headers
         self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
-        self.searchResultsTableModel.setColumnCount(6)
+        self.searchResultsTableModel.setColumnCount(7)
         self.current_results = {}
         self.signals = SearchResultSignals()
         self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
@@ -79,17 +79,19 @@ class SearchResultsTable(QtWidgets.QTableView):
         for result in results:
             self.current_results[result.id] = result
 
-            title_cell = QtGui.QStandardItem(str(self.convert_none_into_space(result.title)))
-            description_cell = QtGui.QStandardItem(str(self.convert_none_into_space(result.description)))
-            duration = result.duration/1000
+            meta_file = result.meta_file
+            title_cell = QtGui.QStandardItem(str(self.convert_none_into_space(meta_file.title)))
+            description_cell = QtGui.QStandardItem(str(self.convert_none_into_space(meta_file.description)))
+            duration = meta_file.duration/1000
             minutes = duration // 60
             seconds = duration % 60
             duration_cell = QtGui.QStandardItem('%02d:%02d' % (minutes, seconds))
-            author_cell = QtGui.QStandardItem(str(self.convert_none_into_space(result.author)))
+            author_cell = QtGui.QStandardItem(str(self.convert_none_into_space(meta_file.artist)))
             library_cell = QtGui.QStandardItem(str(self.convert_none_into_space(result.library)))
             sound_id = QtGui.QStandardItem(str(result.id))
+            name = QtGui.QStandardItem(str(meta_file.filename))
             row = Row(self.row_order, title_cell, author_cell,
-                      description_cell, duration_cell, library_cell, sound_id)
+                      description_cell, duration_cell, library_cell, sound_id, name)
 
             self.searchResultsTableModel.appendRow(row)
             self.sort()
@@ -118,7 +120,7 @@ class SearchResultsTable(QtWidgets.QTableView):
 
 
 class Row(list):
-    def __init__(self, order, title, author, description, duration, library, id):
+    def __init__(self, order, title, author, description, duration, library, id, name):
         super().__init__()
         self.title = title
         self.author = author
@@ -126,12 +128,15 @@ class Row(list):
         self.duration = duration
         self.library = library
         self.id = id
+        self.name = name
         for key in order:
             self.append_to_self(key, order[key])
 
     def append_to_self(self, name, index):
         if name == 'Title':
             self.insert(index, self.title)
+        elif name == 'Name':
+            self.insert(index, self.name)
         elif name == 'Author':
             self.insert(index, self.author)
         elif name == 'Description':

@@ -35,16 +35,12 @@ class Indexer(QRunnable):
             try:
                 pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
             except TypeError:
-                for o in obj:
-                    print(o.path + '+')
                 raise AttributeError
 
     def run(self):
         index = []
         try:
             index = self.load_obj(self.index_file_name)
-            for i in index:
-                print(i.title)
         except FileNotFoundError:
             self.save_obj(index, self.index_file_name)
             print('Made New Index File')
@@ -60,6 +56,7 @@ class Indexer(QRunnable):
                         if self.determine_if_file_should_be_added_to_index(file_path, index_paths):
                             self.append_to_index(index, file_path)
                             self.signals.added_item.emit(file_path)
+                    print(index)
                     self.save_obj(index, self.index_file_name)
                 self.signals.finished_adding_items.emit()
             else:

@@ -15,7 +15,6 @@ def get_meta_file(path):
     try:
         return supported_file_types.get(filetype)(path)
     except KeyError:
-        print(filetype)
         raise AttributeError('File type not supported')
 
 
@@ -115,51 +114,60 @@ class MutagenFile:
         self._file.save()
 
 
-class WavFile(MutagenFile):
+class WavFile:
     def __init__(self, path):
-        super().__init__(path)
-        self._file = sf.SoundFile(path)
+        self.path = path
+        self.sample_rate = None
+        self.duration = None
+        self.channels = None
+        self.artist = ''
+        self.url = ''
+        self.genre = ''
+        self.album = ''
+        self.album_image = None
+        self.description = ''
+        self.populate()
 
     @property
     def title(self):
         return os.path.splitext(self.filename)[0]
 
+    @property
+    def filename(self):
+        return os.path.basename(self.path)
+
     @title.setter
     def title(self, title):
         new_dir = os.path.join(os.path.dirname(self.path), title + self.file_type)
         try:
-            self._file.close()
             os.rename(self.path, new_dir)
             self.path = new_dir
-            self._file = sf.SoundFile(self.path)
         except PermissionError:
             print('Another application is using this file')
 
-    @property
-    def sample_rate(self):
-        return self._file.samplerate
-
-    @property
-    def duration(self):
-        """In milliseconds"""
+    def populate(self):
+        _file = sf.SoundFile(self.path)
         try:
-            return round((len(self._file) / self._file.samplerate)*1000)
+            self.duration = round((len(_file) / _file.samplerate)*1000)
         except AttributeError:
             print('Sound has no length')
+        else:
+            self.channels = _file.channels
+            self.sample_rate = _file.samplerate
 
     @property
-    def channels(self):
-        return self._file.channels
+    def file_type(self):
+        return os.path.splitext(self.path)[1]
 
     @property
     def bitrate(self):
         return None
 
     def get_tag(self, tag):
-        return None
+        return ''
 
     def set_tag(self, tag, value):
-        pass
+        print('wav does not support tags at this point')
 
 
 class OggFile(MutagenFile):
@@ -175,6 +183,7 @@ class FlacFile(MutagenFile):
             self._file = FLAC(path)
         except mutagen.flac.FLACNoHeaderError:
             print('File could not be imported')
+            raise AttributeError
 
 
 class Mp3File(MutagenFile):
@@ -184,6 +193,7 @@ class Mp3File(MutagenFile):
             self._file = EasyMP3(path)
         except mutagen.mp3.HeaderNotFoundError:
             print('File Type Not Supported')
+            raise AttributeError
 
     def get_tag(self, tag):
         try:
