@@ -280,9 +280,9 @@ class Gui(GUI.Ui_MainWindow):
         name = QtWidgets.QFileDialog.getOpenFileName(caption='Open File')
         self.open_import_audio_file(name)
 
-    def open_import_directory(self, path):
+    def open_import_directory(self, paths):
         try:
-            indexer = LocalFileHandler.Indexer(path)
+            indexer = LocalFileHandler.Indexer(paths)
             indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
             indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
             indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)

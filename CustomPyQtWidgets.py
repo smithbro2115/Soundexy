@@ -3,7 +3,7 @@ from PyQt5.QtCore import pyqtSignal
 
 
 class SearchResultSignals(QtCore.QObject):
-    drop_sig = pyqtSignal(str)
+    drop_sig = pyqtSignal(list)
     meta_edit = pyqtSignal(dict)
 
 
@@ -75,11 +75,19 @@ class SearchResultsTable(QtWidgets.QTableView):
         else:
             return result
 
+    @staticmethod
+    def try_to_get_value_from_meta_file(value):
+        try:
+            return value
+        except AttributeError:
+            return ''
+
     def add_results_to_search_results_table(self, results):
         for result in results:
             self.current_results[result.id] = result
 
             meta_file = result.meta_file
+            print(meta_file)
             title_cell = QtGui.QStandardItem(str(self.convert_none_into_space(meta_file.title)))
             description_cell = QtGui.QStandardItem(str(self.convert_none_into_space(meta_file.description)))
             duration = meta_file.duration/1000
@@ -115,8 +123,10 @@ class SearchResultsTable(QtWidgets.QTableView):
 
     def dropEvent(self, event):
         files = [u.toLocalFile() for u in event.mimeData().urls()]
+        paths = []
         for f in files:
-            self.signals.drop_sig.emit(f)
+            paths.append(f)
+        self.signals.drop_sig.emit(paths)
 
 
 class Row(list):

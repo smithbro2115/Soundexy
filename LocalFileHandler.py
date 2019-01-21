@@ -2,7 +2,6 @@ import os
 import pickle
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 from SearchResults import Local
-import traceback
 
 
 class IndexerSigs(QObject):
@@ -14,12 +13,15 @@ class IndexerSigs(QObject):
 
 
 class Indexer(QRunnable):
-    def __init__(self, path):
+    def __init__(self, paths):
         super(Indexer, self).__init__()
         self.excepted_file_types = ['.mp3', '.wav', '.flac', '.ogg']
         self.index_file_name = 'local_index'
         self.signals = IndexerSigs()
-        self.path = path
+        self.paths = paths
+        self.index_paths = []
+        self.index = []
+        self.emitted_start_adding_items = False
 
     @staticmethod
     def load_obj(name):
@@ -37,41 +39,70 @@ class Indexer(QRunnable):
             except TypeError:
                 raise AttributeError
 
+    @staticmethod
+    def emit_signal_if_condition_false(signal: pyqtSignal, condition: bool):
+        if not condition:
+            signal.emit()
+            return True
+        else:
+            return False
+
+    def emit_started_adding_items(self):
+        if self.emit_signal_if_condition_false(self.signals.started_adding_items, self.emitted_start_adding_items):
+            print('test')
+            self.emitted_start_adding_items = True
+
     def run(self):
-        index = []
         try:
-            index = self.load_obj(self.index_file_name)
+            self.index = self.load_obj(self.index_file_name)
         except FileNotFoundError:
-            self.save_obj(index, self.index_file_name)
+            self.save_obj(self.index, self.index_file_name)
             print('Made New Index File')
         finally:
-            index_paths = []
-            for i in index:
-                index_paths.append(i.path)
-            if os.path.isdir(self.path):
-                self.signals.started_adding_items.emit()
-                for root, dirs, files in os.walk(self.path):
-                    for file in files:
-                        file_path = os.path.join(root, file.title())
-                        if self.determine_if_file_should_be_added_to_index(file_path, index_paths):
-                            self.append_to_index(index, file_path)
-                            self.signals.added_item.emit(file_path)
-                    print(index)
-                    self.save_obj(index, self.index_file_name)
-                self.signals.finished_adding_items.emit()
+            self.index_paths = []
+            for i in self.index:
+                self.index_paths.append(i.path)
+            if len(self.paths) > 1:
+                self.add_multiple_paths_to_index(self.paths)
             else:
-                if self.determine_if_file_should_be_added_to_index(self.path, index_paths):
-                    self.append_to_index(index, self.path)
-                    self.save_obj(index, self.index_file_name)
+                print('test')
+                self.add_path_to_index(self.paths[0])
+
+    def add_multiple_paths_to_index(self, paths):
+        self.emit_started_adding_items()
+        for path in paths:
+            self.add_path_to_index(path, emit_when_added=True)
+        self.signals.finished_adding_items.emit()
+
+    def add_path_to_index(self, path, emit_when_added=False):
+        if os.path.isdir(path):
+            self.emit_started_adding_items()
+            self.add_dir_to_index(path, emit_when_added=True)
+        else:
+            self.add_single_to_index(path, emit_when_added=emit_when_added)
+
+    def add_dir_to_index(self, path, emit_when_added=False):
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                file_path = os.path.join(root, file.title())
+                self.add_single_to_index(file_path, emit_when_added=emit_when_added)
+            if len(self.paths) > 1:
+                self.signals.finished_adding_items.emit()
+
+    def add_single_to_index(self, path, emit_when_added=False):
+        if self.determine_if_file_should_be_added_to_index(path, self.index_paths):
+            self.append_to_index(self.index, path)
+            self.save_obj(self.index, self.index_file_name)
+            if emit_when_added:
+                self.signals.added_item.emit(path)
 
     @staticmethod
     def append_to_index(index, file_path):
         i = 'L%08d' % len(index)
         local_result = Local()
         if local_result.populate(file_path, i):
+            print('passed')
             index.append(local_result)
-        else:
-            pass
 
     def determine_if_file_should_be_added_to_index(self, file_path, index_paths):
         extension = os.path.splitext(file_path)[1]
