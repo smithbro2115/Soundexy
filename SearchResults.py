@@ -33,7 +33,6 @@ class Local:
         try:
             self.meta_file = MetaData.get_meta_file(self.path)
         except AttributeError:
-            print('failed')
             return False
         else:
             self.file_type = self.meta_file.file_type

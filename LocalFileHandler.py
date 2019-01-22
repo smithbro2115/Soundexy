@@ -49,7 +49,6 @@ class Indexer(QRunnable):
 
     def emit_started_adding_items(self):
         if self.emit_signal_if_condition_false(self.signals.started_adding_items, self.emitted_start_adding_items):
-            print('test')
             self.emitted_start_adding_items = True
 
     def run(self):
@@ -65,7 +64,6 @@ class Indexer(QRunnable):
             if len(self.paths) > 1:
                 self.add_multiple_paths_to_index(self.paths)
             else:
-                print('test')
                 self.add_path_to_index(self.paths[0])
 
     def add_multiple_paths_to_index(self, paths):
@@ -86,8 +84,8 @@ class Indexer(QRunnable):
             for file in files:
                 file_path = os.path.join(root, file.title())
                 self.add_single_to_index(file_path, emit_when_added=emit_when_added)
-            if len(self.paths) > 1:
-                self.signals.finished_adding_items.emit()
+        if len(self.paths) <= 1:
+            self.signals.finished_adding_items.emit()
 
     def add_single_to_index(self, path, emit_when_added=False):
         if self.determine_if_file_should_be_added_to_index(path, self.index_paths):
@@ -101,7 +99,6 @@ class Indexer(QRunnable):
         i = 'L%08d' % len(index)
         local_result = Local()
         if local_result.populate(file_path, i):
-            print('passed')
             index.append(local_result)
 
     def determine_if_file_should_be_added_to_index(self, file_path, index_paths):
@@ -169,7 +166,6 @@ class LocalSearch(QRunnable):
                     self.emit_batch(results)
                     results.clear()
                 if index[i].search(self.keywords, self.excluded_words):
-                    print(index[i].title)
                     results.append(index[i])
             if len(results) > 0:
                 self.emit_batch(results)

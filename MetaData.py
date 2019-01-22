@@ -126,6 +126,7 @@ class WavFile:
         self.album = ''
         self.album_image = None
         self.description = ''
+        self.tags = {}
         self.populate()
 
     @property
@@ -174,6 +175,7 @@ class OggFile(MutagenFile):
     def __init__(self, path):
         super().__init__(path)
         self._file = OggVorbis(path)
+        self.tags = self._file
 
 
 class FlacFile(MutagenFile):
@@ -181,6 +183,7 @@ class FlacFile(MutagenFile):
         super().__init__(path)
         try:
             self._file = FLAC(path)
+            self.tags = self._file
         except mutagen.flac.FLACNoHeaderError:
             print('File could not be imported')
             raise AttributeError
@@ -191,6 +194,7 @@ class Mp3File(MutagenFile):
         super().__init__(path)
         try:
             self._file = EasyMP3(path)
+            self.tags = self._file
         except mutagen.mp3.HeaderNotFoundError:
             print('File Type Not Supported')
             raise AttributeError

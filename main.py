@@ -183,7 +183,6 @@ class Gui(GUI.Ui_MainWindow):
     def single_clicked_row(self, signal):
         row_index = signal.row()
         id_column_index = self.searchResultsTable.row_order['Id']
-        print(id_column_index)
         sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
         self.single_clicked_result = self.searchResultsTable.current_results[sound_id]
 

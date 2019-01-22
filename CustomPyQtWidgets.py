@@ -87,7 +87,7 @@ class SearchResultsTable(QtWidgets.QTableView):
             self.current_results[result.id] = result
 
             meta_file = result.meta_file
-            print(meta_file)
+            print(meta_file.tags)
             title_cell = QtGui.QStandardItem(str(self.convert_none_into_space(meta_file.title)))
             description_cell = QtGui.QStandardItem(str(self.convert_none_into_space(meta_file.description)))
             duration = meta_file.duration/1000
