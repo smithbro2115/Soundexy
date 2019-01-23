@@ -110,6 +110,7 @@ class Free:
         self.link = ''
         self.library = ''
         self.file_type = ''
+        self.meta_file = self.get_dict_of_all_attributes()
 
     def set_title(self, title):
         index = title.find('.')

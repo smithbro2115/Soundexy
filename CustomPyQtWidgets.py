@@ -8,11 +8,14 @@ class SearchResultSignals(QtCore.QObject):
 
 
 class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
-    def __init__(self, table_view, read_only_columns):
+    def __init__(self, table_view):
         super(SelectiveReadOnlyColumnModel, self).__init__()
-        self.read_only_columns = read_only_columns
+        self.read_only_columns = []
         self.current_results = {}
         self.table_view = table_view
+
+    def set_read_only_columns(self, column_indexes):
+        self.read_only_columns = column_indexes
 
     def flags(self, QModelIndex):
         base_flags = QtGui.QStandardItemModel.flags(self, QModelIndex)
@@ -48,16 +51,16 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
 class SearchResultsTable(QtWidgets.QTableView):
     def __init__(self):
         super(SearchResultsTable, self).__init__()
-        self.row_order = {'Name': 0, 'Title': 1, 'Description': 2, 'Duration': 3,
-                          'Library': 4, 'Author': 5, 'Id': 6}
+        self.row_order = {'File Name': 0, 'Title': 1, 'Description': 2, 'Duration': 3,
+                          'Library': 4, 'Artist': 5, 'Id': 6}
         self.setAcceptDrops(True)
-        self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self,
-                                                                    [self.row_order['Duration'],
-                                                                     self.row_order['Library'],
-                                                                     self.row_order['Id']])
+        self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self)
+        self.searchResultsTableModel.set_read_only_columns([self.get_column_index('Duration'),
+                                                            self.get_column_index('Library'),
+                                                            self.get_column_index('Id')])
         self.setModel(self.searchResultsTableModel)
-        headers = sorted(self.row_order, key=self.row_order.get)
-        self.searchResultsTableModel.headers = headers
+        self.headers = sorted(self.row_order, key=self.row_order.get)
+        self.searchResultsTableModel.headers = self.headers
         self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
         self.searchResultsTableModel.setColumnCount(7)
         self.current_results = {}
@@ -82,31 +85,66 @@ class SearchResultsTable(QtWidgets.QTableView):
         except AttributeError:
             return ''
 
+    @staticmethod
+    def special_values(k, v):
+        if k == 'duration':
+            duration = v / 1000
+            minutes = duration // 60
+            seconds = duration % 60
+            return '%02d:%02d' % (minutes, seconds)
+        else:
+            return v
+
     def add_results_to_search_results_table(self, results):
         for result in results:
             self.current_results[result.id] = result
 
             meta_file = result.meta_file
-            print(meta_file.tags)
-            title_cell = QtGui.QStandardItem(str(self.convert_none_into_space(meta_file.title)))
-            description_cell = QtGui.QStandardItem(str(self.convert_none_into_space(meta_file.description)))
-            duration = meta_file.duration/1000
-            minutes = duration // 60
-            seconds = duration % 60
-            duration_cell = QtGui.QStandardItem('%02d:%02d' % (minutes, seconds))
-            author_cell = QtGui.QStandardItem(str(self.convert_none_into_space(meta_file.artist)))
-            library_cell = QtGui.QStandardItem(str(self.convert_none_into_space(result.library)))
-            sound_id = QtGui.QStandardItem(str(result.id))
-            name = QtGui.QStandardItem(str(meta_file.filename))
-            row = Row(self.row_order, title_cell, author_cell,
-                      description_cell, duration_cell, library_cell, sound_id, name)
-
-            self.searchResultsTableModel.appendRow(row)
+            standard_items = {}
+            for k, v in meta_file().items():
+                readable_version = self.convert_none_into_space(v)
+                checked_for_special = self.special_values(k, readable_version)
+                item = QtGui.QStandardItem(str(checked_for_special))
+                standard_items[k] = item
+            standard_items['Id'] = QtGui.QStandardItem(str(result.id))
+            self.add_to_table_model(standard_items)
             self.sort()
 
     def sort(self):
         self.sortByColumn(self.horizontalHeader().sortIndicatorSection(),
                           self.horizontalHeader().sortIndicatorOrder())
+
+    def add_to_table_model(self, meta_dict):
+        row = []
+        for k, v in meta_dict.items():
+            index = self.get_column_index(k)
+            if index >= 0:
+                if isinstance(v, list):
+                    row.insert(index, v[0])
+                row.insert(index, v)
+            else:
+                print('pass')
+                # self.add_new_column(k)
+                # row.insert(self.get_column_index(k) + 1, v)
+        print(row[1].text())
+        self.searchResultsTableModel.appendRow(row)
+
+    def get_column_index(self, header):
+        header_count = self.searchResultsTableModel.columnCount()
+        for x in range(0, header_count, 1):
+            header_text = self.searchResultsTableModel.horizontalHeaderItem(x).text().lower()
+            if header_text == header.lower():
+                return x
+        else:
+            return -1
+
+    def add_new_column(self, header, hidden=True):
+        self.row_order[header.title()] = len(self.row_order.keys())
+        self.headers = sorted(self.row_order, key=self.row_order.get)
+        self.searchResultsTableModel.setHorizontalHeaderLabels(self.headers)
+        self.searchResultsTableModel.setColumnCount(self.searchResultsTableModel.columnCount() - 1)
+        if hidden:
+            self.setColumnHidden(self.searchResultsTableModel.columnCount() + 1, True)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -130,15 +168,9 @@ class SearchResultsTable(QtWidgets.QTableView):
 
 
 class Row(list):
-    def __init__(self, order, title, author, description, duration, library, id, name):
+    def __init__(self, order, id, meta):
         super().__init__()
-        self.title = title
-        self.author = author
-        self.description = description
-        self.duration = duration
-        self.library = library
         self.id = id
-        self.name = name
         for key in order:
             self.append_to_self(key, order[key])
 

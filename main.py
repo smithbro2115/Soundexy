@@ -481,33 +481,6 @@ class Window(QtWidgets.QMainWindow):
         return super(Window, self).resizeEvent(event)
 
 
-class Row(list):
-    def __init__(self, order, title, author, description, duration, library, id):
-        super().__init__()
-        self.title = title
-        self.author = author
-        self.description = description
-        self.duration = duration
-        self.library = library
-        self.id = id
-        for key in order:
-            self.append_to_self(key, order[key])
-
-    def append_to_self(self, name, index):
-        if name == 'Title':
-            self.insert(index, self.title)
-        elif name == 'Author':
-            self.insert(index, self.author)
-        elif name == 'Description':
-            self.insert(index, self.description)
-        elif name == 'Duration':
-            self.insert(index, self.duration)
-        elif name == 'Library':
-            self.insert(index, self.library)
-        elif name == 'Id':
-            self.insert(index, self.id)
-
-
 class WorkerSignals(QObject):
     finished = pyqtSignal()
     error = pyqtSignal(tuple)

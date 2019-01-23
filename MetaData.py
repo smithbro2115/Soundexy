@@ -5,8 +5,6 @@ from mutagen.oggvorbis import OggVorbis
 from mutagen.flac import FLAC
 from mutagen.mp3 import EasyMP3
 
-# TODO delete result from index when an error is encountered
-
 
 def get_meta_file(path):
     supported_file_types = {'.mp3': Mp3File, '.wav': WavFile,
@@ -21,97 +19,63 @@ def get_meta_file(path):
 class MutagenFile:
     def __init__(self, path):
         self.path = path
-        self._file = None
+        self.meta = {}
+        self.populate()
 
-    @property
-    def sample_rate(self):
-        return self._file.info.sample_rate
+    def __call__(self, *args, **kwargs):
+        return self.meta
+
+    def populate(self):
+        file = self.get_file(self.path)
+        self.meta['file name'] = self.filename
+        self.meta['sample rate'] = self.sample_rate(file)
+        self.meta['channels'] = self.channels(file)
+        self.meta['duration'] = self.duration(file)
+        self.meta['bit rate'] = self.bitrate(file)
+        self.meta['file type'] = self.file_type
+        self.meta.update(file)
+
+    @staticmethod
+    def sample_rate(file):
+        return file.info.sample_rate
 
     @property
     def filename(self):
         return os.path.basename(self.path)
 
-    @property
-    def title(self):
-        return self.get_tag('title')
-
-    @title.setter
-    def title(self, title):
-        self.set_tag('title', title)
-
-    @property
-    def artist(self):
-        return self.get_tag('artist')
-
-    @artist.setter
-    def artist(self, artist):
-        self.set_tag('artist', artist)
-
-    @property
-    def url(self):
-        return self.get_tag('url')
-
-    @url.setter
-    def url(self, url):
-        self.set_tag('url', url)
-
-    @property
-    def description(self):
-        return self.get_tag('description')
-
-    @description.setter
-    def description(self, description):
-        self.set_tag('description', description)
-
-    @property
-    def genre(self):
-        return self.get_tag('genre')
-
-    @genre.setter
-    def genre(self, genre):
-        self.set_tag('genre', genre)
-
-    @property
-    def album(self):
-        return self.get_tag('album')
-
-    @album.setter
-    def album(self, album):
-        self.set_tag('album', album)
-
-    @property
-    def album_image(self):
-        return self.get_tag('cover')
-
-    @property
-    def duration(self):
+    @staticmethod
+    def duration(file):
         """In milliseconds"""
         try:
-            return round(self._file.info.length * 1000)
+            return round(file.info.length * 1000)
         except AttributeError:
             print('Sound has no length')
 
-    @property
-    def channels(self):
-        return self._file.info.channels
+    @staticmethod
+    def channels(file):
+        return file.info.channels
 
     @property
     def file_type(self):
         return os.path.splitext(self.path)[1]
 
-    @property
-    def bitrate(self):
-        return self._file.info.bitrate
+    @staticmethod
+    def bitrate(file):
+        return file.info.bitrate
 
-    def get_tag(self, tag):
+    def get_tag(self, tag, file):
         try:
-            return self._file[tag][0]
+            return file[tag][0]
         except (KeyError, TypeError):
             return None
 
-    def set_tag(self, tag, value):
-        self._file[tag] = value
-        self._file.save()
+    @staticmethod
+    def set_tag(tag, value, file):
+        file[tag] = value
+        file.save()
+
+    def get_file(self, path):
+        pass
 
 
 class WavFile:
@@ -128,6 +92,10 @@ class WavFile:
         self.description = ''
         self.tags = {}
         self.populate()
+        self.meta = {}
+
+    def __call__(self, *args, **kwargs):
+        return self.meta
 
     @property
     def title(self):
@@ -147,14 +115,20 @@ class WavFile:
             print('Another application is using this file')
 
     def populate(self):
+        self.meta['title'] = self.filename
+        self.meta['file name'] = self.filename
         _file = sf.SoundFile(self.path)
         try:
             self.duration = round((len(_file) / _file.samplerate)*1000)
+            self.meta['duration'] = self.duration
         except AttributeError:
             print('Sound has no length')
+            raise AttributeError
         else:
             self.channels = _file.channels
             self.sample_rate = _file.samplerate
+            self.meta['channels'] = self.channels
+            self.meta['sample rate'] = self.sample_rate
 
     @property
     def file_type(self):
@@ -172,44 +146,39 @@ class WavFile:
 
 
 class OggFile(MutagenFile):
-    def __init__(self, path):
-        super().__init__(path)
-        self._file = OggVorbis(path)
-        self.tags = self._file
+    def get_file(self, path):
+        return OggVorbis(path)
 
 
 class FlacFile(MutagenFile):
-    def __init__(self, path):
-        super().__init__(path)
+    def get_file(self, path):
         try:
-            self._file = FLAC(path)
-            self.tags = self._file
+            return FLAC(path)
         except mutagen.flac.FLACNoHeaderError:
             print('File could not be imported')
             raise AttributeError
 
 
 class Mp3File(MutagenFile):
-    def __init__(self, path):
-        super().__init__(path)
+    def get_file(self, path):
         try:
-            self._file = EasyMP3(path)
-            self.tags = self._file
+            return EasyMP3(path)
         except mutagen.mp3.HeaderNotFoundError:
             print('File Type Not Supported')
             raise AttributeError
 
-    def get_tag(self, tag):
+    def get_tag(self, tag, file):
         try:
-            return self._file[str(tag)][0]
+            return file[str(tag)][0]
         except mutagen.easyid3.EasyID3KeyError:
             return None
         except KeyError as e:
-            return self.get_tag_second_try(e)
+            return self.get_tag_second_try(e, file)
 
-    def get_tag_second_try(self, tag):
+    @staticmethod
+    def get_tag_second_try(tag, file):
         try:
-            return self._file[str(tag)][0]
+            return file[str(tag)][0]
         except KeyError:
             return None
 
