@@ -116,6 +116,9 @@ class SearchResultsTable(QtWidgets.QTableView):
 
     def add_to_table_model(self, meta_dict):
         row = []
+        for index in range(0, self.searchResultsTableModel.columnCount()):
+            empty_item = QtGui.QStandardItem(str('test'))
+            row.append(empty_item)
         for k, v in meta_dict.items():
             index = self.get_column_index(k)
             if index >= 0:
@@ -123,18 +126,20 @@ class SearchResultsTable(QtWidgets.QTableView):
                     row.insert(index, v[0])
                 row.insert(index, v)
             else:
-                print('pass')
-                # self.add_new_column(k)
-                # row.insert(self.get_column_index(k) + 1, v)
-        print(row[1].text())
+                self.add_new_column(k)
+                row.insert(self.get_column_index(k) + 1, v)
         self.searchResultsTableModel.appendRow(row)
 
     def get_column_index(self, header):
         header_count = self.searchResultsTableModel.columnCount()
         for x in range(0, header_count, 1):
-            header_text = self.searchResultsTableModel.horizontalHeaderItem(x).text().lower()
-            if header_text == header.lower():
-                return x
+            try:
+                header_text = self.searchResultsTableModel.horizontalHeaderItem(x).text().lower()
+            except AttributeError:
+                return 0
+            else:
+                if header_text == header.lower():
+                    return x
         else:
             return -1
 
