@@ -102,7 +102,10 @@ class SearchResultsTable(QtWidgets.QTableView):
             meta_file = result.meta_file
             standard_items = {}
             for k, v in meta_file().items():
-                readable_version = self.convert_none_into_space(v)
+                if isinstance(v, list):
+                    readable_version = self.convert_none_into_space(v[0])
+                else:
+                    readable_version = self.convert_none_into_space(v)
                 checked_for_special = self.special_values(k, readable_version)
                 item = QtGui.QStandardItem(str(checked_for_special))
                 standard_items[k] = item
@@ -114,42 +117,39 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.sortByColumn(self.horizontalHeader().sortIndicatorSection(),
                           self.horizontalHeader().sortIndicatorOrder())
 
-    def add_to_table_model(self, meta_dict):
+    def return_empty_row(self):
         row = []
-        for index in range(0, self.searchResultsTableModel.columnCount()):
-            empty_item = QtGui.QStandardItem(str('test'))
-            row.append(empty_item)
+        for i in range(0, self.searchResultsTableModel.columnCount(), 1):
+            row.append(QtGui.QStandardItem(''))
+        return row
+
+    def add_to_table_model(self, meta_dict):
+        row = self.return_empty_row()
         for k, v in meta_dict.items():
             index = self.get_column_index(k)
             if index >= 0:
-                if isinstance(v, list):
-                    row.insert(index, v[0])
-                row.insert(index, v)
+                row[index] = v
             else:
-                self.add_new_column(k)
-                row.insert(self.get_column_index(k) + 1, v)
+                self.add_new_column(k, False)
+                row.append(v)
         self.searchResultsTableModel.appendRow(row)
 
     def get_column_index(self, header):
         header_count = self.searchResultsTableModel.columnCount()
         for x in range(0, header_count, 1):
-            try:
-                header_text = self.searchResultsTableModel.horizontalHeaderItem(x).text().lower()
-            except AttributeError:
-                return 0
-            else:
-                if header_text == header.lower():
-                    return x
+            header_text = self.searchResultsTableModel.horizontalHeaderItem(x).text().lower()
+            if header_text == header.lower():
+                return x
         else:
             return -1
 
     def add_new_column(self, header, hidden=True):
         self.row_order[header.title()] = len(self.row_order.keys())
         self.headers = sorted(self.row_order, key=self.row_order.get)
+        self.searchResultsTableModel.setColumnCount(self.searchResultsTableModel.columnCount())
         self.searchResultsTableModel.setHorizontalHeaderLabels(self.headers)
-        self.searchResultsTableModel.setColumnCount(self.searchResultsTableModel.columnCount() - 1)
         if hidden:
-            self.setColumnHidden(self.searchResultsTableModel.columnCount() + 1, True)
+            self.setColumnHidden(self.searchResultsTableModel.columnCount() - 1, True)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
