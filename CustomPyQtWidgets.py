@@ -45,7 +45,7 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
                 return False
 
     def get_id_from_row(self, row_number: int) -> str:
-        return self.index(row_number, self.table_view.row_order['Id']).data()
+        return self.index(row_number, self.table_view.get_column_index('id')).data()
 
 
 class SearchResultsTable(QtWidgets.QTableView):
@@ -70,6 +70,7 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.setSortingEnabled(True)
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers | QtWidgets.QAbstractItemView.SelectedClicked)
         self.verticalHeader().setVisible(False)
+        self.setColumnHidden(self.get_column_index('id'), True)
 
     @staticmethod
     def convert_none_into_space(result):
@@ -171,26 +172,3 @@ class SearchResultsTable(QtWidgets.QTableView):
             paths.append(f)
         self.signals.drop_sig.emit(paths)
 
-
-class Row(list):
-    def __init__(self, order, id, meta):
-        super().__init__()
-        self.id = id
-        for key in order:
-            self.append_to_self(key, order[key])
-
-    def append_to_self(self, name, index):
-        if name == 'Title':
-            self.insert(index, self.title)
-        elif name == 'Name':
-            self.insert(index, self.name)
-        elif name == 'Author':
-            self.insert(index, self.author)
-        elif name == 'Description':
-            self.insert(index, self.description)
-        elif name == 'Duration':
-            self.insert(index, self.duration)
-        elif name == 'Library':
-            self.insert(index, self.library)
-        elif name == 'Id':
-            self.insert(index, self.id)

@@ -168,7 +168,7 @@ class SoundPlayer(QRunnable):
         if busy:
             self.stop()
         if not self.is_remote:
-            self.load(self.path, result.duration, conversion_rate, result.sample_rate)
+            self.load(self.path, result.meta_file()['duration'], conversion_rate, result.meta_file()['sample rate'])
         else:
             try:
                 f = MetaData.get_meta_file(self.path)
@@ -178,7 +178,6 @@ class SoundPlayer(QRunnable):
                 self.signals.error.emit(str(e))
             else:
                 sample_rate = f.sample_rate
-                print(sample_rate)
                 if segment:
                     self.segment_length = f.duration
                     self.is_segment = True
@@ -205,7 +204,6 @@ class SoundPlayer(QRunnable):
         from time import sleep
 
         self.alias = 'playsound_' + str(random())
-        print('open "' + self.path + '" alias', self.alias)
         try:
             self.win_command('open "' + self.path + '" alias', self.alias)
         except PlaysoundException:
@@ -438,7 +436,7 @@ class WaveformSlider(QSlider):
     def load_result(self, result):
         self.reset_cursor()
         self.current_result = result
-        self.current_sound_duration = result.duration
+        self.current_sound_duration = result.meta_file()['duration']
 
     def move_to_current_time(self):
         sound_duration = self.current_sound_duration

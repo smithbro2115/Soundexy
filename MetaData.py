@@ -28,6 +28,7 @@ class MutagenFile:
     def populate(self):
         file = self.get_file(self.path)
         self.meta['file name'] = self.filename
+        self.meta['path'] = self.path
         self.meta['sample rate'] = self.sample_rate(file)
         self.meta['channels'] = self.channels(file)
         self.meta['duration'] = self.duration(file)
@@ -91,8 +92,8 @@ class WavFile:
         self.album_image = None
         self.description = ''
         self.tags = {}
-        self.populate()
         self.meta = {}
+        self.populate()
 
     def __call__(self, *args, **kwargs):
         return self.meta
@@ -115,8 +116,8 @@ class WavFile:
             print('Another application is using this file')
 
     def populate(self):
-        self.meta['title'] = self.filename
         self.meta['file name'] = self.filename
+        self.meta['path'] = self.path
         _file = sf.SoundFile(self.path)
         try:
             self.duration = round((len(_file) / _file.samplerate)*1000)
@@ -155,7 +156,7 @@ class FlacFile(MutagenFile):
         try:
             return FLAC(path)
         except mutagen.flac.FLACNoHeaderError:
-            print('File could not be imported')
+            print('File could not be imported: ' + path)
             raise AttributeError
 
 

@@ -126,14 +126,14 @@ class Gui(GUI.Ui_MainWindow):
 
     def local_sound_init(self, result):
         try:
-            self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
+            self.pixel_time_conversion_rate = self.waveform.maximum() / result.meta_file()['duration']
         except ZeroDivisionError as e:
             self.show_error("This sound can't be played because it has no duration")
         else:
             if not self.current_result == result or not self.audio_player.get_busy():
                 self.clear_meta_from_meta_tab()
                 self.clear_album_image()
-                self.add_metadata_to_meta_tab(result)
+                self.add_metadata_to_meta_tab(result.meta_file())
                 self.make_waveform(result.path)
                 self.waveform.load_result(result)
                 self.audio_player.handle(result, self.pixel_time_conversion_rate)
@@ -210,8 +210,10 @@ class Gui(GUI.Ui_MainWindow):
         self.index_progress_dialog.setStyleSheet("QWidget {background-color: #31363b; color: white;}\n"
                                                  " QProgressBar {background-color: #232629;}")
         self.index_progress_dialog.setAutoClose(True)
-        self.index_progress_dialog.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        self.index_progress_dialog.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.WindowCloseButtonHint)
         self.index_progress_dialog.setMaximum(0)
+        self.index_progress_dialog.setMaximumWidth(500)
+        self.index_progress_dialog.setMinimumWidth(499)
         self.index_progress_dialog.setMinimum(0)
         self.index_progress_dialog.setValue(0)
         self.index_progress_dialog.show()
@@ -322,16 +324,19 @@ class Gui(GUI.Ui_MainWindow):
             layout.itemAt(i).widget().setParent(None)
 
     def add_metadata_to_meta_tab(self, result):
-        for t, v in result.get_dict_of_all_attributes().items():
+        for t, v in result.items():
             if v is not None and v != '':
                 tl = QtWidgets.QLabel()
-                tl.setText(t)
+                tl.setText(t.title())
                 tl.setStyleSheet("font-weight: bold; font-size: 12px; margin-bottom: 1px;")
                 tl.setWordWrap(True)
                 tl.setMinimumWidth(self.metaArea.minimumSizeHint().width() + self.metaArea.verticalScrollBar().width())
                 self.metaAreaContents.layout().addWidget(tl)
                 vl = QtWidgets.QLabel()
-                vl.setText(str(v))
+                if isinstance(v, list):
+                    vl.setText(str(v[0]))
+                else:
+                    vl.setText(str(v))
                 vl.setStyleSheet("margin-bottom: 10px;")
                 vl.setMinimumWidth(self.metaArea.minimumSizeHint().width() + self.metaArea.verticalScrollBar().width())
                 self.metaAreaContents.layout().addWidget(vl)
@@ -437,7 +442,6 @@ class Gui(GUI.Ui_MainWindow):
             self.stop__busy_indicator_search()
 
     def start_busy_indicator_search(self):
-        print('started')
         self.is_busy_searching = True
         self.busy_indicator_small.frameChanged.connect(self.change_frame_busy_indicator_search)
         self.busy_indicator_small.start()
@@ -448,7 +452,6 @@ class Gui(GUI.Ui_MainWindow):
         self.add_file_too_background('graphics/current_frame_small.png')
 
     def stop__busy_indicator_search(self):
-        print('stopped')
         self.clear_busy_indicator()
         self.busy_indicator_small.stop()
         self.is_busy_searching = False

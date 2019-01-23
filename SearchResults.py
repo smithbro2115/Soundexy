@@ -1,5 +1,6 @@
 import MetaData
 from PyQt5.QtCore import pyqtSignal
+import traceback
 
 
 class LocalSigs:
@@ -44,7 +45,8 @@ class Local:
     def repopulate(self):
         self.populate(self.path, self.id)
 
-    def get_library(self, path):
+    @staticmethod
+    def get_library(path):
         if 'Digital Juice' in path:
             return 'Digital Juice'
         elif 'SoundDogs' in path:
