@@ -70,9 +70,10 @@ class MutagenFile:
         except (KeyError, TypeError):
             return None
 
-    @staticmethod
-    def set_tag(tag, value, file):
+    def set_tag(self, tag, value):
+        file = self.get_file(self.path)
         file[tag] = value
+        self.meta[tag] = value
         file.save()
 
     def get_file(self, path):

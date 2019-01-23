@@ -1,6 +1,5 @@
 import MetaData
 from PyQt5.QtCore import pyqtSignal
-import traceback
 
 
 class LocalSigs:
@@ -58,6 +57,10 @@ class Local:
         else:
             return 'Local'
 
+    def set_tag(self, tag, value):
+        self.meta_file.set_tag(tag, value)
+        index = LocalFileHandler.Indexer.delete_from_index()
+
     def get_words(self):
         path_list = list(self.path)
         new_path = []
@@ -112,7 +115,7 @@ class Free:
         self.link = ''
         self.library = ''
         self.file_type = ''
-        self.meta_file = self.get_dict_of_all_attributes()
+        self.tags = self.meta_file()
 
     def set_title(self, title):
         index = title.find('.')
@@ -122,10 +125,10 @@ class Free:
         else:
             self.title = title
 
-    def get_dict_of_all_attributes(self):
-        return {'Title': self.title, 'Duration': str(self.duration) + ' ms', 'Description': self.description, 'ID': self.id,
-                'Author': self.author, 'Library': self.library, 'Preview Link': self.preview,
-                'File Type': self.file_type, 'Download Link': self.link}
+    def meta_file(self):
+        return {'title': self.title, 'duration': self.duration, 'description': self.description, 'id': self.id,
+                'author': self.author, 'library': self.library, 'preview Link': self.preview,
+                'file type': self.file_type, 'download link': self.link}
 
 
 class Paid:

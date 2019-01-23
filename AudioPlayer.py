@@ -177,11 +177,12 @@ class SoundPlayer(QRunnable):
                     print(file.buffer)
                 self.signals.error.emit(str(e))
             else:
-                sample_rate = f.sample_rate
+                sample_rate = f()['sample rate']
                 if segment:
-                    self.segment_length = f.duration
+                    self.segment_length = f()['duration']
                     self.is_segment = True
-                    self.load(self.path, result.duration, conversion_rate, sample_rate, current_time=self.current_time)
+                    self.load(self.path, result.meta_file()['duration'], conversion_rate, sample_rate
+                              , current_time=self.current_time)
                 else:
                     self.load(self.path, result.duration, conversion_rate, sample_rate)
 

@@ -147,7 +147,7 @@ class Gui(GUI.Ui_MainWindow):
         else:
             self.clear_meta_from_meta_tab()
             self.clear_album_image()
-            self.add_metadata_to_meta_tab(result)
+            self.add_metadata_to_meta_tab(result.meta_file())
             self.current_result = result
             try:
                 self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
@@ -352,7 +352,7 @@ class Gui(GUI.Ui_MainWindow):
         if self.current_result is not None:
             self.pixel_time_conversion_rate = (
                 self.audio_player.calculate_px_time_conversion_rate(self.waveform.maximum(),
-                                                                    self.current_result.duration))
+                                                                    self.current_result.meta_file()['duration']))
 
     def get_waveform_width_minus_margin(self):
         horizontal_margin = self.waveform.contentsMargins().left() + self.waveform.contentsMargins().right()
