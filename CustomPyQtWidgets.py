@@ -1,5 +1,6 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal
+import traceback
 
 
 class SearchResultSignals(QtCore.QObject):
@@ -37,11 +38,10 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
     def change_result_meta(result, meta: dict):
         for k, v in meta.items():
             try:
-                result.meta_file.set_tag(k, v)
-                result.repopulate()
+                result.set_tag(k, v)
                 return True
             except Exception as e:
-                print(e)
+                traceback.print_exc()
                 return False
 
     def get_id_from_row(self, row_number: int) -> str:
@@ -131,7 +131,7 @@ class SearchResultsTable(QtWidgets.QTableView):
             if index >= 0:
                 row[index] = v
             else:
-                self.add_new_column(k, False)
+                self.add_new_column(k)
                 row.append(v)
         self.searchResultsTableModel.appendRow(row)
 

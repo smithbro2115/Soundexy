@@ -1,13 +1,10 @@
 import MetaData
-from PyQt5.QtCore import pyqtSignal
-
-
-class LocalSigs:
-    failed_to_load_meta = pyqtSignal(str)
+from PyQt5.QtCore import pyqtSignal, QObject
 
 
 class Local:
     def __init__(self):
+        self.signals = LocalSigs()
         self.title = ''
         self.name = ''
         self.duration = 0
@@ -22,7 +19,6 @@ class Local:
         self.keywords = []
         self.album_image = None
         self.sample_rate = 48000
-        self.signals = LocalSigs()
         self.meta_file = None
 
     def populate(self, path, identification_number):
@@ -59,7 +55,9 @@ class Local:
 
     def set_tag(self, tag, value):
         self.meta_file.set_tag(tag, value)
-        index = LocalFileHandler.Indexer.delete_from_index()
+        self.repopulate()
+        print(self.signals)
+        self.signals.meta_changed.emit(self)
 
     def get_words(self):
         path_list = list(self.path)
@@ -102,6 +100,11 @@ class Local:
                 'Author': self.author, 'Library': self.library, 'Channels': self.channels,
                 'File Type': self.file_type, 'File Path': self.path, 'Bit Rate': self.bitrate,
                 'Keywords': self.keywords, 'Sample Rate': self.sample_rate}
+
+
+class LocalSigs(QObject):
+    failed_to_load_meta = pyqtSignal(str)
+    meta_changed = pyqtSignal(Local)
 
 
 class Free:

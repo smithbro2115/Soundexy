@@ -77,6 +77,7 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform_maker = None
         self.local_search = None
         self.free_search = None
+        self.indexer = LocalFileHandler.Indexer()
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
@@ -110,6 +111,9 @@ class Gui(GUI.Ui_MainWindow):
                                         """)
         self.metaArea.setStyleSheet("""QWidget{background-color: #232629; overflow-y}""")
         self.metaArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
+        self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
+        self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
@@ -283,11 +287,8 @@ class Gui(GUI.Ui_MainWindow):
 
     def open_import_directory(self, paths):
         try:
-            indexer = LocalFileHandler.Indexer(paths)
-            indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
-            indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
-            indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
-            self.index_thread_pool.start(indexer)
+            self.indexer.paths = paths
+            self.index_thread_pool.start(self.indexer)
         except TypeError:
             pass
 
