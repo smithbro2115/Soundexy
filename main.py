@@ -114,6 +114,8 @@ class Gui(GUI.Ui_MainWindow):
         self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
         self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
         self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
+        self.buyButton.setHidden(True)
+        self.downloadButton.setHidden(True)
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
@@ -152,6 +154,7 @@ class Gui(GUI.Ui_MainWindow):
             self.clear_meta_from_meta_tab()
             self.clear_album_image()
             self.add_metadata_to_meta_tab(result.meta_file())
+            self.add_download_button(result.meta_file())
             self.current_result = result
             try:
                 self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
@@ -166,7 +169,7 @@ class Gui(GUI.Ui_MainWindow):
                 self.waveform.start_busy_indicator_waveform()
                 if self.cache_thread_pool.activeThreadCount() > 0:
                     self.current_downloader.cancel()
-                downloader = Downloader.Downloader(url, sound_id)
+                downloader = Downloader.PreviewDownloader(url, sound_id)
                 downloader.signals.downloaded.connect(self.downloaded_ready_for_preview)
                 downloader.signals.already_exists.connect(self.download_already_exists)
                 downloader.signals.download_done.connect(self.download_done)
@@ -189,6 +192,9 @@ class Gui(GUI.Ui_MainWindow):
         id_column_index = self.searchResultsTable.row_order['Id']
         sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
         self.single_clicked_result = self.searchResultsTable.current_results[sound_id]
+
+    def add_download_button(self, url):
+        self.downloadButton.clicked.connect(lambda: )
 
     def download_already_exists(self, path):
         self.waveform.load_result(self.searchResultsTable.current_result)

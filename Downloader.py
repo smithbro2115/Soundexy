@@ -1,6 +1,7 @@
 import requests
 import os
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
+import WebsiteAuth
 
 
 class DownloaderSigs(QObject):
@@ -10,9 +11,9 @@ class DownloaderSigs(QObject):
     download_done = pyqtSignal(str)
 
 
-class Downloader(QRunnable):
+class PreviewDownloader(QRunnable):
     def __init__(self, url, title):
-        super(Downloader, self).__init__()
+        super(PreviewDownloader, self).__init__()
         self.signals = DownloaderSigs()
         self.url = url
         self.title = title
@@ -67,3 +68,10 @@ class Downloader(QRunnable):
             os.remove(file_path)
         except (PermissionError, FileNotFoundError):
             pass
+
+
+def freesound_download(threadpool, meta_file, username, password, ):
+    auth_s = WebsiteAuth.FreeSound(username, password)
+    downloader = PreviewDownloader(auth_s.get_sound_link(meta_file['download link']), meta_file['title'])
+    downloader.signals.download_done.connect()
+    threadpool.start(downloader)

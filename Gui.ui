@@ -316,7 +316,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="3" column="0">
            <widget class="QScrollArea" name="metaArea">
             <property name="widgetResizable">
              <bool>true</bool>
@@ -327,11 +327,28 @@
                <x>0</x>
                <y>0</y>
                <width>274</width>
-               <height>287</height>
+               <height>229</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_3"/>
             </widget>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QPushButton" name="downloadButton">
+            <property name="text">
+             <string>Download</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="buyButton">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string>Buy</string>
+            </property>
            </widget>
           </item>
          </layout>
