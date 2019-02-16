@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal
 import traceback
+import DownloadButton
 
 
 class SearchResultSignals(QtCore.QObject):
@@ -46,6 +47,13 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
 
     def get_id_from_row(self, row_number: int) -> str:
         return self.index(row_number, self.table_view.get_column_index('id')).data()
+
+
+class DownloadButtonLocal(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super(DownloadButtonLocal, self).__init__(parent=parent)
+        self.ui = DownloadButton.Ui_Form()
+        self.ui.setupUi(self)
 
 
 class SearchResultsTable(QtWidgets.QTableView):

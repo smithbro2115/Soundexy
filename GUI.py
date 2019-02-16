@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\Josh\PycharmProjects\Soundexy\Gui.ui'
+# Form implementation generated from reading ui file 'D:\Programming\Soundexy\Gui.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.3
 #
@@ -153,15 +153,12 @@ class Ui_MainWindow(object):
         self.metaArea.setWidgetResizable(True)
         self.metaArea.setObjectName("metaArea")
         self.metaAreaContents = QtWidgets.QWidget()
-        self.metaAreaContents.setGeometry(QtCore.QRect(0, 0, 274, 229))
+        self.metaAreaContents.setGeometry(QtCore.QRect(0, 0, 274, 258))
         self.metaAreaContents.setObjectName("metaAreaContents")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.metaAreaContents)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.metaArea.setWidget(self.metaAreaContents)
-        self.gridLayout_4.addWidget(self.metaArea, 3, 0, 1, 1)
-        self.downloadButton = QtWidgets.QPushButton(self.metaTab)
-        self.downloadButton.setObjectName("downloadButton")
-        self.gridLayout_4.addWidget(self.downloadButton, 2, 0, 1, 1)
+        self.gridLayout_4.addWidget(self.metaArea, 2, 0, 1, 1)
         self.buyButton = QtWidgets.QPushButton(self.metaTab)
         self.buyButton.setEnabled(True)
         self.buyButton.setObjectName("buyButton")
@@ -285,7 +282,6 @@ class Ui_MainWindow(object):
         self.pushButton_6.setText(_translate("MainWindow", "PushButton"))
         self.pushButton_5.setText(_translate("MainWindow", "PushButton"))
         self.pushButton_2.setText(_translate("MainWindow", "PushButton"))
-        self.downloadButton.setText(_translate("MainWindow", "Download"))
         self.buyButton.setText(_translate("MainWindow", "Buy"))
         self.sidebar.setTabText(self.sidebar.indexOf(self.metaTab), _translate("MainWindow", "Metadata"))
         self.playlistAddBtn.setText(_translate("MainWindow", "Add"))

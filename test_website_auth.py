@@ -26,6 +26,11 @@ class TestFreeSoundAuth(unittest.TestCase):
         self.assertEqual("http://freesound.org/people/zagi2/sounds/330686/download/330686__"
                          "zagi2__harpsichord-phrase.wav", self.session.get_sound_link(url))
 
+    def test_download_sound(self):
+        url = self.session.get_sound_link("https://freesound.org/people/DCPoke/sounds/387978/")
+        self.session.download_sound(url)
+
+
 
 if __name__ == '__main__':
     unittest.main()

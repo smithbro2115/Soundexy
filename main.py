@@ -10,7 +10,7 @@ import traceback
 import Downloader
 import os
 from Wave import make_waveform
-from CustomPyQtWidgets import SearchResultsTable
+from CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal
 from Searches import FreesoundSearch
 
 
@@ -78,6 +78,7 @@ class Gui(GUI.Ui_MainWindow):
         self.local_search = None
         self.free_search = None
         self.indexer = LocalFileHandler.Indexer()
+        self.download_button = DownloadButtonLocal()
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
@@ -111,11 +112,12 @@ class Gui(GUI.Ui_MainWindow):
                                         """)
         self.metaArea.setStyleSheet("""QWidget{background-color: #232629; overflow-y}""")
         self.metaArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.metaTab.layout().addWidget(self.download_button, 2, 0)
         self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
         self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
         self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
         self.buyButton.setHidden(True)
-        self.downloadButton.setHidden(True)
+        # self.downloadButton.setHidden(True)
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
@@ -193,8 +195,8 @@ class Gui(GUI.Ui_MainWindow):
         sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
         self.single_clicked_result = self.searchResultsTable.current_results[sound_id]
 
-    def add_download_button(self, url):
-        self.downloadButton.clicked.connect(lambda: )
+    # def add_download_button(self, url):
+    #     self.downloadButton.clicked.connect(lambda: )
 
     def download_already_exists(self, path):
         self.waveform.load_result(self.searchResultsTable.current_result)
