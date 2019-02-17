@@ -275,8 +275,8 @@
          <attribute name="title">
           <string>Metadata</string>
          </attribute>
-         <layout class="QGridLayout" name="gridLayout_4">
-          <item row="0" column="0">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
            <widget class="QLabel" name="metaAlbumImageLbl">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -316,7 +316,17 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item>
+           <widget class="QPushButton" name="buyButton">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string>Buy</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QScrollArea" name="metaArea">
             <property name="widgetResizable">
              <bool>true</bool>
@@ -332,16 +342,6 @@
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_3"/>
             </widget>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="buyButton">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string>Buy</string>
-            </property>
            </widget>
           </item>
          </layout>

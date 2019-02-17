@@ -54,6 +54,7 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         super(DownloadButtonLocal, self).__init__(parent=parent)
         self.ui = DownloadButton.Ui_Form()
         self.ui.setupUi(self)
+        # self.show()
 
 
 class SearchResultsTable(QtWidgets.QTableView):

@@ -112,12 +112,18 @@ class Gui(GUI.Ui_MainWindow):
                                         """)
         self.metaArea.setStyleSheet("""QWidget{background-color: #232629; overflow-y}""")
         self.metaArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.metaTab.layout().addWidget(self.download_button, 2, 0)
+        self.metaTab.layout().insertWidget(2, self.download_button)
+        self.download_button.raise_()
+        self.download_button.ui.downloadButton.clicked.connect(self.test_download_progress_bar)
         self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
         self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
         self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
         self.buyButton.setHidden(True)
         # self.downloadButton.setHidden(True)
+
+    def test_download_progress_bar(self):
+        value = self.download_button.ui.downloadProgressBar.value()
+        self.download_button.ui.downloadProgressBar.setValue(value + 10)
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
