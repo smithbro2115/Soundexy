@@ -113,6 +113,7 @@ class RemoteSigs(QObject):
     downloaded_some = pyqtSignal(int)
     download_done = pyqtSignal(str)
     ready_for_preview = pyqtSignal(str)
+    preview_done = pyqtSignal(str)
     preview_already_exists = pyqtSignal(str)
     download_started = pyqtSignal()
 
@@ -135,7 +136,6 @@ class Free:
 
     def check_if_downloaded(self):
         for root, dirs, files in os.walk(self.download_path):
-            print(Downloader.get_title_from_url(self.meta_file()['download link']) in files)
             return Downloader.get_title_from_url(self.meta_file()['download link']) in files
 
     def set_title(self, title):
@@ -152,7 +152,8 @@ class Free:
                 'file type': self.file_type, 'download link': self.link}
 
     def download(self, threadpool):
-        downloader = Downloader.Downloader(self.meta_file()['download link'])
+        downloader = Downloader.AuthDownloader(self.meta_file()['download link'])
+        downloader.download_path = self.download_path
         downloader.signals.downloaded_some.connect(lambda x: self.signals.downloaded_some.emit(x))
         downloader.signals.download_done.connect(lambda x: self.signals.download_done.emit(x))
         downloader.signals.download_started.connect(lambda: self.signals.download_started.emit())
@@ -164,7 +165,7 @@ class Free:
         downloader = Downloader.PreviewDownloader(self.meta_file()['preview Link'], self.meta_file()['id'])
         downloader.signals.downloaded.connect(lambda x: self.signals.ready_for_preview.emit(x))
         downloader.signals.already_exists.connect(lambda x: self.signals.preview_already_exists.emit(x))
-        downloader.signals.download_done.connect(lambda x: self.signals.download_done.emit(x))
+        downloader.signals.download_done.connect(lambda x: self.signals.preview_done.emit(x))
         threadpool.start(downloader)
         return downloader
 

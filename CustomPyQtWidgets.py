@@ -77,12 +77,12 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.delete_button.setHidden(False)
 
     def done(self):
-        self.setValue(0)
+        self.progress_bar.setValue(0)
         self.button.setEnabled(False)
         self.delete_button.setHidden(False)
 
     def reset(self):
-        self.setValue(0)
+        self.progress_bar.setValue(0)
         self.button.setEnabled(True)
         self.delete_button.setHidden(True)
 

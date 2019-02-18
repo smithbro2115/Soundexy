@@ -6,7 +6,7 @@ import WebsiteAuth
 
 class DownloaderSigs(QObject):
     download_started = pyqtSignal()
-    download_some = pyqtSignal(int)
+    downloaded_some = pyqtSignal(int)
     downloaded = pyqtSignal(str)
     already_exists = pyqtSignal(str)
     download_done = pyqtSignal(str)
@@ -25,7 +25,8 @@ class Downloader(QRunnable):
 
     @pyqtSlot()
     def run(self):
-        name = get_title_from_url(self.url)
+        name = get_title_from_url(self.get_download_path())
+        print(self.get_download_path())
         for root, dirs, files in os.walk(self.download_path):
             if name in files:
                 self.signals.already_exists.emit(os.path.join(root, name))
@@ -33,21 +34,24 @@ class Downloader(QRunnable):
                 self.download(name)
 
     def download(self, name):
-        file_download_path = f'{self.download_folder}\\{name}'
-        self.file_size = self.session.get(self.url, stream=True).headers['Content-length']
+        file_download_path = f'{self.download_path}\\{name}'
+        try:
+            self.file_size = self.session.get(self.get_download_path(), stream=True).headers['Content-length']
+        except KeyError:
+            self.file_size = -1
         amount = 1024 * 200
         fd = open(file_download_path, 'wb')
-        r = self.session.get(self.url, stream=True)
+        r = self.session.get(self.get_download_path(), stream=True)
         self.signals.download_started.emit()
         for chunk in r.iter_content(amount):
-            if self.download_canceled:
+            if self.canceled:
                 fd.close()
                 self.remove(file_download_path)
                 break
             fd.write(chunk)
             self.amount_downloaded += len(chunk)
-            self.signals.download_some.emit(self.get_file_progress())
-        if not self.download_canceled:
+            self.signals.downloaded_some.emit(self.get_file_progress())
+        if not self.canceled:
             fd.close()
             self.signals.download_done.emit(file_download_path)
         else:
@@ -64,7 +68,13 @@ class Downloader(QRunnable):
             pass
 
     def get_file_progress(self):
-        return 100*(self.amount_downloaded/self.file_size)
+        if not self.file_size == -1:
+            return 100*(self.amount_downloaded/self.file_size)
+        else:
+            return -1
+
+    def get_download_path(self):
+        return self.url
 
 
 class PreviewDownloader(Downloader):
@@ -114,6 +124,15 @@ class PreviewDownloader(Downloader):
             self.remove(file_path)
 
 
+class AuthDownloader(Downloader):
+    def __init__(self, url):
+        super(AuthDownloader, self).__init__(url)
+
+    def get_download_url(self):
+        print('test')
+        return self.session.get_sound_link(self.url)
+
+
 def freesound_download(threadpool, meta_file, username, password, done_function, progress_function):
     auth_s = WebsiteAuth.FreeSound(username, password)
     downloader = Downloader(auth_s.get_sound_link(meta_file['download link']))
@@ -124,4 +143,4 @@ def freesound_download(threadpool, meta_file, username, password, done_function,
 
 
 def get_title_from_url(url):
-    return url[url.rfind() + 1:]
+    return url[url[:-2].rfind('/') + 1:-1]

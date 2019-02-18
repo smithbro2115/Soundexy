@@ -114,16 +114,11 @@ class Gui(GUI.Ui_MainWindow):
         self.metaArea.setStyleSheet("""QWidget{background-color: #232629; overflow-y}""")
         self.metaArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.metaTab.layout().insertWidget(2, self.download_button)
-        self.download_button.set_button_function(self.test_download_progress_bar)
         self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
         self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
         self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
         self.buyButton.setHidden(True)
-        # self.downloadButton.setHidden(True)
-
-    def test_download_progress_bar(self):
-        value = self.download_button.progress_bar.value()
-        self.download_button.progress_bar.setValue(value + 10)
+        self.download_button.setHidden(True)
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
@@ -178,8 +173,9 @@ class Gui(GUI.Ui_MainWindow):
                 self.waveform.start_busy_indicator_waveform()
                 self.current_result.signals.downloaded_some.connect(self.downloaded_ready_for_preview)
                 self.current_result.signals.preview_already_exists.connect(self.download_already_exists)
-                self.current_result.signals.download_done.connect(self.download_done)
-                self.current_downloader = self.current_result.download_preview()
+                self.current_result.signals.preview_done.connect(self.download_done)
+                self.current_downloader = self.current_result.download_preview(self.cache_thread_pool,
+                                                                               self.current_downloader)
 
     @staticmethod
     def clear_cache():
