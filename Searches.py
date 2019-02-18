@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QThreadPool, QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QObject, pyqtSignal
 import abc
 import WebScrapers
 

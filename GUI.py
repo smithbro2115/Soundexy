@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'D:\Programming\Soundexy\Gui.ui'
+# Form implementation generated from reading ui file 'C:\Users\Josh\PycharmProjects\Soundexy\Gui.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.3
 #
@@ -118,6 +118,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addWidget(self.pushButton_2)
         self.gridLayout.addLayout(self.horizontalLayout, 2, 0, 1, 1)
         self.mainWidget = QtWidgets.QHBoxLayout()
+        self.mainWidget.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
         self.mainWidget.setObjectName("mainWidget")
         self.sidebar = QtWidgets.QTabWidget(self.centralwidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Expanding)
@@ -160,6 +161,7 @@ class Ui_MainWindow(object):
         self.metaAreaContents.setGeometry(QtCore.QRect(0, 0, 274, 258))
         self.metaAreaContents.setObjectName("metaAreaContents")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.metaAreaContents)
+        self.verticalLayout_3.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.metaArea.setWidget(self.metaAreaContents)
         self.verticalLayout_2.addWidget(self.metaArea)

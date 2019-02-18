@@ -1,7 +1,6 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal
 import traceback
-import DownloadButton
 
 
 class SearchResultSignals(QtCore.QObject):
@@ -52,9 +51,49 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
 class DownloadButtonLocal(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(DownloadButtonLocal, self).__init__(parent=parent)
-        self.ui = DownloadButton.Ui_Form()
-        self.ui.setupUi(self)
-        # self.show()
+        layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        # layout.setStretch(5, 5)
+        self.setLayout(layout)
+        self.progress_bar = QtWidgets.QProgressBar()
+        self.layout().addWidget(self.progress_bar)
+        self.delete_button = QtWidgets.QPushButton()
+        self.delete_button.setText(' X ')
+        self.delete_button.setStyleSheet('background-color: #00ffff00')
+        self.layout().addWidget(self.delete_button)
+        self.delete_button.setHidden(True)
+        self.button = QtWidgets.QPushButton()
+        self.button.setText('Download')
+        self.button.setStyleSheet('background-color: #00ffff00')
+        self.button.setFocusPolicy(QtCore.Qt.NoFocus)
+        progress_layout = QtWidgets.QHBoxLayout()
+        progress_layout.setContentsMargins(0, 0, 0, 0)
+        self.progress_bar.setLayout(progress_layout)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.layout().addWidget(self.button)
+
+    def downloaded_started(self):
+        self.button.setEnabled(False)
+        self.delete_button.setHidden(False)
+
+    def done(self):
+        self.setValue(0)
+        self.button.setEnabled(False)
+        self.delete_button.setHidden(False)
+
+    def reset(self):
+        self.setValue(0)
+        self.button.setEnabled(True)
+        self.delete_button.setHidden(True)
+
+    def set_delete_button_function(self, function):
+        self.delete_button.clicked.connect(function)
+
+    def set_button_function(self, function):
+        self.button.clicked.connect(function)
+
+    def set_progress(self, value: int):
+        self.progress_bar.setValue(value)
 
 
 class SearchResultsTable(QtWidgets.QTableView):

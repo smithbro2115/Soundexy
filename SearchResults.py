@@ -1,5 +1,7 @@
 import MetaData
 from PyQt5.QtCore import pyqtSignal, QObject
+import os
+import Downloader
 
 
 class Local:
@@ -107,6 +109,14 @@ class LocalSigs(QObject):
     meta_changed = pyqtSignal(Local)
 
 
+class RemoteSigs(QObject):
+    downloaded_some = pyqtSignal(int)
+    download_done = pyqtSignal(str)
+    ready_for_preview = pyqtSignal(str)
+    preview_already_exists = pyqtSignal(str)
+    download_started = pyqtSignal()
+
+
 class Free:
     def __init__(self):
         self.title = ''
@@ -118,7 +128,15 @@ class Free:
         self.link = ''
         self.library = ''
         self.file_type = ''
+        self.signals = RemoteSigs()
         self.tags = self.meta_file()
+        self.download_path = 'downloads'
+        self.downloaded = self.check_if_downloaded()
+
+    def check_if_downloaded(self):
+        for root, dirs, files in os.walk(self.download_path):
+            print(Downloader.get_title_from_url(self.meta_file()['download link']) in files)
+            return Downloader.get_title_from_url(self.meta_file()['download link']) in files
 
     def set_title(self, title):
         index = title.find('.')
@@ -132,6 +150,23 @@ class Free:
         return {'title': self.title, 'duration': self.duration, 'description': self.description, 'id': self.id,
                 'author': self.author, 'library': self.library, 'preview Link': self.preview,
                 'file type': self.file_type, 'download link': self.link}
+
+    def download(self, threadpool):
+        downloader = Downloader.Downloader(self.meta_file()['download link'])
+        downloader.signals.downloaded_some.connect(lambda x: self.signals.downloaded_some.emit(x))
+        downloader.signals.download_done.connect(lambda x: self.signals.download_done.emit(x))
+        downloader.signals.download_started.connect(lambda: self.signals.download_started.emit())
+        threadpool.start(downloader)
+
+    def download_preview(self, threadpool, current):
+        if threadpool.activeThreadCount() > 0:
+            current.cancel()
+        downloader = Downloader.PreviewDownloader(self.meta_file()['preview Link'], self.meta_file()['id'])
+        downloader.signals.downloaded.connect(lambda x: self.signals.ready_for_preview.emit(x))
+        downloader.signals.already_exists.connect(lambda x: self.signals.preview_already_exists.emit(x))
+        downloader.signals.download_done.connect(lambda x: self.signals.download_done.emit(x))
+        threadpool.start(downloader)
+        return downloader
 
 
 class Paid:

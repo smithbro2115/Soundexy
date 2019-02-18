@@ -6,18 +6,71 @@ import WebsiteAuth
 
 class DownloaderSigs(QObject):
     download_started = pyqtSignal()
+    download_some = pyqtSignal(int)
     downloaded = pyqtSignal(str)
     already_exists = pyqtSignal(str)
     download_done = pyqtSignal(str)
 
 
-class PreviewDownloader(QRunnable):
-    def __init__(self, url, title):
-        super(PreviewDownloader, self).__init__()
+class Downloader(QRunnable):
+    def __init__(self, url):
+        super(Downloader, self).__init__()
         self.signals = DownloaderSigs()
         self.url = url
-        self.title = title
         self.canceled = False
+        self.download_path = None
+        self.session = requests
+        self.file_size = 0
+        self.amount_downloaded = 0
+
+    @pyqtSlot()
+    def run(self):
+        name = get_title_from_url(self.url)
+        for root, dirs, files in os.walk(self.download_path):
+            if name in files:
+                self.signals.already_exists.emit(os.path.join(root, name))
+            else:
+                self.download(name)
+
+    def download(self, name):
+        file_download_path = f'{self.download_folder}\\{name}'
+        self.file_size = self.session.get(self.url, stream=True).headers['Content-length']
+        amount = 1024 * 200
+        fd = open(file_download_path, 'wb')
+        r = self.session.get(self.url, stream=True)
+        self.signals.download_started.emit()
+        for chunk in r.iter_content(amount):
+            if self.download_canceled:
+                fd.close()
+                self.remove(file_download_path)
+                break
+            fd.write(chunk)
+            self.amount_downloaded += len(chunk)
+            self.signals.download_some.emit(self.get_file_progress())
+        if not self.download_canceled:
+            fd.close()
+            self.signals.download_done.emit(file_download_path)
+        else:
+            fd.close()
+            self.remove(file_download_path)
+
+    def cancel(self):
+        self.canceled = True
+
+    def remove(self, file_path):
+        try:
+            os.remove(file_path)
+        except (PermissionError, FileNotFoundError):
+            pass
+
+    def get_file_progress(self):
+        return 100*(self.amount_downloaded/self.file_size)
+
+
+class PreviewDownloader(Downloader):
+    def __init__(self, url, title):
+        super(PreviewDownloader, self).__init__(url)
+        self.title = title
 
     @pyqtSlot()
     def run(self):
@@ -60,18 +113,15 @@ class PreviewDownloader(QRunnable):
             fd.close()
             self.remove(file_path)
 
-    def cancel(self):
-        self.canceled = True
 
-    def remove(self, file_path):
-        try:
-            os.remove(file_path)
-        except (PermissionError, FileNotFoundError):
-            pass
-
-
-def freesound_download(threadpool, meta_file, username, password, ):
+def freesound_download(threadpool, meta_file, username, password, done_function, progress_function):
     auth_s = WebsiteAuth.FreeSound(username, password)
-    downloader = PreviewDownloader(auth_s.get_sound_link(meta_file['download link']), meta_file['title'])
-    downloader.signals.download_done.connect()
+    downloader = Downloader(auth_s.get_sound_link(meta_file['download link']))
+    downloader.session = auth_s
+    downloader.signals.downloaded.connect(progress_function)
+    downloader.signals.download_done.connect(done_function)
     threadpool.start(downloader)
+
+
+def get_title_from_url(url):
+    return url[url.rfind() + 1:]

@@ -242,6 +242,9 @@
     </item>
     <item row="4" column="0">
      <layout class="QHBoxLayout" name="mainWidget">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetFixedSize</enum>
+      </property>
       <item>
        <widget class="QTabWidget" name="sidebar">
         <property name="sizePolicy">
@@ -340,7 +343,11 @@
                <height>258</height>
               </rect>
              </property>
-             <layout class="QVBoxLayout" name="verticalLayout_3"/>
+             <layout class="QVBoxLayout" name="verticalLayout_3">
+              <property name="sizeConstraint">
+               <enum>QLayout::SetFixedSize</enum>
+              </property>
+             </layout>
             </widget>
            </widget>
           </item>

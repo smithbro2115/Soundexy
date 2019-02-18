@@ -54,6 +54,7 @@ class Gui(GUI.Ui_MainWindow):
         self.freesound_amount_of_pages = None
         self.freesound_url = None
         self.cache_thread_pool = QThreadPool()
+        self.download_pool = QThreadPool()
         self.current_results = {}
         self.searchResultsTable = SearchResultsTable()
         self.waveform = WaveformSlider(self.audio_player)
@@ -113,8 +114,7 @@ class Gui(GUI.Ui_MainWindow):
         self.metaArea.setStyleSheet("""QWidget{background-color: #232629; overflow-y}""")
         self.metaArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.metaTab.layout().insertWidget(2, self.download_button)
-        self.download_button.raise_()
-        self.download_button.ui.downloadButton.clicked.connect(self.test_download_progress_bar)
+        self.download_button.set_button_function(self.test_download_progress_bar)
         self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
         self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
         self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
@@ -122,8 +122,8 @@ class Gui(GUI.Ui_MainWindow):
         # self.downloadButton.setHidden(True)
 
     def test_download_progress_bar(self):
-        value = self.download_button.ui.downloadProgressBar.value()
-        self.download_button.ui.downloadProgressBar.setValue(value + 10)
+        value = self.download_button.progress_bar.value()
+        self.download_button.progress_bar.setValue(value + 10)
 
     def double_clicked_row(self, signal):
         row_index = signal.row()
@@ -135,10 +135,11 @@ class Gui(GUI.Ui_MainWindow):
             self.local_sound_init(result)
             self.add_album_image_to_player(sound.album_image)
         elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
-            self.remote_sound_init(result, sound_id)
+            self.remote_sound_init(result)
         self.single_clicked_result = None
 
     def local_sound_init(self, result):
+        self.download_button.setHidden(True)
         try:
             self.pixel_time_conversion_rate = self.waveform.maximum() / result.meta_file()['duration']
         except ZeroDivisionError as e:
@@ -155,14 +156,15 @@ class Gui(GUI.Ui_MainWindow):
                 self.audio_player.handle(result, self.pixel_time_conversion_rate)
             self.current_result = result
 
-    def remote_sound_init(self, result, sound_id):
+    def remote_sound_init(self, result):
+        self.download_button.reset()
         if self.current_result == result:
             self.audio_player.handle(result, self.pixel_time_conversion_rate)
         else:
             self.clear_meta_from_meta_tab()
             self.clear_album_image()
             self.add_metadata_to_meta_tab(result.meta_file())
-            self.add_download_button(result.meta_file())
+            self.add_download_button(result)
             self.current_result = result
             try:
                 self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
@@ -171,18 +173,13 @@ class Gui(GUI.Ui_MainWindow):
             else:
                 self.audio_player.stop()
                 self.audio_player.remote_sound(self.current_result, self.pixel_time_conversion_rate)
-                url = result.preview
                 self.waveform.load_result(self.current_result)
                 self.waveform.clear_waveform()
                 self.waveform.start_busy_indicator_waveform()
-                if self.cache_thread_pool.activeThreadCount() > 0:
-                    self.current_downloader.cancel()
-                downloader = Downloader.PreviewDownloader(url, sound_id)
-                downloader.signals.downloaded.connect(self.downloaded_ready_for_preview)
-                downloader.signals.already_exists.connect(self.download_already_exists)
-                downloader.signals.download_done.connect(self.download_done)
-                self.cache_thread_pool.start(downloader)
-                self.current_downloader = downloader
+                self.current_result.signals.downloaded_some.connect(self.downloaded_ready_for_preview)
+                self.current_result.signals.preview_already_exists.connect(self.download_already_exists)
+                self.current_result.signals.download_done.connect(self.download_done)
+                self.current_downloader = self.current_result.download_preview()
 
     @staticmethod
     def clear_cache():
@@ -201,8 +198,12 @@ class Gui(GUI.Ui_MainWindow):
         sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
         self.single_clicked_result = self.searchResultsTable.current_results[sound_id]
 
-    # def add_download_button(self, url):
-    #     self.downloadButton.clicked.connect(lambda: )
+    def add_download_button(self, result):
+        result.signals.download_started.connect(self.download_button.downloaded_started)
+        result.signals.download_done.connect(self.download_button.done)
+        result.signals.downloaded_some.connect(self.download_button.set_progress)
+        self.download_button.set_button_function(lambda: result.download(self.download_pool))
+        self.download_button.setHidden(False)
 
     def download_already_exists(self, path):
         self.waveform.load_result(self.searchResultsTable.current_result)
