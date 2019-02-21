@@ -171,7 +171,7 @@ class Gui(GUI.Ui_MainWindow):
                 self.waveform.load_result(self.current_result)
                 self.waveform.clear_waveform()
                 self.waveform.start_busy_indicator_waveform()
-                self.current_result.signals.downloaded_some.connect(self.downloaded_ready_for_preview)
+                self.current_result.signals.ready_for_preview.connect(self.downloaded_ready_for_preview)
                 self.current_result.signals.preview_already_exists.connect(self.download_already_exists)
                 self.current_result.signals.preview_done.connect(self.download_done)
                 self.current_downloader = self.current_result.download_preview(self.cache_thread_pool,
@@ -255,14 +255,14 @@ class Gui(GUI.Ui_MainWindow):
                 if isinstance(self.current_result, SearchResults.Local):
                     self.local_sound_init(self.single_clicked_result)
                 else:
-                    self.remote_sound_init(self.single_clicked_result, self.single_clicked_result.id)
+                    self.remote_sound_init(self.single_clicked_result)
             else:
                 self.audio_player.handle(self.current_result, conversion_rate=self.pixel_time_conversion_rate)
         elif self.single_clicked_result is not None:
             if isinstance(self.current_result, SearchResults.Local):
                 self.local_sound_init(self.single_clicked_result)
             else:
-                self.remote_sound_init(self.single_clicked_result, self.single_clicked_result.id)
+                self.remote_sound_init(self.single_clicked_result)
 
     def reset_cursor(self):
         self.waveform.reset_cursor()

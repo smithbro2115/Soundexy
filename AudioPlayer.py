@@ -266,7 +266,6 @@ class SoundPlayer(QRunnable):
             self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                     "Try downloading it again.")
         if was_playing or self.outside_of_downloaded_range_playing:
-            print(was_playing, self.outside_of_downloaded_range_playing)
             self.outside_of_downloaded_range = False
             self.outside_of_downloaded_range_playing = False
             self.play()

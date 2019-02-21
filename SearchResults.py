@@ -152,11 +152,12 @@ class Free:
                 'file type': self.file_type, 'download link': self.link}
 
     def download(self, threadpool):
-        downloader = Downloader.AuthDownloader(self.meta_file()['download link'])
+        downloader = Downloader.AuthDownloader(self.meta_file()['download link'], 'smithbro', 'Ferrari578')
         downloader.download_path = self.download_path
+        print('downloaddddd')
+        self.signals.download_started.emit()
         downloader.signals.downloaded_some.connect(lambda x: self.signals.downloaded_some.emit(x))
         downloader.signals.download_done.connect(lambda x: self.signals.download_done.emit(x))
-        downloader.signals.download_started.connect(lambda: self.signals.download_started.emit())
         threadpool.start(downloader)
 
     def download_preview(self, threadpool, current):

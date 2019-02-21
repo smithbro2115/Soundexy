@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-import os
-from PyQt5.QtCore import pyqtSignal, QRunnable
+from PyQt5.QtCore import QRunnable
 
 
 class AuthSession(QRunnable):
@@ -15,7 +14,6 @@ class AuthSession(QRunnable):
         self.url = ''
         self.session = None
         self.token_id_form = []
-        self.signals = DownloaderSigs()
         self.download_folder = 'downloads'  # change to a config
 
     def login(self):
@@ -43,29 +41,8 @@ class AuthSession(QRunnable):
         attr_value = self.token_id_form[0]
         self.login_data[attr_value] = soup.find(tag_type, attrs={attr_type: attr_value})['value']
 
-    def download_sound(self, url):
-        url_title = url[url.rfind('/') + 1:]
-        file_download_path = f'{self.download_folder}\\{url_title}'
-        amount = 1024 * 200
-        fd = open(file_download_path, 'wb')
-        r = self.session.get(url, stream=True)
-        self.signals.download_started.emit()
-        for chunk in r.iter_content(amount):
-            if self.download_canceled:
-                fd.close()
-                self.remove(file_download_path)
-                break
-            fd.write(chunk)
-            # self.signals.downloaded.emit()
-        if not self.download_canceled:
-            fd.close()
-            self.signals.download_done.emit(file_download_path)
-        else:
-            fd.close()
-            self.remove(file_download_path)
-
-    def remove(self, path):
-        os.remove(path)
+    def get(self, url, **kwargs):
+        return self.session.get(url, **kwargs)
 
 
 class FreeSound(AuthSession):

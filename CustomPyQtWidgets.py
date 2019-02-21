@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal
 import traceback
+import pyqt_utils
 
 
 class SearchResultSignals(QtCore.QObject):
@@ -73,12 +74,14 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.progress_bar.layout().addWidget(self.button)
 
     def downloaded_started(self):
+        self.button.setText('Downloading')
         self.button.setEnabled(False)
         self.delete_button.setHidden(False)
 
     def done(self):
         self.progress_bar.setValue(0)
         self.button.setEnabled(False)
+        self.button.setText('Downloaded ✓')
         self.delete_button.setHidden(False)
 
     def reset(self):
@@ -87,9 +90,11 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.delete_button.setHidden(True)
 
     def set_delete_button_function(self, function):
+        pyqt_utils.disconnect_all_signals(self.delete_button.clicked)
         self.delete_button.clicked.connect(function)
 
     def set_button_function(self, function):
+        pyqt_utils.disconnect_all_signals(self.button.clicked)
         self.button.clicked.connect(function)
 
     def set_progress(self, value: int):

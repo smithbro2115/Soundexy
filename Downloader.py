@@ -2,6 +2,7 @@ import requests
 import os
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
 import WebsiteAuth
+import time
 
 
 class DownloaderSigs(QObject):
@@ -69,7 +70,8 @@ class Downloader(QRunnable):
 
     def get_file_progress(self):
         if not self.file_size == -1:
-            return 100*(self.amount_downloaded/self.file_size)
+            print(self.amount_downloaded, time.time())
+            return 100*(self.amount_downloaded/int(self.file_size))
         else:
             return -1
 
@@ -125,11 +127,11 @@ class PreviewDownloader(Downloader):
 
 
 class AuthDownloader(Downloader):
-    def __init__(self, url):
+    def __init__(self, url, username, password):
         super(AuthDownloader, self).__init__(url)
+        self.session = WebsiteAuth.FreeSound(username, password)
 
-    def get_download_url(self):
-        print('test')
+    def get_download_path(self):
         return self.session.get_sound_link(self.url)
 
 
@@ -143,4 +145,4 @@ def freesound_download(threadpool, meta_file, username, password, done_function,
 
 
 def get_title_from_url(url):
-    return url[url[:-2].rfind('/') + 1:-1]
+    return url[url[:-2].rfind('/') + 1:]
