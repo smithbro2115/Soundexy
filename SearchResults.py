@@ -33,10 +33,10 @@ class Local:
         except AttributeError:
             return False
         else:
-            self.file_type = self.meta_file.file_type
-            self.sample_rate = self.meta_file.sample_rate
-            self.duration = self.meta_file.duration
-            self.channels = self.meta_file.channels
+            self.file_type = self.meta_file['file type']
+            self.sample_rate = self.meta_file['sample rate']
+            self.duration = self.meta_file['duration']
+            self.channels = self.meta_file['channels']
             return True
 
     def repopulate(self):
@@ -136,6 +136,7 @@ class Free:
 
     def check_if_downloaded(self):
         for root, dirs, files in os.walk(self.download_path):
+            print(files)
             return Downloader.get_title_from_url(self.meta_file()['download link']) in files
 
     def set_title(self, title):
