@@ -116,6 +116,8 @@ class RemoteSigs(QObject):
     preview_done = pyqtSignal(str)
     preview_already_exists = pyqtSignal(str)
     download_started = pyqtSignal()
+    download_already_exists = pyqtSignal(str)
+    download_deleted = pyqtSignal()
 
 
 class Free:
@@ -132,12 +134,8 @@ class Free:
         self.signals = RemoteSigs()
         self.tags = self.meta_file()
         self.download_path = 'downloads'
-        self.downloaded = self.check_if_downloaded()
-
-    def check_if_downloaded(self):
-        for root, dirs, files in os.walk(self.download_path):
-            print(files)
-            return Downloader.get_title_from_url(self.meta_file()['download link']) in files
+        self.downloader = None
+        self._file_name = ''
 
     def set_title(self, title):
         index = title.find('.')
@@ -148,18 +146,31 @@ class Free:
             self.title = title
 
     def meta_file(self):
-        return {'title': self.title, 'duration': self.duration, 'description': self.description, 'id': self.id,
+        return {'file name': self.title, 'title': self.title, 'duration': self.duration, 'description': self.description, 'id': self.id,
                 'author': self.author, 'library': self.library, 'preview Link': self.preview,
                 'file type': self.file_type, 'download link': self.link}
 
     def download(self, threadpool):
-        downloader = Downloader.AuthDownloader(self.meta_file()['download link'], 'smithbro', 'Ferrari578')
-        downloader.download_path = self.download_path
-        print('downloaddddd')
+        self.downloader = Downloader.AuthDownloader(self.meta_file()['download link'], 'smithbro', 'Ferrari578')
+        self.downloader.download_path = self.download_path
         self.signals.download_started.emit()
-        downloader.signals.downloaded_some.connect(lambda x: self.signals.downloaded_some.emit(x))
-        downloader.signals.download_done.connect(lambda x: self.signals.download_done.emit(x))
-        threadpool.start(downloader)
+        self.downloader.signals.downloaded_some.connect(lambda x: self.signals.downloaded_some.emit(x))
+        self.downloader.signals.already_exists.connect(self._download_done)
+        self.downloader.signals.download_done.connect(self._download_done)
+        threadpool.start(self.downloader)
+
+    def _download_done(self, filename):
+        print(filename)
+        self._file_name = filename
+        self.signals.download_done.emit(filename)
+
+    def cancel_download(self):
+        self.downloader.cancel()
+        self.signals.download_deleted.emit()
+
+    def delete_download(self):
+        os.remove(self._file_name)
+        self.signals.download_deleted.emit()
 
     def download_preview(self, threadpool, current):
         if threadpool.activeThreadCount() > 0:

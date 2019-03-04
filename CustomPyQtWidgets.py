@@ -49,16 +49,43 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
         return self.index(row_number, self.table_view.get_column_index('id')).data()
 
 
+class RemoveButtonSigs(QtCore.QObject):
+    hover = pyqtSignal()
+    unhover = pyqtSignal()
+
+
+class DownloadButtonRemove(QtWidgets.QPushButton):
+    def __init__(self):
+        self.signals = RemoveButtonSigs()
+        super(DownloadButtonRemove, self).__init__()
+        font = QtGui.QFont("Segoe UI Symbol")
+        self.setFont(font)
+
+    def enterEvent(self, *args, **kwargs):
+        self.signals.hover.emit()
+        super(DownloadButtonRemove, self).enterEvent(*args, **kwargs)
+
+    def leaveEvent(self, *args, **kwargs):
+        self.signals.unhover.emit()
+        super(DownloadButtonRemove, self).leaveEvent(*args, **kwargs)
+
+
+class DownloadButtonSigs(QtCore.QObject):
+    delete = pyqtSignal()
+    cancel = pyqtSignal()
+
+
 class DownloadButtonLocal(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(DownloadButtonLocal, self).__init__(parent=parent)
+        self.signals = DownloadButtonSigs()
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         # layout.setStretch(5, 5)
         self.setLayout(layout)
         self.progress_bar = QtWidgets.QProgressBar()
         self.layout().addWidget(self.progress_bar)
-        self.delete_button = QtWidgets.QPushButton()
+        self.delete_button = DownloadButtonRemove()
         self.delete_button.setText(' X ')
         self.delete_button.setStyleSheet('background-color: #00ffff00')
         self.layout().addWidget(self.delete_button)
@@ -77,17 +104,32 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.button.setText('Downloading')
         self.button.setEnabled(False)
         self.delete_button.setHidden(False)
+        self.remove_button_downloading_mode()
 
     def done(self):
-        self.progress_bar.setValue(0)
+        self.progress_bar.setValue(100)
         self.button.setEnabled(False)
-        self.button.setText('Downloaded ✓')
+        self.button.setText('Downloaded')
         self.delete_button.setHidden(False)
+        self.remove_button_downloaded_mode()
+
+    def remove_button_downloaded_mode(self):
+        self.delete_button.setText(' ✓ ')
+        self.delete_button.signals.hover.connect(lambda: self.delete_button.setText(' X '))
+        self.delete_button.signals.unhover.connect(lambda: self.delete_button.setText(' ✓ '))
+        self.delete_button.clicked.connect(lambda: self.signals.delete.emit())
+
+    def remove_button_downloading_mode(self):
+        pyqt_utils.disconnect_all_signals(self.delete_button.signals.hover)
+        pyqt_utils.disconnect_all_signals(self.delete_button.signals.unhover)
+        pyqt_utils.disconnect_all_signals(self.delete_button.clicked)
+        self.delete_button.clicked.connect(lambda: self.signals.cancel.emit())
 
     def reset(self):
         self.progress_bar.setValue(0)
         self.button.setEnabled(True)
         self.delete_button.setHidden(True)
+        self.button.setText('Download')
 
     def set_delete_button_function(self, function):
         pyqt_utils.disconnect_all_signals(self.delete_button.clicked)

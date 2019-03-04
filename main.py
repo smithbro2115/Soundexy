@@ -197,8 +197,12 @@ class Gui(GUI.Ui_MainWindow):
     def add_download_button(self, result):
         result.signals.download_started.connect(self.download_button.downloaded_started)
         result.signals.download_done.connect(self.download_button.done)
+        result.signals.download_already_exists.connect(self.download_button.done)
         result.signals.downloaded_some.connect(self.download_button.set_progress)
+        result.signals.download_deleted.connect(self.download_button.reset)
         self.download_button.set_button_function(lambda: result.download(self.download_pool))
+        self.download_button.signals.cancel.connect(result.cancel_download)
+        self.download_button.signals.delete.connect(result.delete_download)
         self.download_button.setHidden(False)
 
     def download_already_exists(self, path):
