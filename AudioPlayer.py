@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import QSlider
 # TODO Allow search results to be dragged on to player
 # TODO Allow sound to be dragged into an external program (maybe convert the file if its not a mp3 or wav
 # TODO Implement pitching and time shifting
-# FIXME for some reason we're getting the wrong result object when you play a remote sound then a local sound
 
 
 class PlaysoundException(Exception):
@@ -75,7 +74,7 @@ class SoundPlayer(QRunnable):
 
     def handle_new_sound_local(self):
         self.path = self.current_result.path
-        print(self.current_result)
+        self.is_remote = False
         self.preload(self.current_result, self.pixel_time_conversion_rate)
         self.play()
 
@@ -134,10 +133,6 @@ class SoundPlayer(QRunnable):
                     self.pause()
                 elif self.is_playing:
                     self.set_current_time(current_time)
-                try:
-                    print(current_time, self.current_result['duration'])
-                except TypeError:
-                    print(current_time, self.length)
                 if self.current_time >= self.length:
                     self.ended = True
             if not self.is_playing or self.ended:
