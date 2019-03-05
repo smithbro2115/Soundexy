@@ -20,7 +20,7 @@ class Downloader(QRunnable):
         self.signals = DownloaderSigs()
         self.url = url
         self.canceled = False
-        self.download_path = None
+        self.download_path = 'downloads'
         self.session = requests
         self.file_size = 0
         self.amount_downloaded = 0
@@ -28,6 +28,7 @@ class Downloader(QRunnable):
     @pyqtSlot()
     def run(self):
         name = get_title_from_url(self.get_download_path())
+        print(name)
         for root, dirs, files in os.walk(self.download_path):
             if name in files:
                 self.signals.already_exists.emit(os.path.join(root, name))

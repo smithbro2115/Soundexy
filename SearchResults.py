@@ -160,26 +160,22 @@ class Remote:
                 'file type': self.file_type, 'download link': self.link}
 
     @abstractmethod
-    def download(self, threadpool, signals):
+    def download(self, threadpool):
         pass
 
     def _download_done(self, filename):
         print(filename)
         self._file_name = filename
         self.signals.download_done.emit(filename)
-        self.downloader = None
-        self.signals = None
+        # self.downloader = None
 
     def cancel_download(self):
         self.downloader.cancel()
         self.signals.download_deleted.emit()
-        self.signals = None
 
-    def delete_download(self, signals):
-        self.signals = signals
+    def delete_download(self):
         os.remove(self._file_name)
         self.signals.download_deleted.emit()
-        self.signals = None
 
     def download_preview(self, threadpool, current):
         if threadpool.activeThreadCount() > 0:
@@ -194,6 +190,9 @@ class Remote:
     def get_downloader(self):
         return Downloader.Downloader
 
+    def get_signals(self):
+        return RemoteSigs
+
 
 class Free(Remote):
     @property
@@ -201,8 +200,7 @@ class Free(Remote):
     def site_name(self):
         return ''
 
-    def download(self, threadpool, signals):
-        self.signals = signals
+    def download(self, threadpool):
         self.downloader = self.get_downloader()(self.meta_file()['download link'])
         self.downloader.download_path = self.download_path
         self.signals.download_started.emit()
