@@ -130,6 +130,7 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.button.setEnabled(True)
         self.delete_button.setHidden(True)
         self.button.setText('Download')
+        self.delete_button.setText(' X ')
 
     def set_delete_button_function(self, function):
         pyqt_utils.disconnect_all_signals(self.delete_button.clicked)
