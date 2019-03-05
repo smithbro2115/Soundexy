@@ -7,7 +7,6 @@ import re
 from AudioPlayer import SoundPlayer, WaveformSlider
 import LocalFileHandler
 import traceback
-import Downloader
 import os
 from Wave import make_waveform
 from CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal
@@ -129,7 +128,7 @@ class Gui(GUI.Ui_MainWindow):
         if isinstance(sound, SearchResults.Local):
             self.local_sound_init(result)
             self.add_album_image_to_player(sound.album_image)
-        elif isinstance(sound, SearchResults.Free or SearchResults.Paid):
+        elif isinstance(sound, SearchResults.Remote or SearchResults.Paid):
             self.remote_sound_init(result)
         self.single_clicked_result = None
 

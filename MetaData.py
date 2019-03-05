@@ -25,6 +25,9 @@ class MutagenFile:
     def __call__(self, *args, **kwargs):
         return self.meta
 
+    def __getitem__(self, item):
+        return self.meta[item]
+
     def populate(self):
         file = self.get_file(self.path)
         self.meta['file name'] = self.filename
@@ -100,6 +103,9 @@ class WavFile:
     def __call__(self, *args, **kwargs):
         return self.meta
 
+    def __getitem__(self, item):
+        return self.meta[item]
+
     @property
     def title(self):
         return os.path.splitext(self.filename)[0]
@@ -120,6 +126,7 @@ class WavFile:
     def populate(self):
         self.meta['file name'] = self.filename
         self.meta['path'] = self.path
+        self.meta['file type'] = 'wav'
         _file = sf.SoundFile(self.path)
         try:
             self.duration = round((len(_file) / _file.samplerate)*1000)

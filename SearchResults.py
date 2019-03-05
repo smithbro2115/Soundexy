@@ -2,6 +2,10 @@ import MetaData
 from PyQt5.QtCore import pyqtSignal, QObject
 import os
 import Downloader
+from abc import abstractmethod
+
+
+# FIXME A result can't have signals when it's being pickled, need to work around that
 
 
 class Local:
@@ -120,7 +124,7 @@ class RemoteSigs(QObject):
     download_deleted = pyqtSignal()
 
 
-class Free:
+class Remote:
     def __init__(self):
         self.title = ''
         self.preview = ''
@@ -137,6 +141,11 @@ class Free:
         self.downloader = None
         self._file_name = ''
 
+    @property
+    @abstractmethod
+    def site_name(self):
+        return ''
+
     def set_title(self, title):
         index = title.find('.')
         if index >= 0:
@@ -150,27 +159,27 @@ class Free:
                 'author': self.author, 'library': self.library, 'preview Link': self.preview,
                 'file type': self.file_type, 'download link': self.link}
 
-    def download(self, threadpool):
-        self.downloader = Downloader.AuthDownloader(self.meta_file()['download link'], 'smithbro', 'Ferrari578')
-        self.downloader.download_path = self.download_path
-        self.signals.download_started.emit()
-        self.downloader.signals.downloaded_some.connect(lambda x: self.signals.downloaded_some.emit(x))
-        self.downloader.signals.already_exists.connect(self._download_done)
-        self.downloader.signals.download_done.connect(self._download_done)
-        threadpool.start(self.downloader)
+    @abstractmethod
+    def download(self, threadpool, signals):
+        pass
 
     def _download_done(self, filename):
         print(filename)
         self._file_name = filename
         self.signals.download_done.emit(filename)
+        self.downloader = None
+        self.signals = None
 
     def cancel_download(self):
         self.downloader.cancel()
         self.signals.download_deleted.emit()
+        self.signals = None
 
-    def delete_download(self):
+    def delete_download(self, signals):
+        self.signals = signals
         os.remove(self._file_name)
         self.signals.download_deleted.emit()
+        self.signals = None
 
     def download_preview(self, threadpool, current):
         if threadpool.activeThreadCount() > 0:
@@ -182,7 +191,39 @@ class Free:
         threadpool.start(downloader)
         return downloader
 
+    def get_downloader(self):
+        return Downloader.Downloader
 
-class Paid:
-    def __init__(self, keywords):
-        print('test paid ' + str(keywords))
+
+class Free(Remote):
+    @property
+    @abstractmethod
+    def site_name(self):
+        return ''
+
+    def download(self, threadpool, signals):
+        self.signals = signals
+        self.downloader = self.get_downloader()(self.meta_file()['download link'])
+        self.downloader.download_path = self.download_path
+        self.signals.download_started.emit()
+        self.downloader.signals.downloaded_some.connect(lambda x: self.signals.downloaded_some.emit(x))
+        self.downloader.signals.already_exists.connect(self._download_done)
+        self.downloader.signals.download_done.connect(self._download_done)
+        threadpool.start(self.downloader)
+
+
+class FreesoundResult(Free):
+    @property
+    def site_name(self):
+        return 'Freesound'
+
+    def get_downloader(self):
+        return Downloader.FreesoundDownloader
+
+
+class Paid(Remote):
+    def __init__(self):
+        super(Paid, self).__init__()
+
+    def download(self, threadpool):
+        pass

@@ -55,3 +55,4 @@ fabric.properties
 .idea/httpRequests
 
 /obj/local_index.pkl
+/downloader_auth.ini

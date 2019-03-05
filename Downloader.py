@@ -2,7 +2,8 @@ import requests
 import os
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
 import WebsiteAuth
-import time
+from abc import abstractmethod
+import configparser
 
 
 class DownloaderSigs(QObject):
@@ -27,7 +28,6 @@ class Downloader(QRunnable):
     @pyqtSlot()
     def run(self):
         name = get_title_from_url(self.get_download_path())
-        print(self.get_download_path())
         for root, dirs, files in os.walk(self.download_path):
             if name in files:
                 self.signals.already_exists.emit(os.path.join(root, name))
@@ -70,7 +70,6 @@ class Downloader(QRunnable):
 
     def get_file_progress(self):
         if not self.file_size == -1:
-            print(self.amount_downloaded, time.time())
             return 100*(self.amount_downloaded/int(self.file_size))
         else:
             return -1
@@ -127,12 +126,32 @@ class PreviewDownloader(Downloader):
 
 
 class AuthDownloader(Downloader):
-    def __init__(self, url, username, password):
+    def __init__(self, url):
         super(AuthDownloader, self).__init__(url)
-        self.session = WebsiteAuth.FreeSound(username, password)
+        self.username, self.password = self.get_credentials()
+
+    @property
+    @abstractmethod
+    def site_name(self):
+        return ''
 
     def get_download_path(self):
         return self.session.get_sound_link(self.url)
+
+    def get_credentials(self):
+        config = configparser.ConfigParser()
+        config.read('downloader_auth.ini')
+        return config[self.site_name]['user'], config[self.site_name]['password']
+
+
+class FreesoundDownloader(AuthDownloader):
+    def __init__(self, url):
+        super(FreesoundDownloader, self).__init__(url)
+        self.session = WebsiteAuth.FreeSound(self.username, self.password)
+
+    @property
+    def site_name(self):
+        return 'Freesound'
 
 
 def freesound_download(threadpool, meta_file, username, password, done_function, progress_function):
@@ -146,3 +165,13 @@ def freesound_download(threadpool, meta_file, username, password, done_function,
 
 def get_title_from_url(url):
     return url[url[:-2].rfind('/') + 1:]
+
+
+def set_username_pass(user, password, site):
+    config = configparser.ConfigParser()
+    config[site] = {}
+    config[site]['User'] = user
+    config[site]['Password'] = password
+    with open('downloader_auth.ini', 'w+') as config_file:
+        config.write(config_file)
+
