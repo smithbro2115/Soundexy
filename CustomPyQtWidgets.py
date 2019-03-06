@@ -48,6 +48,11 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
     def get_id_from_row(self, row_number: int) -> str:
         return self.index(row_number, self.table_view.get_column_index('id')).data()
 
+    def get_row_from_id(self, id_number):
+        for row_number in range(self.rowCount()):
+            if self.get_id_from_row(row_number) == id_number:
+                return row_number
+
 
 class RemoveButtonSigs(QtCore.QObject):
     hover = pyqtSignal()
@@ -117,6 +122,7 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.delete_button.setText(' ✓ ')
         self.delete_button.signals.hover.connect(lambda: self.delete_button.setText(' X '))
         self.delete_button.signals.unhover.connect(lambda: self.delete_button.setText(' ✓ '))
+        pyqt_utils.disconnect_all_signals(self.delete_button.clicked)
         self.delete_button.clicked.connect(lambda: self.signals.delete.emit())
 
     def remove_button_downloading_mode(self):
@@ -195,20 +201,43 @@ class SearchResultsTable(QtWidgets.QTableView):
     def add_results_to_search_results_table(self, results):
         for result in results:
             self.current_results[result.id] = result
-
-            meta_file = result.meta_file
-            standard_items = {}
-            for k, v in meta_file().items():
-                if isinstance(v, list):
-                    readable_version = self.convert_none_into_space(v[0])
-                else:
-                    readable_version = self.convert_none_into_space(v)
-                checked_for_special = self.special_values(k, readable_version)
-                item = QtGui.QStandardItem(str(checked_for_special))
-                standard_items[k] = item
-            standard_items['Id'] = QtGui.QStandardItem(str(result.id))
-            self.add_to_table_model(standard_items)
+            standard_items = self.make_standard_items_from_result(result)
+            self.append_row(self.make_row(standard_items))
             self.sort()
+
+    def make_standard_items_from_result(self, result):
+        meta_file = result.meta_file
+        standard_items = {}
+        for k, v in meta_file().items():
+            if isinstance(v, list):
+                readable_version = self.convert_none_into_space(v[0])
+            else:
+                readable_version = self.convert_none_into_space(v)
+            checked_for_special = self.special_values(k, readable_version)
+            item = QtGui.QStandardItem(str(checked_for_special))
+            standard_items[k] = item
+        standard_items['Id'] = QtGui.QStandardItem(str(result.id))
+        return standard_items
+
+    def replace_result(self, new_result, old_result):
+        index = self.searchResultsTableModel.get_row_from_id(old_result.id)
+        new_row = self.make_row(self.make_standard_items_from_result(new_result))
+        self.current_results[old_result.id] = None
+        self.current_results[new_result.id] = new_result
+        self.replace_row(new_row, index)
+
+    def append_row(self, row):
+        self.searchResultsTableModel.appendRow(row)
+
+    def add_row_at(self, row, index):
+        self.searchResultsTableModel.insertRow(index, row)
+
+    def replace_row(self, new_row_item, old_row_number):
+        self.delete_row(old_row_number)
+        self.add_row_at(new_row_item, old_row_number)
+
+    def delete_row(self, row_number):
+        self.searchResultsTableModel.takeRow(row_number)
 
     def sort(self):
         self.sortByColumn(self.horizontalHeader().sortIndicatorSection(),
@@ -220,7 +249,7 @@ class SearchResultsTable(QtWidgets.QTableView):
             row.append(QtGui.QStandardItem(''))
         return row
 
-    def add_to_table_model(self, meta_dict):
+    def make_row(self, meta_dict, index=-1):
         row = self.return_empty_row()
         for k, v in meta_dict.items():
             index = self.get_column_index(k)
@@ -229,7 +258,7 @@ class SearchResultsTable(QtWidgets.QTableView):
             else:
                 self.add_new_column(k)
                 row.append(v)
-        self.searchResultsTableModel.appendRow(row)
+        return row
 
     def get_column_index(self, header):
         header_count = self.searchResultsTableModel.columnCount()

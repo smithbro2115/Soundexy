@@ -50,7 +50,6 @@ class MutagenFile:
     @staticmethod
     def duration(file):
         """In milliseconds"""
-        print('test')
         try:
             return round(file.info.length * 1000)
         except AttributeError:

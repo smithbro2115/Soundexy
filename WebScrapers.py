@@ -80,8 +80,12 @@ class FreesoundScraper(Scraper):
                                       str(raw_result.find('div', {'class': 'sound_filename'})
                                           .find('a', {'class': 'title'}).get('href'))
                         result.id = raw_result.get('id')
-
-                        results.append(result)
+                        existing_result = result.check_if_already_downloaded()
+                        print(existing_result)
+                        if existing_result:
+                            results.append(existing_result)
+                        else:
+                            results.append(result)
 
             self.signals.sig_results.emit(results)
         self.signals.sig_finished.emit()

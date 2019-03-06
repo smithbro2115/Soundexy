@@ -77,8 +77,8 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform_maker = None
         self.local_search = None
         self.free_search = None
-        self.indexer = LocalFileHandler.Indexer()
         self.download_button = DownloadButtonLocal()
+        self.indexer = LocalFileHandler.Indexer()
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
@@ -103,6 +103,9 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.audio_player.signals.time_changed.connect(self.set_current_time)
         self.audio_player.signals.error.connect(self.show_error)
+        self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
+        self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
+        self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
         self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 0, 1)
         self.mainWidget.insertWidget(0, self.searchResultsTable)
@@ -113,9 +116,6 @@ class Gui(GUI.Ui_MainWindow):
         self.metaArea.setStyleSheet("""QWidget{background-color: #232629; overflow-y}""")
         self.metaArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.metaTab.layout().insertWidget(2, self.download_button)
-        self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
-        self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
-        self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
         self.buyButton.setHidden(True)
         self.download_button.setHidden(True)
 
@@ -170,11 +170,10 @@ class Gui(GUI.Ui_MainWindow):
                 self.waveform.load_result(self.current_result)
                 self.waveform.clear_waveform()
                 self.waveform.start_busy_indicator_waveform()
-                self.current_result.signals.ready_for_preview.connect(self.downloaded_ready_for_preview)
-                self.current_result.signals.preview_already_exists.connect(self.download_already_exists)
-                self.current_result.signals.preview_done.connect(self.download_done)
                 self.current_downloader = self.current_result.download_preview(self.cache_thread_pool,
-                                                                               self.current_downloader)
+                                                                               self.current_downloader,
+                                                                               self.downloaded_ready_for_preview,
+                                                                               self.preview_download_done)
 
     @staticmethod
     def clear_cache():
@@ -194,17 +193,21 @@ class Gui(GUI.Ui_MainWindow):
         self.single_clicked_result = self.searchResultsTable.current_results[sound_id]
 
     def add_download_button(self, result):
-        result.signals.download_started.connect(self.download_button.downloaded_started)
-        result.signals.download_done.connect(self.download_button.done)
-        result.signals.download_already_exists.connect(self.download_button.done)
-        result.signals.downloaded_some.connect(self.download_button.set_progress)
-        result.signals.download_deleted.connect(self.download_button.reset)
-        self.download_button.set_button_function(lambda: result.download(self.download_pool))
-        self.download_button.signals.cancel.connect(result.cancel_download)
-        self.download_button.signals.delete.connect(result.delete_download)
+        self.download_button.set_button_function(lambda: result.download(self.download_pool,
+                                                                         self.download_button.downloaded_started,
+                                                                         self.download_button.set_progress,
+                                                                         self.download_done))
+        self.download_button.signals.cancel.connect(lambda: result.cancel_download(self.download_button.reset))
+        self.download_button.signals.delete.connect(lambda: result.delete_download(self.download_button.reset))
+        if result.downloaded:
+            self.download_button.done()
         self.download_button.setHidden(False)
 
-    def download_already_exists(self, path):
+    def download_done(self, new_result):
+        self.download_button.done()
+        self.searchResultsTable.replace_result(new_result, new_result)
+
+    def preview_download_already_exists(self, path):
         self.waveform.load_result(self.searchResultsTable.current_result)
         self.make_waveform(path)
         self.audio_player.handle_new_sound_remote(path)
@@ -214,9 +217,17 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.handle_segment(sound_path, self.current_result,
                                          self.pixel_time_conversion_rate)
 
-    def download_done(self, path):
+    def preview_download_done(self, path):
         self.audio_player.handle_download_complete(path)
         self.make_waveform(path)
+
+    def get_indexer(self, paths):
+        indexer = LocalFileHandler.Indexer()
+        indexer.paths = paths
+        indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
+        indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
+        indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
+        return indexer
 
     def open_add_to_index_progress_dialog(self):
         self.index_progress_dialog = QtWidgets.QProgressDialog()
@@ -303,13 +314,16 @@ class Gui(GUI.Ui_MainWindow):
         try:
             self.indexer.paths = paths
             self.index_thread_pool.start(self.indexer)
+        except RuntimeError:
+            self.indexer = self.get_indexer(paths)
+            self.index_thread_pool.start(self.indexer)
         except TypeError:
             pass
 
     def open_import_audio_file(self, path):
         try:
-            indexer = LocalFileHandler.Indexer(path)
-            self.index_thread_pool.start(indexer)
+            self.indexer.paths = path
+            self.index_thread_pool.start(self.indexer)
         except TypeError:
             print('error')
             pass

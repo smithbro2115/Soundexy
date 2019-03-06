@@ -10,7 +10,6 @@ from abc import abstractmethod
 
 class Local:
     def __init__(self):
-        self.signals = LocalSigs()
         self.title = ''
         self.name = ''
         self.duration = 0
@@ -26,6 +25,8 @@ class Local:
         self.album_image = None
         self.sample_rate = 48000
         self.meta_file = None
+        self.index_file_name = 'local_index'
+        self.available_locally = True
 
     def populate(self, path, identification_number):
         self.id = identification_number
@@ -62,8 +63,9 @@ class Local:
     def set_tag(self, tag, value):
         self.meta_file.set_tag(tag, value)
         self.repopulate()
-        print(self.signals)
-        self.signals.meta_changed.emit(self)
+        from LocalFileHandler import IndexFile
+        index = IndexFile(self.index_file_name)
+        index.changed_meta_data(self)
 
     def get_words(self):
         path_list = list(self.path)
@@ -105,12 +107,33 @@ class Local:
                 'Duration': str(self.duration) + ' ms', 'Description': self.description, 'ID': self.id,
                 'Author': self.author, 'Library': self.library, 'Channels': self.channels,
                 'File Type': self.file_type, 'File Path': self.path, 'Bit Rate': self.bitrate,
-                'Keywords': self.keywords, 'Sample Rate': self.sample_rate}
+                'Keywords': self.keywords, 'Sample Rate': self.sample_rate, 'Available Locally': self.available_locally}
 
 
-class LocalSigs(QObject):
-    failed_to_load_meta = pyqtSignal(str)
-    meta_changed = pyqtSignal(Local)
+class Downloaded(Local):
+    def __init__(self):
+        super(Downloaded, self).__init__()
+        self.library = ''
+        self.old_meta = {}
+        self.index_file_name = 'download_index'
+        self.delete_function = None
+
+    def __eq__(self, other):
+        try:
+            return self.old_meta == other.meta_file()
+        except AttributeError:
+            return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def delete(self):
+        from LocalFileHandler import IndexFile
+        index = IndexFile(self.index_file_name)
+        index.delete_from_index(self)
+
+    def get_dict_of_all_attributes(self):
+        return self.old_meta
 
 
 class RemoteSigs(QObject):
@@ -135,11 +158,27 @@ class Remote:
         self.link = ''
         self.library = ''
         self.file_type = ''
-        self.signals = RemoteSigs()
-        self.tags = self.meta_file()
         self.download_path = 'downloads'
+        self.index_file_name = 'downloaded_index'
         self.downloader = None
-        self._file_name = ''
+        self.downloaded = False
+        self.path = ''
+
+    def __eq__(self, other):
+        try:
+            return self.meta_file()['id'] == other.meta_file()['id']
+        except AttributeError:
+            return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def check_if_already_downloaded(self):
+        from LocalFileHandler import IndexFile
+        for result in IndexFile(self.index_file_name).index:
+            print(self, result)
+            if self == result:
+                return result
 
     @property
     @abstractmethod
@@ -157,41 +196,50 @@ class Remote:
     def meta_file(self):
         return {'file name': self.title, 'title': self.title, 'duration': self.duration, 'description': self.description, 'id': self.id,
                 'author': self.author, 'library': self.library, 'preview Link': self.preview,
-                'file type': self.file_type, 'download link': self.link}
+                'file type': self.file_type, 'download link': self.link, 'available locally': self.downloaded}
 
     @abstractmethod
-    def download(self, threadpool):
+    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f):
         pass
 
-    def _download_done(self, filename):
-        print(filename)
+    def get_downloaded_index(self):
+        from LocalFileHandler import IndexFile
+        return IndexFile(self.index_file_name)
+
+    def _download_done(self, filename, function):
+        self.file_name = filename
+        self.downloader = None
+        self.downloaded = True
+        index = self.get_downloaded_index()
+        index.add_result_to_index(self)
+        index.save()
+        function(self)
+
+    def _preview_download_done(self, filename, function):
         self._file_name = filename
-        self.signals.download_done.emit(filename)
-        # self.downloader = None
+        function(filename)
 
-    def cancel_download(self):
+    def cancel_download(self, function):
         self.downloader.cancel()
-        self.signals.download_deleted.emit()
+        function()
 
-    def delete_download(self):
+    def delete_download(self, function):
         os.remove(self._file_name)
-        self.signals.download_deleted.emit()
+        self.downloaded = False
+        function()
 
-    def download_preview(self, threadpool, current):
+    def download_preview(self, threadpool, current, downloaded_some_f, done_f):
         if threadpool.activeThreadCount() > 0:
             current.cancel()
         downloader = Downloader.PreviewDownloader(self.meta_file()['preview Link'], self.meta_file()['id'])
-        downloader.signals.downloaded.connect(lambda x: self.signals.ready_for_preview.emit(x))
-        downloader.signals.already_exists.connect(lambda x: self.signals.preview_already_exists.emit(x))
-        downloader.signals.download_done.connect(lambda x: self.signals.preview_done.emit(x))
+        downloader.signals.downloaded.connect(lambda x: downloaded_some_f(x))
+        downloader.signals.already_exists.connect(lambda x: self._preview_download_done(x, done_f))
+        downloader.signals.download_done.connect(lambda x: self._preview_download_done(x, done_f))
         threadpool.start(downloader)
         return downloader
 
     def get_downloader(self):
         return Downloader.Downloader
-
-    def get_signals(self):
-        return RemoteSigs
 
 
 class Free(Remote):
@@ -200,13 +248,13 @@ class Free(Remote):
     def site_name(self):
         return ''
 
-    def download(self, threadpool):
+    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f):
         self.downloader = self.get_downloader()(self.meta_file()['download link'])
         self.downloader.download_path = self.download_path
-        self.signals.download_started.emit()
-        self.downloader.signals.downloaded_some.connect(lambda x: self.signals.downloaded_some.emit(x))
-        self.downloader.signals.already_exists.connect(self._download_done)
-        self.downloader.signals.download_done.connect(self._download_done)
+        download_started_f()
+        self.downloader.signals.downloaded_some.connect(lambda x: downloaded_some_f(x))
+        self.downloader.signals.already_exists.connect(lambda x: self._download_done(x, download_done_f))
+        self.downloader.signals.download_done.connect(lambda x: self._download_done(x, download_done_f))
         threadpool.start(self.downloader)
 
 
@@ -223,5 +271,5 @@ class Paid(Remote):
     def __init__(self):
         super(Paid, self).__init__()
 
-    def download(self, threadpool):
+    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f):
         pass
