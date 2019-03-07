@@ -152,7 +152,9 @@ class Gui(GUI.Ui_MainWindow):
 
     def remote_sound_init(self, result):
         self.download_button.reset()
-        if self.current_result == result:
+        if result.downloaded:
+            self.local_sound_init(result)
+        elif self.current_result == result:
             self.audio_player.handle(result, self.pixel_time_conversion_rate)
         else:
             self.clear_meta_from_meta_tab()

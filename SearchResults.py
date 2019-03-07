@@ -110,32 +110,6 @@ class Local:
                 'Keywords': self.keywords, 'Sample Rate': self.sample_rate, 'Available Locally': self.available_locally}
 
 
-class Downloaded(Local):
-    def __init__(self):
-        super(Downloaded, self).__init__()
-        self.library = ''
-        self.old_meta = {}
-        self.index_file_name = 'download_index'
-        self.delete_function = None
-
-    def __eq__(self, other):
-        try:
-            return self.old_meta == other.meta_file()
-        except AttributeError:
-            return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def delete(self):
-        from LocalFileHandler import IndexFile
-        index = IndexFile(self.index_file_name)
-        index.delete_from_index(self)
-
-    def get_dict_of_all_attributes(self):
-        return self.old_meta
-
-
 class RemoteSigs(QObject):
     downloaded_some = pyqtSignal(int)
     download_done = pyqtSignal(str)
@@ -163,6 +137,7 @@ class Remote:
         self.downloader = None
         self.downloaded = False
         self.path = ''
+        self.sample_rate = 44100
 
     def __eq__(self, other):
         try:
@@ -195,7 +170,7 @@ class Remote:
 
     def meta_file(self):
         return {'file name': self.title, 'title': self.title, 'duration': self.duration, 'description': self.description, 'id': self.id,
-                'author': self.author, 'library': self.library, 'preview Link': self.preview,
+                'author': self.author, 'library': self.library, 'preview Link': self.preview, 'sample rate': self.sample_rate,
                 'file type': self.file_type, 'download link': self.link, 'available locally': self.downloaded}
 
     @abstractmethod
@@ -207,13 +182,18 @@ class Remote:
         return IndexFile(self.index_file_name)
 
     def _download_done(self, filename, function):
-        self.file_name = filename
+        self.path = filename
         self.downloader = None
         self.downloaded = True
+        self.sample_rate = self._get_sample_rate()
         index = self.get_downloaded_index()
         index.add_result_to_index(self)
         index.save()
         function(self)
+
+    def _get_sample_rate(self):
+        meta = MetaData.get_meta_file(self.path)
+        return meta['sample rate']
 
     def _preview_download_done(self, filename, function):
         self._file_name = filename
@@ -225,8 +205,14 @@ class Remote:
 
     def delete_download(self, function):
         os.remove(self._file_name)
+        self.delete_from_index()
         self.downloaded = False
         function()
+
+    def delete_from_index(self):
+        from LocalFileHandler import IndexFile
+        index = IndexFile(self.index_file_name)
+        index.delete_from_index(self)
 
     def download_preview(self, threadpool, current, downloaded_some_f, done_f):
         if threadpool.activeThreadCount() > 0:
