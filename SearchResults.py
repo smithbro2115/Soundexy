@@ -5,9 +5,6 @@ import Downloader
 from abc import abstractmethod
 
 
-# FIXME A result can't have signals when it's being pickled, need to work around that
-
-
 class Local:
     def __init__(self):
         self.title = ''

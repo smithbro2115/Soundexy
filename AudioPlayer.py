@@ -7,6 +7,7 @@ from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
 from PyQt5 import QtGui, QtWidgets
 import SearchResults
 from PyQt5.QtWidgets import QSlider
+from abc import abstractmethod
 
 # TODO Implement selection of a portion
 # TODO Allow search results to be dragged on to player
@@ -404,6 +405,293 @@ class SoundPlayer(QRunnable):
         self.set_current_time(goto)
 
 
+class AudioPlayerSigs(QObject):
+    error = pyqtSignal(str)
+
+
+class AudioPlayer:
+    def __init__(self):
+        self.signals = AudioPlayerSigs()
+        self.loaded = False
+        self._playing = False
+        self.playing = False
+        self.loop = False
+        self.segment = False
+        self._path = ''
+        self.path = ''
+        self._meta_data = None
+        self._duration = 0
+        self.attempted_current_time = 0
+        self.passed_download_head = False
+        self._current_time_start = 0
+        self.current_time_stop = 0
+        self._current_time_stop = 0
+        self._current_time = 0
+
+    @property
+    def current_time_stop(self):
+        if not self.playing:
+            return self._current_time_stop
+        return time.time()
+
+    @current_time_stop.setter
+    def current_time_stop(self, value):
+        self._current_time_stop = value
+
+    @property
+    def playing(self):
+        return self._playing
+
+    @playing.setter
+    def playing(self, value):
+        if value:
+            self._current_time_start = time.time()
+        else:
+            self.current_time_stop = time.time()
+        self._playing = value
+
+    @property
+    def path(self):
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        self._path = get_short_path_name(value)
+
+    @property
+    def current_time(self) -> int:
+        return int((self.current_time_stop - self._current_time_start)*1000) + self._current_time
+
+    @current_time.setter
+    def current_time(self, value):
+        self._current_time_start = time.time()
+        self._current_time = value
+
+    @property
+    def meta_data(self):
+        if self.loaded:
+            return self._meta_data
+        self._meta_data = MetaData.get_meta_file(self.path)
+        return self._meta_data
+
+    @property
+    def true_duration(self):
+        return self.meta_data['duration']
+
+    @property
+    def duration(self):
+        if self.segment:
+            return self._duration
+        return self.true_duration
+
+    @property
+    def ended(self):
+        return self.duration <= self.current_time
+
+    def load(self, path):
+        self.path = path
+        d = self.duration
+        self._load(path)
+        self.loaded = True
+
+    @abstractmethod
+    def _load(self, path):
+        pass
+
+    def play(self):
+        if not self.playing:
+            self.playing = True
+            self._play()
+
+    @abstractmethod
+    def _play(self):
+        pass
+
+    def pause(self):
+        if self.playing:
+            self.playing = True
+            self._pause()
+
+    @abstractmethod
+    def _pause(self):
+        pass
+
+    def resume(self):
+        if not self.playing:
+            self.playing = True
+            self._resume()
+
+    @abstractmethod
+    def _resume(self):
+        pass
+
+    def stop(self):
+        if self.loaded:
+            self._reset()
+            self._stop()
+
+    @abstractmethod
+    def _stop(self):
+        pass
+
+    def goto(self, position):
+        if self.segment and position >= self.true_duration:
+            self.pause()
+            self.attempted_current_time = position
+            self.passed_download_head = True
+        else:
+            self._goto(position)
+
+    @abstractmethod
+    def _goto(self, position):
+        pass
+
+    def _reset(self):
+        self.loaded = False
+        self.playing = False
+        self.loop = False
+        self.segment = False
+        self.passed_download_head = False
+
+    def end(self):
+        if self.loop:
+            self.goto(0)
+            self.play()
+
+    def swap_file_with_complete_file(self, path):
+        if self.passed_download_head:
+            current_time = self.attempted_current_time
+        else:
+            current_time = self.current_time
+        self.stop()
+        self.load(path)
+        self.goto(current_time)
+        self.play()
+
+    def swap_file_with_incomplete_file(self, path, duration):
+        current_time = self.current_time
+        self.stop()
+        self.load_segment(path, duration)
+        self.goto(current_time)
+        self.play()
+
+    def load_segment(self, path, duration):
+        self.segment = True
+        self._duration = duration
+        self.load(path)
+
+    def load_rest_of_segment(self, path):
+        self.swap_file_with_complete_file(path)
+
+
+class FullPlayer(AudioPlayer):
+    def __init__(self):
+        super(FullPlayer, self).__init__()
+        self.current_player = None
+        self.wav_list = ['.wav']
+        self.pygame_list = ['.flac', '.ogg', '.mp3']
+
+    def _load(self, path):
+        file_type = os.path.splitext(path)[1].lower()
+        if file_type in self.wav_list:
+            self.current_player = WavPlayer()
+        else:
+            self.current_player = PygamePlayer()
+        self.current_player.load(path)
+
+    def _play(self):
+        self.current_player.play()
+
+    def _pause(self):
+        self.current_player.pause()
+
+    def _resume(self):
+        self.current_player.resume()
+
+    def _stop(self):
+        self.current_player.stop()
+
+    def _goto(self, position):
+        self.current_player.goto(position)
+
+
+class WavPlayer(AudioPlayer):
+    def __init__(self):
+        super(WavPlayer, self).__init__()
+        self.alias = ''
+
+    def _load(self, path):
+        self.alias = 'playsound_' + str(random())
+        self.win_command('open "' + self.path + '" alias', self.alias)
+        self.win_command('set', self.alias, 'time format milliseconds')
+
+    def _play(self):
+        self.win_command('play', self.alias, 'from 0 to', str(self.duration))
+
+    def _pause(self):
+        self.win_command('pause', self.alias)
+
+    def _resume(self):
+        self.win_command('play', self.alias)
+
+    def _stop(self):
+        self.win_command('stop', self.alias)
+
+    def _goto(self, position):
+        self.win_command('play', self.alias, 'from', str(round(position)), 'to', str(self.duration))
+
+    @staticmethod
+    def win_command(*command):
+        from ctypes import c_buffer, windll
+        from sys import getfilesystemencoding
+        buf = c_buffer(255)
+        command = ' '.join(command).encode(getfilesystemencoding())
+        errorCode = int(windll.winmm.mciSendStringA(command, buf, 254, 0))
+        if errorCode:
+            errorBuffer = c_buffer(255)
+            windll.winmm.mciGetErrorStringA(errorCode, errorBuffer, 254)
+            exceptionMessage = ('\n    Error ' + str(errorCode) + ' for command:'
+                                                                  '\n        ' + command.decode() +
+                                '\n    ' + errorBuffer.value.decode())
+            raise PlaysoundException(exceptionMessage)
+        return buf.value
+
+
+class PygamePlayer(AudioPlayer):
+    def __init__(self):
+        super(PygamePlayer, self).__init__()
+        pygame.mixer.init()
+
+    def _load(self, path):
+        pygame.mixer.quit()
+        frequency = int(self.meta_data['sample rate'])
+        pygame.mixer.init(frequency, -16, 2, 512)
+        try:
+            pygame.mixer.music.load(self.path)
+        except pygame.error:
+            self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
+                                    "Try downloading it again.")
+
+    def _play(self):
+        try:
+            pygame.mixer.music.play()
+        except Exception as e:
+            self.signals.error.emit(e)
+
+    def _pause(self):
+        pygame.mixer.music.pause()
+
+    def _resume(self):
+        pygame.mixer.music.play()
+
+    def _stop(self):
+        pygame.mixer.music.stop()
+
+    def _goto(self, position):
+        pygame.mixer.music.rewind()
+        pygame.mixer.music.set_pos(position)
+
+
 class WaveformSlider(QSlider):
     def __init__(self, audio_player):
         super(WaveformSlider, self).__init__()
@@ -501,6 +789,26 @@ class WaveformSlider(QSlider):
         if self.is_busy:
             self.stop__busy_indicator_waveform()
         self.add_file_too_border("Waveforms/waveform.png")
+
+
+def get_short_path_name(long_name):
+    from ctypes import wintypes
+    import ctypes
+    _GetShortPathNameW = ctypes.windll.kernel32.GetShortPathNameW
+    _GetShortPathNameW.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+    _GetShortPathNameW.restype = wintypes.DWORD
+    """
+    Gets the short path name of a given long path.
+    http://stackoverflow.com/a/23598461/200291
+    """
+    output_buf_size = 0
+    while True:
+        output_buf = ctypes.create_unicode_buffer(output_buf_size)
+        needed = _GetShortPathNameW(long_name, output_buf, output_buf_size)
+        if output_buf_size >= needed:
+            return output_buf.value
+        else:
+            output_buf_size = needed
 
 
 def test():
