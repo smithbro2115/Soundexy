@@ -32,11 +32,11 @@ class WavPlayerTest(unittest.TestCase):
 class FullPlayerTest(unittest.TestCase):
     def setUp(self):
         self.audio_player = AudioPlayer.FullPlayer()
-        self.test_file = "downloads/180389__mrmccormack__limiter-on-hand-crank-music-box-amazing-grace.wav"
-        self.test_file_2 = "C:\\Users\\Josh\\Downloads\\261389__jaklocke__tearing-fabric-1.mp3"
+        self.test_file = 'downloads/221869__thatjeffcarter__amazing-grace-beatitudes-chapel.wav'
+        self.test_file_2 = "D:\\Audio Dramas\\Downloads\\01 Track 01.mp3"
 
     def test_overall(self):
-        self.audio_player.load(self.test_file_2)
+        self.audio_player.load(self.test_file)
         self.audio_player.play()
         while self.audio_player.playing and not self.audio_player.ended:
             print(self.audio_player.current_player)
@@ -45,10 +45,11 @@ class FullPlayerTest(unittest.TestCase):
     def test_pause(self):
         self.audio_player.load(self.test_file)
         self.audio_player.play()
-        print('play')
+        print('\nplay')
         time.sleep(6)
         self.audio_player.pause()
         print('pause')
         time.sleep(2)
         self.audio_player.resume()
+        print("resume")
         time.sleep(2)

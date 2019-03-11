@@ -123,44 +123,28 @@ class Gui(GUI.Ui_MainWindow):
         row_index = signal.row()
         id_column_index = self.searchResultsTable.row_order['Id']
         sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
-        sound = self.searchResultsTable.current_results[sound_id]
         result = self.searchResultsTable.current_results[sound_id]
-        if isinstance(sound, SearchResults.Local):
-            self.local_sound_init(result)
-            self.add_album_image_to_player(sound.album_image)
-        elif isinstance(sound, SearchResults.Remote or SearchResults.Paid):
-            self.remote_sound_init(result)
+        self.init_sound_by_type(result)
         self.single_clicked_result = None
+
+    def init_sound_by_type(self, result):
+        if isinstance(result, SearchResults.Local):
+            self.local_sound_init(result)
+            self.add_album_image_to_player(result.album_image)
+        elif isinstance(result, SearchResults.Remote or SearchResults.Paid):
+            self.remote_sound_init(result)
 
     def local_sound_init(self, result):
         self.download_button.setHidden(True)
-        try:
-            self.pixel_time_conversion_rate = self.waveform.maximum() / result.meta_file()['duration']
-        except ZeroDivisionError as e:
-            self.show_error("This sound can't be played because it has no duration")
-        else:
-            if not self.current_result == result or not self.audio_player.get_busy():
-                self.clear_meta_from_meta_tab()
-                self.clear_album_image()
-                self.add_metadata_to_meta_tab(result.meta_file())
-                self.make_waveform(result.path)
-                self.waveform.load_result(result)
-                self.audio_player.handle(result, self.pixel_time_conversion_rate)
-            else:
-                self.audio_player.handle(result, self.pixel_time_conversion_rate)
-            self.current_result = result
+        self.sound_init(result)
 
     def remote_sound_init(self, result):
         self.download_button.reset()
-        if result.downloaded:
-            self.local_sound_init(result)
-        elif self.current_result == result:
-            self.audio_player.handle(result, self.pixel_time_conversion_rate)
+        self.add_download_button(result)
+        if result.downloaded or self.current_result == result:
+            self.sound_init(result)
         else:
-            self.clear_meta_from_meta_tab()
-            self.clear_album_image()
-            self.add_metadata_to_meta_tab(result.meta_file())
-            self.add_download_button(result)
+            self.new_sound_meta(result)
             self.current_result = result
             try:
                 self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
@@ -168,14 +152,41 @@ class Gui(GUI.Ui_MainWindow):
                 self.show_error("This sound can't be played because it has no duration")
             else:
                 self.audio_player.stop()
-                self.audio_player.remote_sound(self.current_result, self.pixel_time_conversion_rate)
-                self.waveform.load_result(self.current_result)
-                self.waveform.clear_waveform()
-                self.waveform.start_busy_indicator_waveform()
+                self.new_sound_waveform(result)
                 self.current_downloader = self.current_result.download_preview(self.cache_thread_pool,
                                                                                self.current_downloader,
                                                                                self.downloaded_ready_for_preview,
                                                                                self.preview_download_done)
+
+    def sound_init(self, result):
+        try:
+            self.pixel_time_conversion_rate = self.waveform.maximum() / result.meta_file()['duration']
+        except ZeroDivisionError:
+            self.show_error("This sound can't be played because it has no duration")
+        else:
+            if not self.current_result == result:
+                self.new_sound_meta(result)
+                self.make_waveform(result.path)
+                self.new_sound_waveform(result)
+                self.new_sound_audio_player(result)
+            else:
+                self.audio_player.space_bar()
+        self.current_result = result
+
+    def new_sound_meta(self, result):
+        self.clear_meta_from_meta_tab()
+        self.clear_album_image()
+        self.add_metadata_to_meta_tab(result.meta_file())
+
+    def new_sound_waveform(self, result):
+        self.waveform.clear_waveform()
+        self.waveform.load_result(result)
+        self.waveform.start_busy_indicator_waveform()
+
+    def new_sound_audio_player(self, result):
+        self.audio_player.audio_player.stop()
+        self.audio_player.load(result.path, self.pixel_time_conversion_rate)
+        self.audio_player.audio_player.play()
 
     @staticmethod
     def clear_cache():
@@ -216,11 +227,12 @@ class Gui(GUI.Ui_MainWindow):
 
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)
-        self.audio_player.handle_segment(sound_path, self.current_result,
-                                         self.pixel_time_conversion_rate)
+        self.audio_player.audio_player.load_segment(sound_path, self.current_result.meta_file()['duration'],
+                                                    self.pixel_time_conversion_rate)
+        self.audio_player.audio_player.play()
 
     def preview_download_done(self, path):
-        self.audio_player.handle_download_complete(path)
+        self.audio_player.audio_player.load_rest_of_segment(path)
         self.make_waveform(path)
 
     def get_indexer(self, paths):
@@ -268,17 +280,11 @@ class Gui(GUI.Ui_MainWindow):
     def spacebar(self):
         if self.current_result is not None:
             if self.current_result != self.single_clicked_result:
-                if isinstance(self.current_result, SearchResults.Local):
-                    self.local_sound_init(self.single_clicked_result)
-                else:
-                    self.remote_sound_init(self.single_clicked_result)
+                self.init_sound_by_type(self.single_clicked_result)
             else:
-                self.audio_player.handle(self.current_result, conversion_rate=self.pixel_time_conversion_rate)
+                self.audio_player.space_bar()
         elif self.single_clicked_result is not None:
-            if isinstance(self.current_result, SearchResults.Local):
-                self.local_sound_init(self.single_clicked_result)
-            else:
-                self.remote_sound_init(self.single_clicked_result)
+            self.init_sound_by_type(self.single_clicked_result)
 
     def reset_cursor(self):
         self.waveform.reset_cursor()
@@ -296,7 +302,7 @@ class Gui(GUI.Ui_MainWindow):
         self.currentTimeLabel.setText(string)
 
     def set_current_time(self):
-        current_time = self.audio_player.current_time
+        current_time = self.audio_player.audio_player.current_time
         self.waveform.move_to_current_time()
         self.set_label_text(current_time)
 
