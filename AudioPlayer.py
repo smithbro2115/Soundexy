@@ -5,7 +5,6 @@ import time
 from random import random
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
 from PyQt5 import QtGui, QtWidgets
-import SearchResults
 from PyQt5.QtWidgets import QSlider
 from abc import abstractmethod
 
@@ -60,6 +59,7 @@ class SoundPlayer(QRunnable):
                 rate = 1/self.pixel_time_conversion_rate
                 sleep_time = rate/1000
                 time.sleep(sleep_time)
+                print(self.audio_player.current_time, self.audio_player._current_time, self.audio_player._current_time_stop, self.audio_player._current_time_start)
                 self.signals.time_changed.emit()
             if not self.audio_player.loaded or self.audio_player.ended:
                 time.sleep(.003)
@@ -99,7 +99,7 @@ class AudioPlayer:
         self._current_time_stop = 0
         self._current_time = 0
         self.current_time = 0
-        self.playing = False
+        # self.playing = False
 
     @property
     def current_time_stop(self):
@@ -120,8 +120,9 @@ class AudioPlayer:
         if value:
             self._current_time_start = time.time()
         else:
-            self.current_time_stop = time.time()
             self._current_time = self.current_time
+            self.current_time_stop = time.time()
+            self._current_time_start = time.time()
         self._playing = value
 
     @property
@@ -215,6 +216,9 @@ class AudioPlayer:
             self.passed_download_head = True
         else:
             self._goto(position)
+        if not self.playing:
+            self._pause()
+        print(position)
         self.current_time = position
 
     @abstractmethod
@@ -395,6 +399,7 @@ class WaveformSlider(QSlider):
         if self.current_result is not None:
             position = QtWidgets.QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.x(), self.width())
             self.setValue(position)
+            print(position)
             self.audio_player.audio_player.goto(position)
 
     def load_result(self, result):

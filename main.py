@@ -161,6 +161,7 @@ class Gui(GUI.Ui_MainWindow):
     def sound_init(self, result):
         try:
             self.pixel_time_conversion_rate = self.waveform.maximum() / result.meta_file()['duration']
+            print(self.pixel_time_conversion_rate)
         except ZeroDivisionError:
             self.show_error("This sound can't be played because it has no duration")
         else:
