@@ -1,6 +1,7 @@
 import AudioPlayer
 import unittest
 import time
+import timeit
 
 
 class PygamePlayerTest(unittest.TestCase):
@@ -33,7 +34,8 @@ class FullPlayerTest(unittest.TestCase):
     def setUp(self):
         self.audio_player = AudioPlayer.FullPlayer()
         self.test_file = 'downloads/221869__thatjeffcarter__amazing-grace-beatitudes-chapel.wav'
-        self.test_file_2 = "D:\\Audio Dramas\\Downloads\\01 Track 01.mp3"
+        self.test_file_2 = \
+            "C:\\Users\\Josh\\Downloads\\Tree-Fall-Palm-Tree-Heavy-Slow-Cracking-Fall_GEN-HD3-38085_1398682.mp3"
 
     def test_overall(self):
         self.audio_player.load(self.test_file)

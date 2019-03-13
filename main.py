@@ -151,7 +151,7 @@ class Gui(GUI.Ui_MainWindow):
             except ZeroDivisionError:
                 self.show_error("This sound can't be played because it has no duration")
             else:
-                self.audio_player.stop()
+                self.audio_player.audio_player.stop()
                 self.new_sound_waveform(result)
                 self.current_downloader = self.current_result.download_preview(self.cache_thread_pool,
                                                                                self.current_downloader,
@@ -161,7 +161,6 @@ class Gui(GUI.Ui_MainWindow):
     def sound_init(self, result):
         try:
             self.pixel_time_conversion_rate = self.waveform.maximum() / result.meta_file()['duration']
-            print(self.pixel_time_conversion_rate)
         except ZeroDivisionError:
             self.show_error("This sound can't be played because it has no duration")
         else:
@@ -228,8 +227,8 @@ class Gui(GUI.Ui_MainWindow):
 
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)
-        self.audio_player.audio_player.load_segment(sound_path, self.current_result.meta_file()['duration'],
-                                                    self.pixel_time_conversion_rate)
+        self.audio_player.load_segment(sound_path, self.current_result.meta_file()['duration'],
+                                       self.pixel_time_conversion_rate)
         self.audio_player.audio_player.play()
 
     def preview_download_done(self, path):

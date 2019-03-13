@@ -139,7 +139,7 @@ class Remote:
     def __eq__(self, other):
         try:
             return self.meta_file()['id'] == other.meta_file()['id']
-        except AttributeError:
+        except (AttributeError, KeyError):
             return False
 
     def __ne__(self, other):

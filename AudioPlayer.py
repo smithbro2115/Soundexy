@@ -47,7 +47,9 @@ class SoundPlayer(QRunnable):
         self.reload(path=path, is_complete=True)
 
     def space_bar(self):
-        if self.audio_player.playing:
+        if self.audio_player.ended:
+            self.audio_player.goto(0)
+        elif self.audio_player.playing:
             self.audio_player.pause()
         else:
             self.audio_player.resume()
@@ -56,25 +58,27 @@ class SoundPlayer(QRunnable):
     def run(self):
         while True:
             while self.audio_player.playing and not self.audio_player.ended:
-                rate = 1/self.pixel_time_conversion_rate
-                sleep_time = rate/1000
-                time.sleep(sleep_time)
-                print(self.audio_player.current_time, self.audio_player._current_time, self.audio_player._current_time_stop, self.audio_player._current_time_start)
-                self.signals.time_changed.emit()
-            if not self.audio_player.loaded or self.audio_player.ended:
                 time.sleep(.003)
+                self.signals.time_changed.emit()
+            time.sleep(.01)
 
     def load(self, path, pixel_time_conversion_rate):
+        self.audio_player.stop()
         self.pixel_time_conversion_rate = pixel_time_conversion_rate
         self.audio_player.load(path)
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
+        self.audio_player.stop()
         self.pixel_time_conversion_rate = pixel_time_conversion_rate
         self.audio_player.load_segment(path, true_duration)
 
     @staticmethod
     def calculate_px_time_conversion_rate(waveform_width, sound_duration):
         return waveform_width/sound_duration
+
+    def goto(self, position):
+        self.audio_player.goto(position/self.pixel_time_conversion_rate)
+        self.signals.time_changed.emit()
 
 
 class AudioPlayerSigs(QObject):
@@ -99,7 +103,6 @@ class AudioPlayer:
         self._current_time_stop = 0
         self._current_time = 0
         self.current_time = 0
-        # self.playing = False
 
     @property
     def current_time_stop(self):
@@ -135,7 +138,9 @@ class AudioPlayer:
 
     @property
     def current_time(self) -> int:
-        return int((self.current_time_stop - self._current_time_start)*1000) + self._current_time
+        if self.playing:
+            return int((self.current_time_stop - self._current_time_start)*1000) + self._current_time
+        return self._current_time
 
     @current_time.setter
     def current_time(self, value):
@@ -146,7 +151,7 @@ class AudioPlayer:
     def meta_data(self):
         if self.loaded:
             return self._meta_data
-        self._meta_data = MetaData.get_meta_file(self.path)
+        self._meta_data = self.get_meta_file()
         return self._meta_data
 
     @property
@@ -163,6 +168,9 @@ class AudioPlayer:
     def ended(self):
         return self.duration <= self.current_time
 
+    def get_meta_file(self):
+        return MetaData.get_meta_file(self.path)
+
     def load(self, path):
         self.path = path
         d = self.duration
@@ -171,6 +179,18 @@ class AudioPlayer:
 
     @abstractmethod
     def _load(self, path):
+        pass
+
+    def reload(self, path):
+        self.path = path
+        self._meta_data = self.get_meta_file()
+        self.stop()
+        self.loaded = True
+        self._reload(path)
+        self.play()
+
+    @abstractmethod
+    def _reload(self, path):
         pass
 
     def play(self):
@@ -210,6 +230,7 @@ class AudioPlayer:
         pass
 
     def goto(self, position):
+        self.current_time = position
         if self.segment and position >= self.true_duration:
             self.pause()
             self.attempted_current_time = position
@@ -218,8 +239,6 @@ class AudioPlayer:
             self._goto(position)
         if not self.playing:
             self._pause()
-        print(position)
-        self.current_time = position
 
     @abstractmethod
     def _goto(self, position):
@@ -231,6 +250,7 @@ class AudioPlayer:
         self.loop = False
         self.segment = False
         self.passed_download_head = False
+        self.current_time = 0
 
     def end(self):
         if self.loop:
@@ -242,10 +262,10 @@ class AudioPlayer:
             current_time = self.attempted_current_time
         else:
             current_time = self.current_time
-        self.stop()
-        self.load(path)
+        self.reload(path)
         self.goto(current_time)
-        self.play()
+
+    load_rest_of_segment = swap_file_with_complete_file
 
     def swap_file_with_incomplete_file(self, path, duration):
         current_time = self.current_time
@@ -259,9 +279,6 @@ class AudioPlayer:
         self._duration = duration
         self.load(path)
 
-    def load_rest_of_segment(self, path):
-        self.swap_file_with_complete_file(path)
-
 
 class FullPlayer(AudioPlayer):
     def __init__(self):
@@ -269,6 +286,9 @@ class FullPlayer(AudioPlayer):
         self.current_player = None
         self.wav_list = ['.wav']
         self.pygame_list = ['.flac', '.ogg', '.mp3']
+
+    def _reload(self, path):
+        self.current_player._reload(path)
 
     def _load(self, path):
         file_type = os.path.splitext(path)[1].lower()
@@ -303,6 +323,9 @@ class WavPlayer(AudioPlayer):
         self.alias = 'playsound_' + str(random())
         self.win_command('open "' + self.path + '" alias', self.alias)
         self.win_command('set', self.alias, 'time format milliseconds')
+
+    def _reload(self, path):
+        self._load(path)
 
     def _play(self):
         self.win_command('play', self.alias, 'from 0 to', str(self.duration))
@@ -351,6 +374,13 @@ class PygamePlayer(AudioPlayer):
             self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                     "Try downloading it again.")
 
+    def _reload(self, path):
+        try:
+            pygame.mixer.music.load(self.path)
+        except pygame.error:
+            self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
+                                    "Try downloading it again.")
+
     def _play(self):
         try:
             pygame.mixer.music.play()
@@ -361,14 +391,13 @@ class PygamePlayer(AudioPlayer):
         pygame.mixer.music.pause()
 
     def _resume(self):
-        pygame.mixer.music.play()
+        pygame.mixer.music.unpause()
 
     def _stop(self):
         pygame.mixer.music.stop()
 
     def _goto(self, position):
-        pygame.mixer.music.rewind()
-        pygame.mixer.music.set_pos(position)
+        pygame.mixer.music.play(start=position/1000)
 
 
 class WaveformSlider(QSlider):
@@ -399,8 +428,7 @@ class WaveformSlider(QSlider):
         if self.current_result is not None:
             position = QtWidgets.QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.x(), self.width())
             self.setValue(position)
-            print(position)
-            self.audio_player.audio_player.goto(position)
+            self.audio_player.goto(position)
 
     def load_result(self, result):
         self.reset_cursor()
