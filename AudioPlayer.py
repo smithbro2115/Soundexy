@@ -185,8 +185,8 @@ class AudioPlayer:
         self.path = path
         self._meta_data = self.get_meta_file()
         self.stop()
-        self.loaded = True
         self._reload(path)
+        self.loaded = True
         self.play()
 
     @abstractmethod
@@ -367,7 +367,8 @@ class PygamePlayer(AudioPlayer):
     def _load(self, path):
         pygame.mixer.quit()
         frequency = int(self.meta_data['sample rate'])
-        pygame.mixer.init(frequency, -16, 2, 512)
+        channels = int(self.meta_data['channels'])
+        pygame.mixer.init(frequency, -16, channels, 512)
         try:
             pygame.mixer.music.load(self.path)
         except pygame.error:

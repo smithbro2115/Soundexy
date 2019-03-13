@@ -219,6 +219,7 @@ class Gui(GUI.Ui_MainWindow):
     def download_done(self, new_result):
         self.download_button.done()
         self.searchResultsTable.replace_result(new_result, new_result)
+        self.audio_player.audio_player.swap_file_with_complete_file(new_result.path)
 
     def preview_download_already_exists(self, path):
         self.waveform.load_result(self.searchResultsTable.current_result)
