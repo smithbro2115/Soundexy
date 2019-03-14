@@ -32,6 +32,8 @@ class SoundPlayer(QRunnable):
         self.waveform = None
         self.label = None
         self.signals = SoundSigs()
+        self.wav_list = ['.wav']
+        self.pygame_list = ['.flac', '.ogg', '.mp3']
         self.current_result = ''
         self.pixel_time_conversion_rate = 0
         self.audio_player = FullPlayer()
@@ -64,6 +66,11 @@ class SoundPlayer(QRunnable):
 
     def load(self, path, pixel_time_conversion_rate):
         self.pixel_time_conversion_rate = pixel_time_conversion_rate
+        file_type = os.path.splitext(path)[1].lower()
+        if file_type in self.wav_list:
+            self.audio_player = WavPlayer()
+        elif file_type in self.pygame_list:
+            self.audio_player = PygamePlayer()
         self.audio_player.load(path)
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
@@ -271,40 +278,6 @@ class AudioPlayer:
         self.segment = True
         self._duration = duration
         self.load(path)
-
-
-class FullPlayer(AudioPlayer):
-    def __init__(self):
-        super(FullPlayer, self).__init__()
-        self.current_player = AudioPlayer()
-        self.wav_list = ['.wav']
-        self.pygame_list = ['.flac', '.ogg', '.mp3']
-
-    def reload(self, path):
-        self.current_player.reload(path)
-
-    def load(self, path):
-        file_type = os.path.splitext(path)[1].lower()
-        if file_type in self.wav_list:
-            self.current_player = WavPlayer()
-        else:
-            self.current_player = PygamePlayer()
-        self.current_player.load(path)
-
-    def play(self):
-        self.current_player.play()
-
-    def pause(self):
-        self.current_player.pause()
-
-    def resume(self):
-        self.current_player.resume()
-
-    def stop(self):
-        self.current_player.stop()
-
-    def goto(self, position):
-        self.current_player.goto(position)
 
 
 class WavPlayer(AudioPlayer):
