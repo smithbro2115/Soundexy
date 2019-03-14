@@ -63,7 +63,6 @@ class SoundPlayer(QRunnable):
             time.sleep(.01)
 
     def load(self, path, pixel_time_conversion_rate):
-        self.audio_player.stop()
         self.pixel_time_conversion_rate = pixel_time_conversion_rate
         self.audio_player.load(path)
 
@@ -174,10 +173,9 @@ class AudioPlayer:
     def load(self, path):
         self.path = path
         d = self.duration
-        self._load(path)
         self.loaded = True
+        self._load(self.path)
 
-    @abstractmethod
     def _load(self, path):
         pass
 
@@ -189,16 +187,15 @@ class AudioPlayer:
         self.loaded = True
         self.play()
 
-    @abstractmethod
     def _reload(self, path):
         pass
 
     def play(self):
         if not self.playing:
+            print(self.playing)
             self.playing = True
             self._play()
 
-    @abstractmethod
     def _play(self):
         pass
 
@@ -207,7 +204,6 @@ class AudioPlayer:
             self.playing = False
             self._pause()
 
-    @abstractmethod
     def _pause(self):
         pass
 
@@ -216,7 +212,6 @@ class AudioPlayer:
             self.playing = True
             self._resume()
 
-    @abstractmethod
     def _resume(self):
         pass
 
@@ -225,7 +220,6 @@ class AudioPlayer:
             self._reset()
             self._stop()
 
-    @abstractmethod
     def _stop(self):
         pass
 
@@ -240,7 +234,6 @@ class AudioPlayer:
         if not self.playing:
             self._pause()
 
-    @abstractmethod
     def _goto(self, position):
         pass
 
@@ -283,14 +276,14 @@ class AudioPlayer:
 class FullPlayer(AudioPlayer):
     def __init__(self):
         super(FullPlayer, self).__init__()
-        self.current_player = None
+        self.current_player = AudioPlayer()
         self.wav_list = ['.wav']
         self.pygame_list = ['.flac', '.ogg', '.mp3']
 
-    def _reload(self, path):
-        self.current_player._reload(path)
+    def reload(self, path):
+        self.current_player.reload(path)
 
-    def _load(self, path):
+    def load(self, path):
         file_type = os.path.splitext(path)[1].lower()
         if file_type in self.wav_list:
             self.current_player = WavPlayer()
@@ -298,19 +291,19 @@ class FullPlayer(AudioPlayer):
             self.current_player = PygamePlayer()
         self.current_player.load(path)
 
-    def _play(self):
+    def play(self):
         self.current_player.play()
 
-    def _pause(self):
+    def pause(self):
         self.current_player.pause()
 
-    def _resume(self):
+    def resume(self):
         self.current_player.resume()
 
-    def _stop(self):
+    def stop(self):
         self.current_player.stop()
 
-    def _goto(self, position):
+    def goto(self, position):
         self.current_player.goto(position)
 
 
@@ -370,7 +363,7 @@ class PygamePlayer(AudioPlayer):
         channels = int(self.meta_data['channels'])
         pygame.mixer.init(frequency, -16, channels, 512)
         try:
-            pygame.mixer.music.load(self.path)
+            pygame.mixer.music.load(path)
         except pygame.error:
             self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                     "Try downloading it again.")
