@@ -36,7 +36,7 @@ class SoundPlayer(QRunnable):
         self.pygame_list = ['.flac', '.ogg', '.mp3']
         self.current_result = ''
         self.pixel_time_conversion_rate = 0
-        self.audio_player = FullPlayer()
+        self.audio_player = AudioPlayer()
         self.audio_player.signals.error.connect(lambda x: self.signals.error.emit(x))
 
     def set_waveform(self, waveform):
@@ -66,17 +66,31 @@ class SoundPlayer(QRunnable):
 
     def load(self, path, pixel_time_conversion_rate):
         self.pixel_time_conversion_rate = pixel_time_conversion_rate
+        self.audio_player = self.get_correct_audio_player(path)
+        self.audio_player.load(path)
+
+    def get_correct_audio_player(self, path):
         file_type = os.path.splitext(path)[1].lower()
         if file_type in self.wav_list:
-            self.audio_player = WavPlayer()
+            return WavPlayer()
         elif file_type in self.pygame_list:
-            self.audio_player = PygamePlayer()
-        self.audio_player.load(path)
+            return PygamePlayer()
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
         self.audio_player.stop()
+        self.audio_player = self.get_correct_audio_player(path)
         self.pixel_time_conversion_rate = pixel_time_conversion_rate
         self.audio_player.load_segment(path, true_duration)
+
+    def reload_sound_from_different_file(self, path):
+        current_time = self.audio_player.current_time
+        playing = self.audio_player.playing
+        self.audio_player.stop()
+        print(current_time)
+        self.load(path, self.pixel_time_conversion_rate)
+        self.audio_player.goto(current_time)
+        if playing:
+            self.audio_player.play()
 
     @staticmethod
     def calculate_px_time_conversion_rate(waveform_width, sound_duration):
@@ -179,7 +193,7 @@ class AudioPlayer:
 
     def load(self, path):
         self.path = path
-        d = self.duration
+        self._meta_data = self.get_meta_file()
         self.loaded = True
         self._load(self.path)
 
@@ -199,7 +213,6 @@ class AudioPlayer:
 
     def play(self):
         if not self.playing:
-            print(self.playing)
             self.playing = True
             self._play()
 
@@ -262,6 +275,7 @@ class AudioPlayer:
             current_time = self.attempted_current_time
         else:
             current_time = self.current_time
+        self.stop()
         self.reload(path)
         self.goto(current_time)
 
@@ -328,12 +342,13 @@ class WavPlayer(AudioPlayer):
 class PygamePlayer(AudioPlayer):
     def __init__(self):
         super(PygamePlayer, self).__init__()
-        pygame.mixer.init()
+        pygame.mixer.pre_init(48000, -16, 2, 512)
 
     def _load(self, path):
-        pygame.mixer.quit()
+        print(self.meta_data())
         frequency = int(self.meta_data['sample rate'])
         channels = int(self.meta_data['channels'])
+        pygame.mixer.quit()
         pygame.mixer.init(frequency, -16, channels, 512)
         try:
             pygame.mixer.music.load(path)
@@ -353,6 +368,7 @@ class PygamePlayer(AudioPlayer):
             pygame.mixer.music.play()
         except Exception as e:
             self.signals.error.emit(e)
+        print(pygame.mixer.get_init())
 
     def _pause(self):
         pygame.mixer.music.pause()
@@ -364,7 +380,11 @@ class PygamePlayer(AudioPlayer):
         pygame.mixer.music.stop()
 
     def _goto(self, position):
-        pygame.mixer.music.play(start=position/1000)
+        try:
+            self._reload(self.path)
+            pygame.mixer.music.play(start=round(position)/1000)
+        except pygame.error:
+            pygame.mixer.music.set_pos(position)
 
 
 class WaveformSlider(QSlider):
