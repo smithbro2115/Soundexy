@@ -38,6 +38,10 @@ class SoundPlayer(QRunnable):
         self.audio_player = AudioPlayer()
         self.audio_player.signals.error.connect(lambda x: self.signals.error.emit(x))
 
+    def reset(self):
+        self.audio_player.stop()
+        self.audio_player = AudioPlayer()
+
     def set_waveform(self, waveform):
         self.waveform = waveform
 
@@ -65,6 +69,7 @@ class SoundPlayer(QRunnable):
             time.sleep(.01)
 
     def load(self, path, pixel_time_conversion_rate):
+        print('loading')
         self.pixel_time_conversion_rate = pixel_time_conversion_rate
         self.audio_player = self.get_correct_audio_player(path)
         self.audio_player.load(path)
@@ -96,11 +101,11 @@ class SoundPlayer(QRunnable):
         self.audio_player.play()
 
     def reload_sound_from_different_file(self, path):
+        print('reloading')
         current_time = self.audio_player.current_time
         playing = self.audio_player.playing
         self.audio_player.stop()
         self.load(path, self.pixel_time_conversion_rate)
-        print(current_time)
         self.audio_player.goto(current_time)
         if playing:
             self.audio_player.play()
@@ -136,6 +141,9 @@ class AudioPlayer:
         self._current_time_stop = 0
         self._current_time = 0
         self.current_time = 0
+
+    def __del__(self):
+        self._meta_data = None
 
     @property
     def current_time_stop(self):
@@ -312,7 +320,11 @@ class AudioPlayer:
 class WavPlayer(AudioPlayer):
     def __init__(self):
         super(WavPlayer, self).__init__()
+        print('init wav')
         self.alias = ''
+
+    def __del__(self):
+        self.win_command('close', self.alias)
 
     def _load(self, path):
         self.alias = 'playsound_' + str(random())
@@ -323,7 +335,7 @@ class WavPlayer(AudioPlayer):
         self._load(path)
 
     def _play(self):
-        self.win_command('play', self.alias, 'from 0 to', str(self.duration))
+        self.win_command('play', self.alias, 'from', str(round(self.current_time)), 'to', str(self.duration))
 
     def _pause(self):
         self.win_command('pause', self.alias)
@@ -444,6 +456,11 @@ class WaveformSlider(QSlider):
             pass
         else:
             self.setSliderPosition(self.maximum()*progress)
+
+    def clear_sound(self):
+        self.reset_cursor()
+        self.current_result = None
+        self.clear_waveform()
 
     def reset_cursor(self):
         self.setSliderPosition(0)

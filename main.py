@@ -174,9 +174,12 @@ class Gui(GUI.Ui_MainWindow):
         self.current_result = result
 
     def new_sound_meta(self, result):
+        self.clear_meta_tab()
+        self.add_metadata_to_meta_tab(result.meta_file())
+
+    def clear_meta_tab(self):
         self.clear_meta_from_meta_tab()
         self.clear_album_image()
-        self.add_metadata_to_meta_tab(result.meta_file())
 
     def new_sound_waveform(self, result):
         self.waveform.clear_waveform()
@@ -211,10 +214,21 @@ class Gui(GUI.Ui_MainWindow):
                                                                          self.download_button.set_progress,
                                                                          self.download_done))
         self.download_button.signals.cancel.connect(lambda: result.cancel_download(self.download_button.reset))
-        self.download_button.signals.delete.connect(lambda: result.delete_download(self.download_button.reset))
+        self.download_button.signals.delete.connect(lambda: result.delete_download(self.download_deleted))
         if result.downloaded:
             self.download_button.done()
         self.download_button.setHidden(False)
+
+    def download_deleted(self):
+        self.reset_waveform()
+        self.clear_meta_tab()
+        self.audio_player.reset()
+        self.set_current_time()
+        self.download_button.reset()
+        self.download_button.setVisible(False)
+
+    def reset_waveform(self):
+        self.waveform.clear_sound()
 
     def download_done(self, new_result):
         self.download_button.done()

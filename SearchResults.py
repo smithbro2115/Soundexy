@@ -1,5 +1,6 @@
 import MetaData
 from PyQt5.QtCore import pyqtSignal, QObject
+import sys
 import os
 import Downloader
 from abc import abstractmethod
@@ -138,6 +139,7 @@ class Remote:
 
     def __eq__(self, other):
         try:
+            print(other.meta_file())
             return self.meta_file()['id'] == other.meta_file()['id']
         except (AttributeError, KeyError):
             return False
@@ -201,10 +203,10 @@ class Remote:
         function()
 
     def delete_download(self, function):
-        os.remove(self._file_name)
+        function()
         self.delete_from_index()
         self.downloaded = False
-        function()
+        os.remove(self.path)
 
     def delete_from_index(self):
         from LocalFileHandler import IndexFile
