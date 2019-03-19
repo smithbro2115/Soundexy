@@ -58,7 +58,8 @@ class SoundPlayer(QRunnable):
     @pyqtSlot()
     def run(self):
         while True:
-            while self.audio_player.playing and not self.audio_player.ended:
+            while self.audio_player.playing and not self.audio_player.ended and not \
+                    self.audio_player.passed_download_head:
                 time.sleep(.003)
                 self.signals.time_changed.emit()
             time.sleep(.01)
@@ -77,7 +78,7 @@ class SoundPlayer(QRunnable):
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
         current_time = self.audio_player.current_time
-        playing = self.audio_player.proxy_playing
+        playing = self.audio_player.playing
         self.audio_player.stop()
         self.audio_player = self.get_correct_audio_player(path)
         self.pixel_time_conversion_rate = pixel_time_conversion_rate
@@ -212,13 +213,14 @@ class AudioPlayer:
     def _load(self, path):
         pass
 
-    def reload(self, path):
+    def reload(self, path, playing):
         self.path = path
         self._meta_data = self.get_meta_file()
         self.stop()
         self._reload(path)
         self.loaded = True
-        self.play()
+        if playing:
+            self.play()
 
     def _reload(self, path):
         pass
@@ -287,8 +289,9 @@ class AudioPlayer:
             current_time = self.attempted_current_time
         else:
             current_time = self.current_time
+        playing = self.playing
         self.stop()
-        self.reload(path)
+        self.reload(path, playing)
         self.goto(current_time)
 
     load_rest_of_segment = swap_file_with_complete_file
@@ -499,7 +502,18 @@ class AudioPlayerPlaceholder(AudioPlayer):
     def __init__(self):
         super(AudioPlayerPlaceholder, self).__init__()
         self.passed_download_head = True
-        self.proxy_playing = False
+
+    @property
+    def current_time(self):
+        return self._current_time
+
+    @current_time.setter
+    def current_time(self, value):
+        self._current_time = value
+
+    @property
+    def ended(self):
+        return False
 
     def goto(self, position):
         self.current_time = position
@@ -507,15 +521,6 @@ class AudioPlayerPlaceholder(AudioPlayer):
     def preload(self, duration):
         self._duration = duration
         self.current_time = 0
-
-    def play(self):
-        self.proxy_playing = True
-
-    def pause(self):
-        self.proxy_playing = False
-
-    def resume(self):
-        self.proxy_playing = True
 
 
 def get_short_path_name(long_name):
