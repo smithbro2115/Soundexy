@@ -56,7 +56,6 @@ class FreesoundScraper(Scraper):
     def run(self):
         if not self.canceled:
             page_number = self.page_number
-            print(page_number)
             url = self.url
             raw_html = simple_get(url + '&page=' + str(page_number))
             results = []
@@ -81,7 +80,6 @@ class FreesoundScraper(Scraper):
                                           .find('a', {'class': 'title'}).get('href'))
                         result.id = raw_result.get('id')
                         existing_result = result.check_if_already_downloaded()
-                        print(existing_result)
                         if existing_result:
                             results.append(existing_result)
                         else:

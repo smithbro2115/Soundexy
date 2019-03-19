@@ -10,7 +10,6 @@ def get_meta_file(path):
     supported_file_types = {'.mp3': Mp3File, '.wav': WavFile,
                             '.flac': FlacFile, '.ogg': OggFile}
     filetype = os.path.splitext(path)[1].lower()
-    print(filetype)
     try:
         return supported_file_types.get(filetype)(path)
     except KeyError:

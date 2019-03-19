@@ -6,7 +6,6 @@ from random import random
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtWidgets import QSlider
-from abc import abstractmethod
 
 # TODO Implement selection of a portion
 # TODO Allow search results to be dragged on to player
@@ -77,17 +76,30 @@ class SoundPlayer(QRunnable):
             return PygamePlayer()
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
+        current_time = self.audio_player.current_time
+        playing = self.audio_player.proxy_playing
         self.audio_player.stop()
         self.audio_player = self.get_correct_audio_player(path)
         self.pixel_time_conversion_rate = pixel_time_conversion_rate
         self.audio_player.load_segment(path, true_duration)
+        self.audio_player.goto(current_time)
+        if playing:
+            self.audio_player.play()
+
+    def preload(self, true_duration, pixel_time_conversion_rate):
+        self.audio_player.stop()
+        self.signals.time_changed.emit()
+        self.audio_player = AudioPlayerPlaceholder()
+        self.pixel_time_conversion_rate = pixel_time_conversion_rate
+        self.audio_player.preload(true_duration)
+        self.audio_player.play()
 
     def reload_sound_from_different_file(self, path):
         current_time = self.audio_player.current_time
         playing = self.audio_player.playing
         self.audio_player.stop()
-        print(current_time)
         self.load(path, self.pixel_time_conversion_rate)
+        print(current_time)
         self.audio_player.goto(current_time)
         if playing:
             self.audio_player.play()
@@ -342,14 +354,13 @@ class WavPlayer(AudioPlayer):
 class PygamePlayer(AudioPlayer):
     def __init__(self):
         super(PygamePlayer, self).__init__()
-        pygame.mixer.pre_init(48000, -16, 2, 512)
+        pygame.mixer.pre_init(48000, -16, 2, 1024)
 
     def _load(self, path):
-        print(self.meta_data())
         frequency = int(self.meta_data['sample rate'])
         channels = int(self.meta_data['channels'])
         pygame.mixer.quit()
-        pygame.mixer.init(frequency, -16, channels, 512)
+        pygame.mixer.init(frequency=frequency, channels=channels)
         try:
             pygame.mixer.music.load(path)
         except pygame.error:
@@ -368,7 +379,6 @@ class PygamePlayer(AudioPlayer):
             pygame.mixer.music.play()
         except Exception as e:
             self.signals.error.emit(e)
-        print(pygame.mixer.get_init())
 
     def _pause(self):
         pygame.mixer.music.pause()
@@ -425,7 +435,6 @@ class WaveformSlider(QSlider):
     def move_to_current_time(self):
         sound_duration = self.current_sound_duration
         current_time = self.audio_player.audio_player.current_time
-        # print('main: ' + str(current_time))
         try:
             progress = current_time/sound_duration
         except ZeroDivisionError:
@@ -484,6 +493,29 @@ class WaveformSlider(QSlider):
         if self.is_busy:
             self.stop__busy_indicator_waveform()
         self.add_file_too_border("Waveforms/waveform.png")
+
+
+class AudioPlayerPlaceholder(AudioPlayer):
+    def __init__(self):
+        super(AudioPlayerPlaceholder, self).__init__()
+        self.passed_download_head = True
+        self.proxy_playing = False
+
+    def goto(self, position):
+        self.current_time = position
+
+    def preload(self, duration):
+        self._duration = duration
+        self.current_time = 0
+
+    def play(self):
+        self.proxy_playing = True
+
+    def pause(self):
+        self.proxy_playing = False
+
+    def resume(self):
+        self.proxy_playing = True
 
 
 def get_short_path_name(long_name):
