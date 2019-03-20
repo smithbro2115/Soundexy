@@ -532,10 +532,21 @@ class Window(QtWidgets.QMainWindow):
     def __init__(self, ui, parent=None):
         super(Window, self).__init__(parent=parent)
         self.resized.connect(ui.resize_event)
+        self.settings = QtCore.QSettings('smithbro', 'App')
+        try:
+            self.restoreGeometry(self.settings.value('geometry'))
+            self.restoreState(self.settings.value('windowState', ''))
+        except TypeError:
+            pass
 
     def resizeEvent(self, event):
         self.resized.emit()
         return super(Window, self).resizeEvent(event)
+
+    def closeEvent(self, event):
+        self.settings.setValue('geometry', self.saveGeometry())
+        self.settings.setValue('windowState', self.saveState())
+        QtWidgets.QMainWindow.closeEvent(self, event)
 
 
 class WorkerSignals(QObject):
