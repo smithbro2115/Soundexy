@@ -127,7 +127,6 @@ class WavFile:
         self.meta['path'] = self.path
         self.meta['file type'] = 'wav'
         _file = sf.SoundFile(self.path)
-        print(_file)
         try:
             self.duration = round((len(_file) / _file.samplerate)*1000)
             self.meta['duration'] = self.duration

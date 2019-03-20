@@ -40,7 +40,7 @@ class SoundPlayer(QRunnable):
 
     def reset(self):
         self.audio_player.stop()
-        self.audio_player = AudioPlayer()
+        self.audio_player = AudioPlayerPlaceholder()
 
     def set_waveform(self, waveform):
         self.waveform = waveform

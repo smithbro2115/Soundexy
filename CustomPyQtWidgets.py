@@ -86,7 +86,7 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.signals = DownloadButtonSigs()
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(1)
+        layout.setSpacing(2)
         # layout.setStretch(5, 5)
         self.setLayout(layout)
         self.progress_bar = QtWidgets.QProgressBar()
