@@ -208,6 +208,7 @@ class Remote:
 
     def delete_from_index(self):
         index = self.get_downloaded_index()
+        print(self.title)
         index.delete_from_index(self)
 
     def add_to_index(self):

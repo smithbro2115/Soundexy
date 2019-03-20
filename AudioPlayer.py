@@ -39,10 +39,8 @@ class SoundPlayer(QRunnable):
         self.audio_player.signals.error.connect(lambda x: self.signals.error.emit(x))
 
     def reset(self):
-        path = self.audio_player.path
         self.audio_player.stop()
         self.audio_player = AudioPlayer()
-        print(path)
 
     def set_waveform(self, waveform):
         self.waveform = waveform
@@ -71,7 +69,6 @@ class SoundPlayer(QRunnable):
             time.sleep(.01)
 
     def load(self, path, pixel_time_conversion_rate):
-        print('loading')
         self.pixel_time_conversion_rate = pixel_time_conversion_rate
         self.audio_player = self.get_correct_audio_player(path)
         self.audio_player.load(path)
@@ -103,7 +100,6 @@ class SoundPlayer(QRunnable):
         self.audio_player.play()
 
     def reload_sound_from_different_file(self, path):
-        print('reloading')
         current_time = self.audio_player.current_time
         playing = self.audio_player.playing
         self.audio_player.stop()
@@ -322,7 +318,6 @@ class AudioPlayer:
 class WavPlayer(AudioPlayer):
     def __init__(self):
         super(WavPlayer, self).__init__()
-        print('init wav')
         self.alias = ''
 
     def __del__(self):
@@ -372,7 +367,6 @@ class PygamePlayer(AudioPlayer):
     def __init__(self):
         super(PygamePlayer, self).__init__()
         pygame.mixer.pre_init(48000, -16, 2, 1024)
-        print('pygame pre_inited')
 
     def __del__(self):
         pygame.mixer.quit()
@@ -384,7 +378,6 @@ class PygamePlayer(AudioPlayer):
         channels = int(self.meta_data['channels'])
         pygame.mixer.quit()
         pygame.mixer.init(frequency=frequency, channels=channels)
-        print('pygame inited')
         try:
             pygame.mixer.music.load(path)
         except pygame.error:

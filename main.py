@@ -11,6 +11,7 @@ import os
 from Wave import make_waveform
 from CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal
 from Searches import FreesoundSearch
+import pyqt_utils
 
 
 # TODO Make the playlist functionality (it would be really cool if we can add remote sounds to a playlist)
@@ -124,7 +125,6 @@ class Gui(GUI.Ui_MainWindow):
         id_column_index = self.searchResultsTable.row_order['Id']
         sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
         result = self.searchResultsTable.current_results[sound_id]
-        print(result)
         self.init_sound_by_type(result)
         self.single_clicked_result = None
 
@@ -214,6 +214,8 @@ class Gui(GUI.Ui_MainWindow):
                                                                          self.download_button.downloaded_started,
                                                                          self.download_button.set_progress,
                                                                          self.download_done))
+        pyqt_utils.disconnect_all_signals(self.download_button.signals.cancel)
+        pyqt_utils.disconnect_all_signals(self.download_button.signals.delete)
         self.download_button.signals.cancel.connect(lambda: result.cancel_download(self.download_button.reset))
         self.download_button.signals.delete.connect(lambda: result.delete_download(self.download_deleted))
         if result.downloaded:
