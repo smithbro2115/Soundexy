@@ -139,7 +139,7 @@ class Remote:
 
     def __eq__(self, other):
         try:
-            print(other.meta_file())
+            print(self.title)
             return self.meta_file()['id'] == other.meta_file()['id']
         except (AttributeError, KeyError):
             return False
@@ -185,9 +185,7 @@ class Remote:
         self.downloader = None
         self.downloaded = True
         self.sample_rate = self._get_sample_rate()
-        index = self.get_downloaded_index()
-        index.add_result_to_index(self)
-        index.save()
+        self.add_to_index()
         function(self)
 
     def _get_sample_rate(self):
@@ -209,9 +207,13 @@ class Remote:
         os.remove(self.path)
 
     def delete_from_index(self):
-        from LocalFileHandler import IndexFile
-        index = IndexFile(self.index_file_name)
+        index = self.get_downloaded_index()
         index.delete_from_index(self)
+
+    def add_to_index(self):
+        index = self.get_downloaded_index()
+        index.add_result_to_index(self)
+        index.save()
 
     def download_preview(self, threadpool, current, downloaded_some_f, done_f):
         if threadpool.activeThreadCount() > 0:

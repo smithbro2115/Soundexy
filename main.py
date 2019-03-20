@@ -124,6 +124,7 @@ class Gui(GUI.Ui_MainWindow):
         id_column_index = self.searchResultsTable.row_order['Id']
         sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
         result = self.searchResultsTable.current_results[sound_id]
+        print(result)
         self.init_sound_by_type(result)
         self.single_clicked_result = None
 
@@ -226,6 +227,8 @@ class Gui(GUI.Ui_MainWindow):
         self.set_current_time()
         self.download_button.reset()
         self.download_button.setVisible(False)
+        self.searchResultsTable.replace_result(self.current_result, self.current_result)
+        self.current_result = None
 
     def reset_waveform(self):
         self.waveform.clear_sound()

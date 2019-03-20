@@ -39,8 +39,10 @@ class SoundPlayer(QRunnable):
         self.audio_player.signals.error.connect(lambda x: self.signals.error.emit(x))
 
     def reset(self):
+        path = self.audio_player.path
         self.audio_player.stop()
         self.audio_player = AudioPlayer()
+        print(path)
 
     def set_waveform(self, waveform):
         self.waveform = waveform
@@ -370,12 +372,19 @@ class PygamePlayer(AudioPlayer):
     def __init__(self):
         super(PygamePlayer, self).__init__()
         pygame.mixer.pre_init(48000, -16, 2, 1024)
+        print('pygame pre_inited')
+
+    def __del__(self):
+        pygame.mixer.quit()
+        self.path = None
+        print('deleted')
 
     def _load(self, path):
         frequency = int(self.meta_data['sample rate'])
         channels = int(self.meta_data['channels'])
         pygame.mixer.quit()
         pygame.mixer.init(frequency=frequency, channels=channels)
+        print('pygame inited')
         try:
             pygame.mixer.music.load(path)
         except pygame.error:

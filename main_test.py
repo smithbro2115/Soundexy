@@ -1,11 +1,14 @@
-class Testing:
-    def __init__(self):
-        self.att = True
-        self.name = "This is a Testing class!"
+import pygame
+import time
+import os
+import MetaData
 
-    def __str__(self):
-        return self.name
-
-
-testing = Testing()
-print(testing)
+file_name = "C:\\Users\\Josh\\Desktop\\Test Audio Files\\template - Copy.mp3"
+meta = MetaData.get_meta_file(file_name)
+pygame.mixer.init()
+pygame.mixer.music.load(file_name)
+pygame.mixer.music.play()
+time.sleep(5)
+pygame.mixer.music.stop()
+pygame.mixer.quit()
+os.remove(file_name)

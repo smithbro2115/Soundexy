@@ -224,7 +224,11 @@ class SearchResultsTable(QtWidgets.QTableView):
         new_row = self.make_row(self.make_standard_items_from_result(new_result))
         self.current_results[old_result.id] = None
         self.current_results[new_result.id] = new_result
-        self.replace_row(new_row, index)
+        try:
+            self.replace_row(new_row, index)
+            self.setCurrentIndex(self.model().index(index, 0))
+        except TypeError:
+            pass
 
     def append_row(self, row):
         self.searchResultsTableModel.appendRow(row)
