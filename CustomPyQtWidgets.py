@@ -86,11 +86,13 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.signals = DownloadButtonSigs()
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(1)
         # layout.setStretch(5, 5)
         self.setLayout(layout)
         self.progress_bar = QtWidgets.QProgressBar()
         self.layout().addWidget(self.progress_bar)
         self.delete_button = DownloadButtonRemove()
+        self.delete_button.setMinimumWidth(27)
         self.delete_button.setText(' X ')
         self.delete_button.setStyleSheet('background-color: #00ffff00')
         self.layout().addWidget(self.delete_button)
@@ -126,9 +128,8 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.delete_button.clicked.connect(lambda: self.signals.delete.emit())
 
     def remove_button_downloading_mode(self):
-        pyqt_utils.disconnect_all_signals(self.delete_button.signals.hover)
-        pyqt_utils.disconnect_all_signals(self.delete_button.signals.unhover)
-        pyqt_utils.disconnect_all_signals(self.delete_button.clicked)
+        pyqt_utils.disconnect_all_signals(self.delete_button.signals.hover, self.delete_button.signals.unhover,
+                                          self.delete_button.clicked)
         self.delete_button.clicked.connect(lambda: self.signals.cancel.emit())
 
     def reset(self):

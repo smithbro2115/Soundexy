@@ -214,8 +214,7 @@ class Gui(GUI.Ui_MainWindow):
                                                                          self.download_button.downloaded_started,
                                                                          self.download_button.set_progress,
                                                                          self.download_done))
-        pyqt_utils.disconnect_all_signals(self.download_button.signals.cancel)
-        pyqt_utils.disconnect_all_signals(self.download_button.signals.delete)
+        pyqt_utils.disconnect_all_signals(self.download_button.signals.cancel, self.download_button.signals.delete)
         self.download_button.signals.cancel.connect(lambda: result.cancel_download(self.download_button.reset))
         self.download_button.signals.delete.connect(lambda: result.delete_download(self.download_deleted))
         if result.downloaded:

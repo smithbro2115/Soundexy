@@ -139,7 +139,6 @@ class Remote:
 
     def __eq__(self, other):
         try:
-            print(self.title)
             return self.meta_file()['id'] == other.meta_file()['id']
         except (AttributeError, KeyError):
             return False
@@ -150,7 +149,6 @@ class Remote:
     def check_if_already_downloaded(self):
         from LocalFileHandler import IndexFile
         for result in IndexFile(self.index_file_name).index:
-            print(self, result)
             if self == result:
                 return result
 
@@ -208,7 +206,6 @@ class Remote:
 
     def delete_from_index(self):
         index = self.get_downloaded_index()
-        print(self.title)
         index.delete_from_index(self)
 
     def add_to_index(self):
