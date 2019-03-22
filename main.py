@@ -12,6 +12,7 @@ from Wave import make_waveform
 from CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal
 from Searches import FreesoundSearch
 import pyqt_utils
+import AudioConverter
 
 
 # TODO Make the playlist functionality (it would be really cool if we can add remote sounds to a playlist)
@@ -25,6 +26,7 @@ class Gui(GUI.Ui_MainWindow):
         self.cursor_graphic = QtWidgets.QGraphicsPixmapItem()
         self.waveform_thread_pool = QThreadPool()
         self.play_sound_thread_pool = QThreadPool()
+        self.audio_converter_thread_pool = QThreadPool()
         self.local_search_thread_pool = QThreadPool()
         self.local_search_thread_pool.setMaxThreadCount(1)
         self.play_sound_thread_pool.setMaxThreadCount(1)
@@ -80,6 +82,7 @@ class Gui(GUI.Ui_MainWindow):
         self.free_search = None
         self.download_button = DownloadButtonLocal()
         self.indexer = LocalFileHandler.Indexer()
+        self.converter = None
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
@@ -237,9 +240,22 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform.clear_sound()
 
     def download_done(self, new_result):
-        self.download_button.done()
-        self.searchResultsTable.replace_result(new_result, new_result)
-        self.audio_player.reload_sound_from_different_file(new_result.path)
+        file_type = os.path.splitext(new_result.path)[1].lower()
+        if not file_type == '.flac':
+            self.download_button.done()
+            self.searchResultsTable.replace_result(new_result, new_result)
+            self.audio_player.reload_sound_from_different_file(new_result.path)
+        else:
+            self.converter = AudioConverter.Converter(new_result.path)
+            self.converter.signals.done.connect(lambda x: self.converting_audio_done(new_result, x))
+            self.converter.signals.error.connect(self.show_error)
+            self.audio_converter_thread_pool.start(self.converter)
+
+    def converting_audio_done(self, result, new_path):
+        result.path = new_path
+        result.delete_from_index()
+        result.add_to_index()
+        self.download_done(result)
 
     def preview_download_already_exists(self, path):
         self.make_waveform(path)
