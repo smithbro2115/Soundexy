@@ -28,7 +28,6 @@ class Downloader(QRunnable):
     @pyqtSlot()
     def run(self):
         name = get_title_from_url(self.get_download_path())
-        print(name)
         for root, dirs, files in os.walk(self.download_path):
             if name in files:
                 self.signals.already_exists.emit(os.path.join(root, name))
@@ -55,6 +54,7 @@ class Downloader(QRunnable):
             self.signals.downloaded_some.emit(self.get_file_progress())
         if not self.canceled:
             fd.close()
+            print('closed file')
             self.signals.download_done.emit(file_download_path)
         else:
             fd.close()

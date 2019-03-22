@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QSlider
 # TODO Allow search results to be dragged on to player
 # TODO Allow sound to be dragged into an external program (maybe convert the file if its not a mp3 or wav
 # TODO Implement pitching and time shifting
+# FIXME Flac files don't play
 
 
 class PlaysoundException(Exception):
@@ -47,9 +48,6 @@ class SoundPlayer(QRunnable):
 
     def set_label(self, label):
         self.label = label
-
-    def handle_download_complete(self, path):
-        self.reload(path=path, is_complete=True)
 
     def space_bar(self):
         if self.audio_player.ended:
@@ -103,7 +101,8 @@ class SoundPlayer(QRunnable):
         current_time = self.audio_player.current_time
         playing = self.audio_player.playing
         self.audio_player.stop()
-        self.load(path, self.pixel_time_conversion_rate)
+        self.audio_player = self.get_correct_audio_player(path)
+        self.audio_player.load(path)
         self.audio_player.goto(current_time)
         if playing:
             self.audio_player.play()
@@ -130,6 +129,7 @@ class AudioPlayer:
         self.segment = False
         self._path = ''
         self.path = ''
+        self._original_path = ''
         self._meta_data = None
         self._duration = 0
         self.attempted_current_time = 0
@@ -173,6 +173,7 @@ class AudioPlayer:
 
     @path.setter
     def path(self, value):
+        self._original_path = value
         self._path = get_short_path_name(value)
 
     @property
@@ -208,10 +209,11 @@ class AudioPlayer:
         return self.duration <= self.current_time
 
     def get_meta_file(self):
-        return MetaData.get_meta_file(self.path)
+        return MetaData.get_meta_file(self._original_path)
 
     def load(self, path):
         self.path = path
+
         self._meta_data = self.get_meta_file()
         self.loaded = True
         self._load(self.path)
@@ -366,11 +368,14 @@ class WavPlayer(AudioPlayer):
 class PygamePlayer(AudioPlayer):
     def __init__(self):
         super(PygamePlayer, self).__init__()
+        print('pre init')
         pygame.mixer.pre_init(48000, -16, 2, 1024)
+
+    def get_meta_file(self):
+        return {'sample rate': 48000, 'channels': 1}
 
     def __del__(self):
         pygame.mixer.quit()
-        self.path = None
         print('deleted')
 
     def _load(self, path):
@@ -412,6 +417,31 @@ class PygamePlayer(AudioPlayer):
             pygame.mixer.music.play(start=round(position)/1000)
         except pygame.error:
             pygame.mixer.music.set_pos(position)
+
+
+class AudioPlayerPlaceholder(AudioPlayer):
+    def __init__(self):
+        super(AudioPlayerPlaceholder, self).__init__()
+        self.passed_download_head = True
+
+    @property
+    def current_time(self):
+        return self._current_time
+
+    @current_time.setter
+    def current_time(self, value):
+        self._current_time = value
+
+    @property
+    def ended(self):
+        return False
+
+    def goto(self, position):
+        self.current_time = position
+
+    def preload(self, duration):
+        self._duration = duration
+        self.current_time = 0
 
 
 class WaveformSlider(QSlider):
@@ -515,31 +545,6 @@ class WaveformSlider(QSlider):
         if self.is_busy:
             self.stop__busy_indicator_waveform()
         self.add_file_too_border("Waveforms/waveform.png")
-
-
-class AudioPlayerPlaceholder(AudioPlayer):
-    def __init__(self):
-        super(AudioPlayerPlaceholder, self).__init__()
-        self.passed_download_head = True
-
-    @property
-    def current_time(self):
-        return self._current_time
-
-    @current_time.setter
-    def current_time(self, value):
-        self._current_time = value
-
-    @property
-    def ended(self):
-        return False
-
-    def goto(self, position):
-        self.current_time = position
-
-    def preload(self, duration):
-        self._duration = duration
-        self.current_time = 0
 
 
 def get_short_path_name(long_name):

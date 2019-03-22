@@ -101,6 +101,7 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
         self.searchResultsTable.signals.drop_sig.connect(self.open_import_directory)
+        self.searchResultsTable.signals.drop_sig.connect(self.open_import_directory)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.audio_player.signals.time_changed.connect(self.set_current_time)
         self.audio_player.signals.error.connect(self.show_error)
