@@ -1,7 +1,6 @@
 import AudioPlayer
 import unittest
 import time
-import timeit
 
 
 class PygamePlayerTest(unittest.TestCase):

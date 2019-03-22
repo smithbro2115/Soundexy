@@ -34,7 +34,7 @@ class SoundPlayer(QRunnable):
         self.label = None
         self.signals = SoundSigs()
         self.wav_list = ['.wav']
-        self.pygame_list = ['.flac', '.ogg', '.mp3']
+        self.pygame_list = ['.ogg', '.mp3', '.flac']
         self.current_result = ''
         self.pixel_time_conversion_rate = 0
         self.audio_player = AudioPlayer()
@@ -65,7 +65,6 @@ class SoundPlayer(QRunnable):
                     self.audio_player.passed_download_head:
                 time.sleep(.003)
                 self.signals.time_changed.emit()
-
             time.sleep(.01)
 
     def load(self, path, pixel_time_conversion_rate):
