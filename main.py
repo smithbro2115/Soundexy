@@ -158,7 +158,8 @@ class Gui(GUI.Ui_MainWindow):
                 self.current_downloader = self.current_result.download_preview(self.cache_thread_pool,
                                                                                self.current_downloader,
                                                                                self.downloaded_ready_for_preview,
-                                                                               self.preview_download_done)
+                                                                               self.preview_download_done,
+                                                                               self.preview_download_already_exists)
 
     def sound_init(self, result):
         try:
@@ -241,9 +242,9 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.reload_sound_from_different_file(new_result.path)
 
     def preview_download_already_exists(self, path):
-        self.waveform.load_result(self.searchResultsTable.current_result)
         self.make_waveform(path)
-        self.audio_player.handle_new_sound_remote(path)
+        self.audio_player.load(path, self.pixel_time_conversion_rate)
+        self.audio_player.audio_player.play()
 
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)

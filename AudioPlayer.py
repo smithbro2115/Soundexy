@@ -6,6 +6,7 @@ from random import random
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtWidgets import QSlider
+import mmap
 
 # TODO Implement selection of a portion
 # TODO Allow search results to be dragged on to player
@@ -64,6 +65,7 @@ class SoundPlayer(QRunnable):
                     self.audio_player.passed_download_head:
                 time.sleep(.003)
                 self.signals.time_changed.emit()
+
             time.sleep(.01)
 
     def load(self, path, pixel_time_conversion_rate):
@@ -103,9 +105,9 @@ class SoundPlayer(QRunnable):
         self.audio_player.stop()
         self.audio_player = self.get_correct_audio_player(path)
         self.audio_player.load(path)
-        self.audio_player.goto(current_time)
         if playing:
             self.audio_player.play()
+        self.audio_player.goto(current_time)
 
     @staticmethod
     def calculate_px_time_conversion_rate(waveform_width, sound_duration):
@@ -127,6 +129,7 @@ class AudioPlayer:
         self._playing = False
         self.loop = False
         self.segment = False
+        self.ran_end = False
         self._path = ''
         self.path = ''
         self._original_path = ''
@@ -206,7 +209,13 @@ class AudioPlayer:
 
     @property
     def ended(self):
-        return self.duration <= self.current_time
+        if self.duration <= self.current_time:
+            if not self.ran_end:
+                self.end()
+            return True
+        else:
+            self.ran_end = False
+            return False
 
     def get_meta_file(self):
         return MetaData.get_meta_file(self._original_path)
@@ -273,8 +282,6 @@ class AudioPlayer:
             self.passed_download_head = True
         else:
             self._goto(position)
-        if not self.playing:
-            self._pause()
 
     def _goto(self, position):
         pass
@@ -291,6 +298,8 @@ class AudioPlayer:
         if self.loop:
             self.goto(0)
             self.play()
+        self.current_time_stop = time.time()
+        self.ran_end = True
 
     def swap_file_with_complete_file(self, path):
         if self.passed_download_head:
@@ -347,6 +356,8 @@ class WavPlayer(AudioPlayer):
 
     def _goto(self, position):
         self.win_command('play', self.alias, 'from', str(round(position)), 'to', str(self.duration))
+        if not self.playing:
+            self._pause()
 
     @staticmethod
     def win_command(*command):
@@ -368,30 +379,38 @@ class WavPlayer(AudioPlayer):
 class PygamePlayer(AudioPlayer):
     def __init__(self):
         super(PygamePlayer, self).__init__()
-        print('pre init')
         pygame.mixer.pre_init(48000, -16, 2, 1024)
-
-    def get_meta_file(self):
-        return {'sample rate': 48000, 'channels': 1}
+        self.memory_file = None
 
     def __del__(self):
-        pygame.mixer.quit()
-        print('deleted')
+        self.close_file()
+
+    def close_file(self):
+        try:
+            self.memory_file.close()
+        except AttributeError:
+            pass
+
+    def set_file(self, path):
+        self.close_file()
+        with open(path) as f:
+            self.memory_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
     def _load(self, path):
         frequency = int(self.meta_data['sample rate'])
         channels = int(self.meta_data['channels'])
-        pygame.mixer.quit()
         pygame.mixer.init(frequency=frequency, channels=channels)
+        self.set_file(path)
         try:
-            pygame.mixer.music.load(path)
+            pygame.mixer.music.load(self.memory_file)
         except pygame.error:
             self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                     "Try downloading it again.")
 
     def _reload(self, path):
+        self.set_file(path)
         try:
-            pygame.mixer.music.load(self.path)
+            pygame.mixer.music.load(self.memory_file)
         except pygame.error:
             self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                     "Try downloading it again.")
@@ -399,7 +418,7 @@ class PygamePlayer(AudioPlayer):
     def _play(self):
         try:
             pygame.mixer.music.play()
-        except Exception as e:
+        except pygame.error as e:
             self.signals.error.emit(e)
 
     def _pause(self):
@@ -410,11 +429,14 @@ class PygamePlayer(AudioPlayer):
 
     def _stop(self):
         pygame.mixer.music.stop()
+        self.close_file()
 
     def _goto(self, position):
         try:
             self._reload(self.path)
             pygame.mixer.music.play(start=round(position)/1000)
+            if not self.playing:
+                self._pause()
         except pygame.error:
             pygame.mixer.music.set_pos(position)
 

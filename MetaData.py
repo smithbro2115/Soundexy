@@ -28,9 +28,6 @@ class MutagenFile:
     def __getitem__(self, item):
         return self.meta[item]
 
-    def __del__(self):
-        print('meta deleted')
-
     def populate(self):
         file = self.get_file(self.path)
         self.meta['file name'] = self.filename
@@ -107,9 +104,6 @@ class WavFile:
 
     def __getitem__(self, item):
         return self.meta[item]
-
-    def __del__(self):
-        print('meta deleted')
 
     @property
     def title(self):
