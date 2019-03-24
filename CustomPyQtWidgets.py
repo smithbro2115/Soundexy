@@ -2,6 +2,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal
 import traceback
 import pyqt_utils
+from useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool
 
 
 class SearchResultSignals(QtCore.QObject):
@@ -192,10 +193,9 @@ class SearchResultsTable(QtWidgets.QTableView):
     @staticmethod
     def special_values(k, v):
         if k == 'duration':
-            duration = v / 1000
-            minutes = duration // 60
-            seconds = duration % 60
-            return '%02d:%02d' % (minutes, seconds)
+            return get_formatted_duration_from_milliseconds(v)
+        elif k == 'available locally':
+            return get_yes_no_from_bool(v)
         else:
             return v
 
