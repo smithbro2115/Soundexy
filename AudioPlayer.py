@@ -128,7 +128,7 @@ class AudioPlayer:
         self._playing = False
         self.loop = False
         self.segment = False
-        self.ran_end = False
+        self._ran_end = False
         self._path = ''
         self.path = ''
         self._original_path = ''
@@ -209,11 +209,11 @@ class AudioPlayer:
     @property
     def ended(self):
         if self.duration <= self.current_time:
-            if not self.ran_end:
+            if not self._ran_end:
                 self.end()
             return True
         else:
-            self.ran_end = False
+            self._ran_end = False
             return False
 
     def get_meta_file(self):
@@ -298,7 +298,7 @@ class AudioPlayer:
             self.goto(0)
             self.play()
         self.current_time_stop = time.time()
-        self.ran_end = True
+        self._ran_end = True
 
     def swap_file_with_complete_file(self, path):
         if self.passed_download_head:

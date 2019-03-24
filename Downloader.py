@@ -175,4 +175,3 @@ def set_username_pass(user, password, site):
     config[site]['Password'] = password
     with open('downloader_auth.ini', 'w+') as config_file:
         config.write(config_file)
-

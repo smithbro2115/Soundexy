@@ -155,7 +155,7 @@ class SearchResultsTable(QtWidgets.QTableView):
     def __init__(self):
         super(SearchResultsTable, self).__init__()
         self.row_order = {'File Name': 0, 'Title': 1, 'Description': 2, 'Duration': 3,
-                          'Library': 4, 'Artist': 5, 'Id': 6}
+                          'Library': 4, 'Artist': 5, 'Available Locally': 7, 'Id': 6}
         self.setAcceptDrops(True)
         self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self)
         self.searchResultsTableModel.set_read_only_columns([self.get_column_index('Duration'),

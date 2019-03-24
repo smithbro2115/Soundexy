@@ -199,9 +199,9 @@ class Remote:
         function()
 
     def delete_download(self, function):
+        self.downloaded = False
         function()
         self.delete_from_index()
-        self.downloaded = False
         os.remove(self.path)
 
     def delete_from_index(self):
