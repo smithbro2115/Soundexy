@@ -84,6 +84,7 @@ class DownloadButtonSigs(QtCore.QObject):
 class DownloadButtonLocal(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(DownloadButtonLocal, self).__init__(parent=parent)
+        self.current_result = None
         self.signals = DownloadButtonSigs()
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)

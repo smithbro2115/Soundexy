@@ -27,7 +27,8 @@ class Downloader(QRunnable):
 
     @pyqtSlot()
     def run(self):
-        name = get_title_from_url(self.get_download_path())
+        self.url = self.get_download_path()
+        name = get_title_from_url(self.url)
         for root, dirs, files in os.walk(self.download_path):
             if name in files:
                 self.signals.already_exists.emit(os.path.join(root, name))
@@ -37,12 +38,12 @@ class Downloader(QRunnable):
     def download(self, name):
         file_download_path = f'{self.download_path}\\{name}'
         try:
-            self.file_size = self.session.get(self.get_download_path(), stream=True).headers['Content-length']
+            self.file_size = self.session.get(self.url, stream=True).headers['Content-length']
         except KeyError:
             self.file_size = -1
         amount = 1024 * 200
         fd = open(file_download_path, 'wb')
-        r = self.session.get(self.get_download_path(), stream=True)
+        r = self.session.get(self.url, stream=True)
         self.signals.download_started.emit()
         for chunk in r.iter_content(amount):
             if self.canceled:
@@ -146,9 +147,9 @@ class AuthDownloader(Downloader):
 
 
 class FreesoundDownloader(AuthDownloader):
-    def __init__(self, url):
-        super(FreesoundDownloader, self).__init__(url)
+    def run(self):
         self.session = WebsiteAuth.FreeSound(self.username, self.password)
+        super(FreesoundDownloader, self).run()
 
     @property
     def site_name(self):

@@ -81,6 +81,7 @@ class Gui(GUI.Ui_MainWindow):
         self.local_search = None
         self.free_search = None
         self.download_button = DownloadButtonLocal()
+        self.currently_downloading_results = {}
         self.indexer = LocalFileHandler.Indexer()
         self.converter = None
 
@@ -144,7 +145,6 @@ class Gui(GUI.Ui_MainWindow):
         self.sound_init(result)
 
     def remote_sound_init(self, result):
-        self.download_button.reset()
         self.add_download_button(result)
         if result.downloaded or self.current_result == result:
             self.sound_init(result)
@@ -215,37 +215,58 @@ class Gui(GUI.Ui_MainWindow):
         self.single_clicked_result = self.searchResultsTable.current_results[sound_id]
 
     def add_download_button(self, result):
+        self.download_button.reset()
+        if result.downloading:
+            self.download_button = self.currently_downloading_results[result.id]
+            # self.metaTab.layout().insertWidget(2, self.download_button)
+        else:
+            self.make_download_button(result)
+            # self.metaTab.layout().insertWidget(2, self.download_button)
+        self.download_button.setHidden(False)
+
+    def make_download_button(self, result):
         self.download_button.set_button_function(lambda: result.download(self.download_pool,
-                                                                         self.download_button.downloaded_started,
-                                                                         self.download_button.set_progress,
+                                                                         self.download_started,
+                                                                         self.downloaded_some,
                                                                          self.download_done))
         pyqt_utils.disconnect_all_signals(self.download_button.signals.cancel, self.download_button.signals.delete)
         self.download_button.signals.cancel.connect(lambda: result.cancel_download(self.download_button.reset))
         self.download_button.signals.delete.connect(lambda: result.delete_download(self.download_deleted))
         if result.downloaded:
             self.download_button.done()
-        self.download_button.setHidden(False)
 
     def download_deleted(self):
         self.reset_waveform()
         self.clear_meta_tab()
         self.audio_player.reset()
         self.set_current_time()
-        self.download_button.reset()
-        self.download_button.setVisible(False)
+        self.current_result.download_button.reset()
+        self.current_result.setVisible(False)
         self.searchResultsTable.replace_result(self.current_result, self.current_result)
         self.current_result = None
 
     def reset_waveform(self):
         self.waveform.clear_sound()
 
+    def downloaded_some(self, progress, result_id):
+        self.currently_downloading_results[result_id].set_progress(progress)
+        print(self.currently_downloading_results, self.download_button)
+        # if self.current_result.id == result_id:
+        #     self.download_button = self.currently_downloading_results[result_id]
+
+    def download_started(self):
+        self.download_button.downloaded_started()
+        self.currently_downloading_results[self.current_result.id] = self.download_button
+
     def download_done(self, new_result):
         file_type = os.path.splitext(new_result.path)[1].lower()
-        if not file_type == '.flac':
+        old_button = self.currently_downloading_results.pop(new_result.id, None)
+        if not file_type == '.flac' and self.current_result == new_result:
+            self.download_button = old_button
             self.download_button.done()
             self.searchResultsTable.replace_result(new_result, new_result)
             self.audio_player.reload_sound_from_different_file(new_result.path)
-        else:
+        elif file_type == '.flac':
             self.converter = AudioConverter.Converter(new_result.path)
             self.converter.signals.done.connect(lambda x: self.converting_audio_done(new_result, x))
             self.converter.signals.error.connect(self.show_error)

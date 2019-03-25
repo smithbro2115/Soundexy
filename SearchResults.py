@@ -133,6 +133,7 @@ class Remote:
         self.download_path = 'downloads'
         self.index_file_name = 'downloaded_index'
         self.downloader = None
+        self.downloading = False
         self.downloaded = False
         self.path = ''
         self.sample_rate = 44100
@@ -180,6 +181,7 @@ class Remote:
 
     def _download_done(self, filename, function):
         self.path = filename
+        self.downloading = False
         self.downloader = None
         self.downloaded = True
         self.sample_rate = self._get_sample_rate()
@@ -195,7 +197,9 @@ class Remote:
         function(filename)
 
     def cancel_download(self, function):
+        self.downloading = False
         self.downloader.cancel()
+        self.downloader = None
         function()
 
     def delete_download(self, function):
@@ -237,10 +241,11 @@ class Free(Remote):
         self.downloader = self.get_downloader()(self.meta_file()['download link'])
         self.downloader.download_path = self.download_path
         download_started_f()
-        self.downloader.signals.downloaded_some.connect(lambda x: downloaded_some_f(x))
+        self.downloader.signals.downloaded_some.connect(lambda x: downloaded_some_f(x, self.id))
         self.downloader.signals.already_exists.connect(lambda x: self._download_done(x, download_done_f))
         self.downloader.signals.download_done.connect(lambda x: self._download_done(x, download_done_f))
         threadpool.start(self.downloader)
+        self.downloading = True
 
 
 class FreesoundResult(Free):
