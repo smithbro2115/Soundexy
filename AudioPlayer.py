@@ -331,6 +331,7 @@ class WavPlayer(AudioPlayer):
         self.alias = ''
 
     def __del__(self):
+        print('closeddd')
         self.win_command('close', self.alias)
 
     def _load(self, path):
@@ -393,12 +394,14 @@ class PygamePlayer(AudioPlayer):
     def set_file(self, path):
         self.close_file()
         with open(path) as f:
+            pygame.mixer.init(frequency=48000, size=-16, channels=2)
             self.memory_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
     def _load(self, path):
         frequency = int(self.meta_data['sample rate'])
         channels = int(self.meta_data['channels'])
-        pygame.mixer.init(frequency=frequency, channels=channels)
+        pygame.mixer.pre_init(frequency, -16, channels, 1024)
+        print(pygame.mixer.get_init())
         self.set_file(path)
         try:
             pygame.mixer.music.load(self.memory_file)
@@ -415,6 +418,7 @@ class PygamePlayer(AudioPlayer):
                                     "Try downloading it again.")
 
     def _play(self):
+        print('play')
         try:
             pygame.mixer.music.play()
         except pygame.error as e:

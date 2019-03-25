@@ -81,7 +81,7 @@ class Gui(GUI.Ui_MainWindow):
         self.local_search = None
         self.free_search = None
         self.download_button = DownloadButtonLocal()
-        self.currently_downloading_results = {}
+        self.currently_downloading_results = []
         self.indexer = LocalFileHandler.Indexer()
         self.converter = None
 
@@ -145,24 +145,28 @@ class Gui(GUI.Ui_MainWindow):
         self.sound_init(result)
 
     def remote_sound_init(self, result):
-        self.add_download_button(result)
         if result.downloaded or self.current_result == result:
             self.sound_init(result)
         else:
             self.new_sound_meta(result)
-            self.current_result = result
+            if result in self.currently_downloading_results:
+                self.current_result = \
+                    self.currently_downloading_results[self.currently_downloading_results.index(result)]
+            else:
+                self.current_result = result
             try:
                 self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
             except ZeroDivisionError:
                 self.show_error("This sound can't be played because it has no duration")
             else:
-                self.audio_player.preload(result.duration, self.pixel_time_conversion_rate)
-                self.new_sound_waveform(result)
+                self.audio_player.preload(self.current_result.duration, self.pixel_time_conversion_rate)
+                self.new_sound_waveform(self.current_result)
                 self.current_downloader = self.current_result.download_preview(self.cache_thread_pool,
                                                                                self.current_downloader,
                                                                                self.downloaded_ready_for_preview,
                                                                                self.preview_download_done,
                                                                                self.preview_download_already_exists)
+            self.add_download_button(self.current_result)
 
     def sound_init(self, result):
         try:
@@ -253,12 +257,14 @@ class Gui(GUI.Ui_MainWindow):
         if self.current_result.id == result_id:
             self.download_button.set_progress(progress)
 
-    def download_started(self, result_id):
-        if self.current_result.id == result_id:
+    def download_started(self, result):
+        self.currently_downloading_results.append(result)
+        if self.current_result == result:
             self.download_button.downloaded_started()
 
     def download_done(self, new_result):
         file_type = os.path.splitext(new_result.path)[1].lower()
+        self.currently_downloading_results.remove(new_result)
         if not file_type == '.flac' and self.current_result == new_result:
             self.download_button.done()
             self.audio_player.reload_sound_from_different_file(new_result.path)
