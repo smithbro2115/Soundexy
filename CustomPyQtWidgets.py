@@ -222,13 +222,14 @@ class SearchResultsTable(QtWidgets.QTableView):
         return standard_items
 
     def replace_result(self, new_result, old_result):
+        current_index = self.currentIndex()
         index = self.searchResultsTableModel.get_row_from_id(old_result.id)
         new_row = self.make_row(self.make_standard_items_from_result(new_result))
         self.current_results[old_result.id] = None
         self.current_results[new_result.id] = new_result
         try:
             self.replace_row(new_row, index)
-            self.setCurrentIndex(self.model().index(index, 0))
+            self.setCurrentIndex(current_index)
         except TypeError:
             pass
 
