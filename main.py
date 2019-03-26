@@ -269,7 +269,7 @@ class Gui(GUI.Ui_MainWindow):
             self.download_button.done()
             self.audio_player.reload_sound_from_different_file(new_result.path)
         elif file_type == '.flac':
-            self.converter = AudioConverter.Converter(new_result.path)
+            self.converter = AudioConverter.ConverterRunnable(new_result.path)
             self.converter.signals.done.connect(lambda x: self.converting_audio_done(new_result, x))
             self.converter.signals.error.connect(self.show_error)
             self.audio_converter_thread_pool.start(self.converter)

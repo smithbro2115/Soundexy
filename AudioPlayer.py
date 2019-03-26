@@ -1,3 +1,4 @@
+import vlc
 import pygame
 import MetaData
 import os
@@ -73,11 +74,12 @@ class SoundPlayer(QRunnable):
         self.audio_player.load(path)
 
     def get_correct_audio_player(self, path):
-        file_type = os.path.splitext(path)[1].lower()
-        if file_type in self.wav_list:
-            return WavPlayer()
-        elif file_type in self.pygame_list:
-            return PygamePlayer()
+        return VLCPlayer()
+        # file_type = os.path.splitext(path)[1].lower()
+        # if file_type in self.wav_list:
+        #     return WavPlayer()
+        # elif file_type in self.pygame_list:
+        #     return PygamePlayer()
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
         current_time = self.audio_player.current_time
@@ -183,6 +185,11 @@ class AudioPlayer:
         if self.playing:
             return int((self.current_time_stop - self._current_time_start)*1000) + self._current_time
         return self._current_time
+
+    @current_time.setter
+    def current_time(self, value):
+        self._current_time_start = time.time()
+        self._current_time = value
 
     @current_time.setter
     def current_time(self, value):
@@ -376,10 +383,36 @@ class WavPlayer(AudioPlayer):
         return buf.value
 
 
+class VLCPlayer(AudioPlayer):
+    def __init__(self):
+        super(VLCPlayer, self).__init__()
+        self._player = vlc.MediaPlayer()
+
+    def _load(self, path):
+        self._player = vlc.MediaPlayer(path)
+
+    def _reload(self, path):
+        self._load(path)
+
+    def _play(self):
+        self._player.play()
+
+    def _pause(self):
+        self._player.pause()
+
+    def _resume(self):
+        self._player.pause()
+
+    def _stop(self):
+        self._player.stop()
+
+    def _goto(self, position):
+        self._player.set_time(round(position))
+
+
 class PygamePlayer(AudioPlayer):
     def __init__(self):
         super(PygamePlayer, self).__init__()
-        pygame.mixer.pre_init(48000, -16, 2, 1024)
         self.memory_file = None
 
     def __del__(self):
