@@ -217,11 +217,10 @@ class Remote:
         index.add_result_to_index(self)
         index.save()
 
-    def download_preview(self, threadpool, current, downloaded_some_f, done_f, downloaded_already_f):
+    def download_preview(self, threadpool, current, done_f, downloaded_already_f):
         if threadpool.activeThreadCount() > 0:
             current.cancel()
         downloader = Downloader.PreviewDownloader(self.meta_file()['preview Link'], self.meta_file()['id'])
-        downloader.signals.downloaded.connect(lambda x: downloaded_some_f(x))
         downloader.signals.already_exists.connect(lambda x: self._preview_download_done(x, downloaded_already_f))
         downloader.signals.download_done.connect(lambda x: self._preview_download_done(x, done_f))
         threadpool.start(downloader)

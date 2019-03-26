@@ -11,7 +11,7 @@ path_4 = "C:\\Users\\Josh\\Desktop\\Audio_Tests\\Airy Static Laser - Copy.Ogg"
 path_5 = "C:\\Users\\Josh\\Desktop\\Audio_Tests\\455746__kyles__door-apartment-buzzer-unlock-ext.flac"
 path_6 = "https://freesound.org/data/previews/73/73191_806506-lq.mp3"
 
-sound_file = vlc.MediaPlayer(path_1)
+sound_file = vlc.MediaPlayer(path_6)
 sound_file.play()
 time.sleep(4)
 length = sound_file.get_length()

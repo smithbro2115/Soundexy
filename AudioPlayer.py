@@ -386,9 +386,20 @@ class WavPlayer(AudioPlayer):
 class VLCPlayer(AudioPlayer):
     def __init__(self):
         super(VLCPlayer, self).__init__()
-        self._player = vlc.MediaPlayer()
+        self._player = None
+
+    def __del__(self):
+        self._player.release()
+
+    @property
+    def true_duration(self):
+        return self._player.get_length()
+
+    def get_meta_file(self):
+        return None
 
     def _load(self, path):
+        print(path)
         self._player = vlc.MediaPlayer(path)
 
     def _reload(self, path):
@@ -407,6 +418,9 @@ class VLCPlayer(AudioPlayer):
         self._player.stop()
 
     def _goto(self, position):
+        self._stop()
+        self._load(self.path)
+        self._play()
         self._player.set_time(round(position))
 
 
@@ -606,23 +620,25 @@ class WaveformSlider(QSlider):
 
 
 def get_short_path_name(long_name):
-    from ctypes import wintypes
-    import ctypes
-    _GetShortPathNameW = ctypes.windll.kernel32.GetShortPathNameW
-    _GetShortPathNameW.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
-    _GetShortPathNameW.restype = wintypes.DWORD
-    """
-    Gets the short path name of a given long path.
-    http://stackoverflow.com/a/23598461/200291
-    """
-    output_buf_size = 0
-    while True:
-        output_buf = ctypes.create_unicode_buffer(output_buf_size)
-        needed = _GetShortPathNameW(long_name, output_buf, output_buf_size)
-        if output_buf_size >= needed:
-            return output_buf.value
-        else:
-            output_buf_size = needed
+    if not long_name.startswith('http'):
+        from ctypes import wintypes
+        import ctypes
+        _GetShortPathNameW = ctypes.windll.kernel32.GetShortPathNameW
+        _GetShortPathNameW.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+        _GetShortPathNameW.restype = wintypes.DWORD
+        """
+        Gets the short path name of a given long path.
+        http://stackoverflow.com/a/23598461/200291
+        """
+        output_buf_size = 0
+        while True:
+            output_buf = ctypes.create_unicode_buffer(output_buf_size)
+            needed = _GetShortPathNameW(long_name, output_buf, output_buf_size)
+            if output_buf_size >= needed:
+                return output_buf.value
+            else:
+                output_buf_size = needed
+    return long_name
 
 
 def test():

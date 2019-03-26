@@ -159,11 +159,11 @@ class Gui(GUI.Ui_MainWindow):
             except ZeroDivisionError:
                 self.show_error("This sound can't be played because it has no duration")
             else:
-                self.audio_player.preload(self.current_result.duration, self.pixel_time_conversion_rate)
+                # self.audio_player.preload(self.current_result.duration, self.pixel_time_conversion_rate)
+                self.new_sound_audio_player(self.current_result.preview)
                 self.new_sound_waveform(self.current_result)
                 self.current_downloader = self.current_result.download_preview(self.cache_thread_pool,
                                                                                self.current_downloader,
-                                                                               self.downloaded_ready_for_preview,
                                                                                self.preview_download_done,
                                                                                self.preview_download_already_exists)
             self.add_download_button(self.current_result)
@@ -178,7 +178,7 @@ class Gui(GUI.Ui_MainWindow):
                 self.new_sound_meta(result)
                 self.make_waveform(result.path)
                 self.new_sound_waveform(result)
-                self.new_sound_audio_player(result)
+                self.new_sound_audio_player(result.path)
             else:
                 self.audio_player.space_bar()
         self.current_result = result
@@ -196,9 +196,9 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform.load_result(result)
         self.waveform.start_busy_indicator_waveform()
 
-    def new_sound_audio_player(self, result):
+    def new_sound_audio_player(self, path):
         self.audio_player.audio_player.stop()
-        self.audio_player.load(result.path, self.pixel_time_conversion_rate)
+        self.audio_player.load(path, self.pixel_time_conversion_rate)
         self.audio_player.audio_player.play()
 
     @staticmethod
@@ -283,8 +283,6 @@ class Gui(GUI.Ui_MainWindow):
 
     def preview_download_already_exists(self, path):
         self.make_waveform(path)
-        self.audio_player.load(path, self.pixel_time_conversion_rate)
-        self.audio_player.audio_player.play()
 
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)
@@ -292,7 +290,6 @@ class Gui(GUI.Ui_MainWindow):
                                        self.pixel_time_conversion_rate)
 
     def preview_download_done(self, path):
-        self.audio_player.audio_player.load_rest_of_segment(path)
         self.make_waveform(path)
 
     def get_indexer(self, paths):
