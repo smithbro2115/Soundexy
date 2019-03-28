@@ -162,6 +162,9 @@ class AudioPlayer:
 
     @playing.setter
     def playing(self, value):
+        self.set_playing(value)
+
+    def set_playing(self, value):
         if value:
             self.set_current_time_start()
         else:
@@ -280,6 +283,7 @@ class AudioPlayer:
 
     def goto(self, position):
         self.current_time = position
+        print(position)
         if self.segment and position >= self.true_duration:
             self.pause()
             self.attempted_current_time = position
@@ -384,6 +388,7 @@ class WavPlayer(AudioPlayer):
 class VLCPlayer(AudioPlayer):
     def __init__(self):
         super(VLCPlayer, self).__init__()
+        self.playing = False
         self._player = None
         self.last_recorded_time = 0
 
@@ -391,35 +396,23 @@ class VLCPlayer(AudioPlayer):
         self._player.release()
 
     @property
-    def current_time(self):
-        if self.playing:
-            if self._current_time_start == 0:
-                self._current_time_start = time.time()
-            self._current_time = int((self.current_time_stop - self._current_time_start)*1000) + self._current_time
-            self._current_time_start = time.time()
-        else:
-            self.current_time_stop = time.time()
-        print(self._current_time)
-        return self._current_time
-
-    @current_time.setter
-    def current_time(self, value):
-        self._current_time = value
-        if self.playing:
-            self._current_time_start = time.time()
-
-    @property
     def playing(self):
         try:
-            return self._player.is_playing()
+            state = bool(self._player.is_playing())
+            if state:
+                if not self._playing:
+                    self.playing = True
+                return True
+            else:
+                if self._playing:
+                    self.playing = False
+                return False
         except AttributeError:
             return False
 
     @playing.setter
     def playing(self, value):
-        if not value:
-            self._current_time = self.current_time
-        self._playing = value
+        self.set_playing(value)
 
     @property
     def true_duration(self):
