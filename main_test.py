@@ -13,30 +13,69 @@ path_6 = "https://freesound.org/data/previews/73/73191_806506-lq.mp3"
 # current_time = 0
 # last_recorded_time = None
 # last_recorded_time_stamp = 0
-#
-# sound_file = vlc.MediaPlayer(path_1)
-# sound_file.play()
 
-current_time = 0
-start = time.time()
+
+class Player:
+    def __init__(self):
+        self.instance = vlc.Instance('--input-repeat=-1', '--fullscreen')
+        self.player = self.instance.media_player_new()
+        self.start = 0
+        self.path = None
+        self.current_time = 0
+
+    @property
+    def playing(self):
+        if self.player.is_playing():
+            if self.start == 0:
+                self.start = time.time()
+            return True
+        if not self.start == 0:
+            self.current_time = int((time.time() - self.start)*1000)+self.current_time
+            self.start = 0
+        return False
+
+    def get_time(self):
+        if not self.playing:
+            return self.current_time
+        return int((time.time() - self.start)*1000)+self.current_time
+
+    def load(self, path):
+        self.stop()
+        self.path = path
+        media = self.instance.media_new(path)
+        self.player.set_media(media)
+
+    def play(self):
+        self.player.play()
+
+    def pause(self):
+        self.player.pause()
+
+    def resume(self):
+        self.player.pause()
+
+    def stop(self):
+        self.start = 0
+        self.current_time = 0
+        self.player.stop()
+
+    def goto(self, position):
+        self.stop()
+        self.load(self.path)
+        self.play()
+        self.player.set_time(round(position))
+        self.current_time = position
+
+
+player = Player()
+player.load(path_6)
+player.play()
 while True:
+    while player.playing:
+        print(player.get_time())
+        current_time = player.get_time()
+        if current_time > 4000:
+            player.goto(2000)
+        time.sleep(.01)
+    print(player.get_time())
     time.sleep(.01)
-    current_time = int((time.time() - start)*1000)
-    print(current_time)
-    # while sound_file.is_playing():
-    #     start = time.time()
-    #     time.sleep(7)
-    #     print(int((time.time() - start)*1000))
-        # sound_time = sound_file.get_time()
-        # if sound_time != last_recorded_time:
-        #     last_recorded_time = sound_time
-        #     last_recorded_time_stamp = time.time()
-        #     current_time = sound_time
-        #     # print(last_recorded_time_stamp)
-        #     # print(current_time, 'New Time Stamp')
-        #     # print(sound_file.get_stats(), 'new')
-        # else:
-        #     # print(last_recorded_time_stamp, time.time())
-        #     current_time = int((time.time() - last_recorded_time_stamp)*1000)+last_recorded_time
-        #     print(current_time)
-        # time.sleep(.01)

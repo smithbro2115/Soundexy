@@ -64,6 +64,7 @@ class SoundPlayer(QRunnable):
         while True:
             while self.audio_player.playing and not self.audio_player.ended:
                 time.sleep(.003)
+                print(self.audio_player.current_time, self.audio_player._player.get_time())
                 self.signals.time_changed.emit()
             time.sleep(.01)
 
@@ -283,7 +284,6 @@ class AudioPlayer:
 
     def goto(self, position):
         self.current_time = position
-        print(position)
         if self.segment and position >= self.true_duration:
             self.pause()
             self.attempted_current_time = position
@@ -388,31 +388,38 @@ class WavPlayer(AudioPlayer):
 class VLCPlayer(AudioPlayer):
     def __init__(self):
         super(VLCPlayer, self).__init__()
+        self.instance = vlc.Instance('--input-repeat=-1', '--fullscreen')
+        self._player = self.instance.media_player_new()
+        self.start = 0
         self.playing = False
-        self._player = None
-        self.last_recorded_time = 0
 
     def __del__(self):
         self._player.release()
 
     @property
     def playing(self):
-        try:
-            state = bool(self._player.is_playing())
-            if state:
-                if not self._playing:
-                    self.playing = True
-                return True
-            else:
-                if self._playing:
-                    self.playing = False
-                return False
-        except AttributeError:
-            return False
+        if self._player.is_playing():
+            if self.start == 0:
+                self.start = time.time()
+            return True
+        if not self.start == 0:
+            self.current_time = int((time.time() - self.start) * 1000) + self._current_time
+        return False
 
     @playing.setter
     def playing(self, value):
         self.set_playing(value)
+
+    @property
+    def current_time(self):
+        if not self.playing:
+            return self._current_time
+        return int((time.time() - self.start) * 1000) + self._current_time
+
+    @current_time.setter
+    def current_time(self, value):
+        self.start = 0
+        self._current_time = value
 
     @property
     def true_duration(self):
@@ -422,10 +429,12 @@ class VLCPlayer(AudioPlayer):
         return None
 
     def _load(self, path):
-        self._player = vlc.MediaPlayer(path)
+        self.path = path
+        media = self.instance.media_new(path)
+        self._player.set_media(media)
 
     def _reload(self, path):
-        self._player.set_mrl(path)
+        self._load(path)
 
     def _play(self):
         self._player.play()
