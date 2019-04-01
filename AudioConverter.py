@@ -41,6 +41,18 @@ class ConverterRunnable(QRunnable):
         self.signals.done.emit(new_path)
 
 
+def convert_to_wav(path, new_path):
+    file_type = os.path.splitext(path)[1].lower()
+    if file_type == '.flac':
+        get_wav_from_flac(path, new_path)
+    elif file_type == '.ogg':
+        get_wav_file_from_ogg(path, new_path)
+    elif file_type == '.mp3':
+        get_wav_file_from_mp3(path, new_path)
+    else:
+        raise RuntimeError('File type not supported')
+
+
 def convert_flac_to_wav(path):
     new_path = os.path.splitext(path)[0] + '.wav'
     get_wav_from_flac(path, new_path)
@@ -57,6 +69,16 @@ def get_mp3_file_from_ogg(path, new_path):
     print(path, new_path)
     sound = pydub.AudioSegment.from_file(path, format='ogg')
     sound.export(new_path, format='mp3')
+
+
+def get_wav_file_from_ogg(path, new_path):
+    sound = pydub.AudioSegment.from_file(path, format='ogg')
+    sound.export(new_path, format='wav')
+
+
+def get_wav_file_from_mp3(path, new_path):
+    sound = pydub.AudioSegment.from_file(path, format='mp3')
+    sound.export(new_path, format='wav')
 
 
 def get_wav_from_flac(path, new_path):
