@@ -1,4 +1,5 @@
-import vlc
+import AudioConverter
+import useful_utils
 import pygame
 import MetaData
 import os
@@ -115,6 +116,9 @@ class SoundPlayer(QRunnable):
     def goto(self, position):
         self.audio_player.goto(position/self.pixel_time_conversion_rate)
         self.signals.time_changed.emit()
+
+    def play(self):
+        self.audio_player.play()
 
 
 class AudioPlayerSigs(QObject):
@@ -312,6 +316,7 @@ class AudioPlayer:
             current_time = self.attempted_current_time
         else:
             current_time = self.current_time
+        print('trying to swap')
         playing = self.playing
         self.stop()
         self.reload(path, playing)
@@ -385,10 +390,19 @@ class WavPlayer(AudioPlayer):
 class PygamePlayer(AudioPlayer):
     def __init__(self):
         super(PygamePlayer, self).__init__()
+        pygame.mixer.pre_init(48000, -16, 2, 1024)
+        pygame.mixer.init(48000, -16, 2, 1024)
+        self.converted_paths = []
         self.memory_file = None
 
     def __del__(self):
         self.close_file()
+        self.delete_converted_temps()
+
+    def delete_converted_temps(self):
+        for _ in range(len(self.converted_paths)):
+            path = self.converted_paths.pop()
+            useful_utils.try_to_remove_file(path)
 
     def close_file(self):
         try:
@@ -402,18 +416,30 @@ class PygamePlayer(AudioPlayer):
             self.memory_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
     def _load(self, path):
-        frequency = int(self.meta_data['sample rate'])
-        channels = int(self.meta_data['channels'])
-        pygame.mixer.init(frequency=frequency, channels=channels)
-        self.set_file(path)
+        self.make_sure_sample_rate_is_correct()
+        self.set_file(self.path)
         try:
             pygame.mixer.music.load(self.memory_file)
         except pygame.error:
             self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                     "Try downloading it again.")
 
+    def make_sure_sample_rate_is_correct(self):
+        frequency = int(self.meta_data['sample rate'])
+        if not frequency == 48000:
+            self._convert_sample_rate()
+
+    def _convert_sample_rate(self):
+        new_path = 'temp/' + os.path.basename(self._original_path)
+        self.close_file()
+        AudioConverter.set_sample_rate(48000, self._original_path, new_path)
+        self.converted_paths.append(new_path)
+        self.path = new_path
+        self._meta_data = self.get_meta_file()
+
     def _reload(self, path):
-        self.set_file(path)
+        self.make_sure_sample_rate_is_correct()
+        self.set_file(self.path)
         try:
             pygame.mixer.music.load(self.memory_file)
         except pygame.error:

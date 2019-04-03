@@ -1,6 +1,7 @@
 import pydub
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
 import os
+from useful_utils import try_to_remove_file
 
 
 class ConverterSigs(QObject):
@@ -86,6 +87,14 @@ def get_wav_from_flac(path, new_path):
     sound.export(new_path, format='wav')
 
 
+def set_sample_rate(sample_rate, path, new_path):
+    sound = pydub.AudioSegment.from_file(path)
+    sound = sound.set_frame_rate(sample_rate)
+    try_to_remove_file(new_path)
+    print('set sample rate')
+    sound.export(new_path, format=os.path.splitext(new_path)[1][1:])
+
+
 def test_flac():
     file_name = "C:\\Users\\Josh\\Desktop\\Test Audio Files\\455746__kyles__door-apartment-buzzer-unlock-ext - Copy.flac"
     converter = ConverterRunnable()
@@ -96,3 +105,4 @@ def test_ogg():
     file_name = "C:\\Users\\Josh\\Desktop\\Audio_Tests\\Airy Static Laser - Copy.Ogg"
     converter = ConverterRunnable(file_name)
     converter.convert_ogg_to_mp3(file_name)
+
