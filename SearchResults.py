@@ -239,7 +239,7 @@ class Free(Remote):
     def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f):
         self.downloader = self.get_downloader()(self.meta_file()['download link'])
         self.downloader.download_path = self.download_path
-        download_started_f(self)
+        download_started_f(self.id)
         self.downloader.signals.downloaded_some.connect(lambda x: downloaded_some_f(x, self.id))
         self.downloader.signals.already_exists.connect(lambda x: self._download_done(x, download_done_f))
         self.downloader.signals.download_done.connect(lambda x: self._download_done(x, download_done_f))

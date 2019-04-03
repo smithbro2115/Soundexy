@@ -64,7 +64,6 @@ class SoundPlayer(QRunnable):
         while True:
             while self.audio_player.playing and not self.audio_player.ended:
                 time.sleep(.003)
-                print(self.audio_player.current_time, self.audio_player._player.get_time())
                 self.signals.time_changed.emit()
             time.sleep(.01)
 
@@ -74,12 +73,11 @@ class SoundPlayer(QRunnable):
         self.audio_player.load(path)
 
     def get_correct_audio_player(self, path):
-        return VLCPlayer()
-        # file_type = os.path.splitext(path)[1].lower()
-        # if file_type in self.wav_list:
-        #     return WavPlayer()
-        # elif file_type in self.pygame_list:
-        #     return PygamePlayer()
+        file_type = os.path.splitext(path)[1].lower()
+        if file_type in self.wav_list:
+            return WavPlayer()
+        elif file_type in self.pygame_list:
+            return PygamePlayer()
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
         current_time = self.audio_player.current_time
@@ -385,76 +383,6 @@ class WavPlayer(AudioPlayer):
         return buf.value
 
 
-class VLCPlayer(AudioPlayer):
-    def __init__(self):
-        super(VLCPlayer, self).__init__()
-        self.instance = vlc.Instance('--input-repeat=-1', '--fullscreen')
-        self._player = self.instance.media_player_new()
-        self.start = 0
-        self.playing = False
-
-    def __del__(self):
-        self._player.release()
-
-    @property
-    def playing(self):
-        if self._player.is_playing():
-            if self.start == 0:
-                self.start = time.time()
-            return True
-        if not self.start == 0:
-            self.current_time = int((time.time() - self.start) * 1000) + self._current_time
-        return False
-
-    @playing.setter
-    def playing(self, value):
-        self.set_playing(value)
-
-    @property
-    def current_time(self):
-        if not self.playing:
-            return self._current_time
-        return int((time.time() - self.start) * 1000) + self._current_time
-
-    @current_time.setter
-    def current_time(self, value):
-        self.start = 0
-        self._current_time = value
-
-    @property
-    def true_duration(self):
-        return self._player.get_length()
-
-    def get_meta_file(self):
-        return None
-
-    def _load(self, path):
-        self.path = path
-        media = self.instance.media_new(path)
-        self._player.set_media(media)
-
-    def _reload(self, path):
-        self._load(path)
-
-    def _play(self):
-        self._player.play()
-
-    def _pause(self):
-        self._player.pause()
-
-    def _resume(self):
-        self._player.pause()
-
-    def _stop(self):
-        self._player.stop()
-
-    def _goto(self, position):
-        self._stop()
-        self._reload(self.path)
-        self._play()
-        self._player.set_time(round(position))
-
-
 class PygamePlayer(AudioPlayer):
     def __init__(self):
         super(PygamePlayer, self).__init__()
@@ -472,14 +400,12 @@ class PygamePlayer(AudioPlayer):
     def set_file(self, path):
         self.close_file()
         with open(path) as f:
-            pygame.mixer.init(frequency=48000, size=-16, channels=2)
             self.memory_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
     def _load(self, path):
         frequency = int(self.meta_data['sample rate'])
         channels = int(self.meta_data['channels'])
-        pygame.mixer.pre_init(frequency, -16, channels, 1024)
-        print(pygame.mixer.get_init())
+        pygame.mixer.init(frequency=frequency, channels=channels)
         self.set_file(path)
         try:
             pygame.mixer.music.load(self.memory_file)
