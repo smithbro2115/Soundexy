@@ -338,7 +338,6 @@ class WavPlayer(AudioPlayer):
         self.alias = ''
 
     def __del__(self):
-        print('closeddd')
         self.win_command('close', self.alias)
 
     def _load(self, path):
@@ -422,7 +421,6 @@ class PygamePlayer(AudioPlayer):
                                     "Try downloading it again.")
 
     def _play(self):
-        print('play')
         try:
             pygame.mixer.music.play()
         except pygame.error as e:
