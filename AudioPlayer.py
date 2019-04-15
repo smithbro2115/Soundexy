@@ -326,10 +326,15 @@ class AudioPlayer:
 
     def swap_file_with_incomplete_file(self, path, duration):
         current_time = self.current_time
+        self._prepare_file(path)
         self.stop()
+        self.current_time = current_time
         self.load_segment(path, duration)
         self.goto(current_time)
         self.play()
+
+    def _prepare_file(self, path):
+        pass
 
     def load_segment(self, path, duration):
         self.segment = True
@@ -415,8 +420,12 @@ class PygamePlayer(AudioPlayer):
         with open(path) as f:
             self.memory_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
+    def _prepare_file(self, path):
+        meta = MetaData.get_meta_file(path)
+        self.make_sure_sample_rate_is_correct(path, meta)
+
     def _load(self, path):
-        self.make_sure_sample_rate_is_correct()
+        self.path = self.make_sure_sample_rate_is_correct(self.path, self.meta_data)
         self.set_file(self.path)
         try:
             pygame.mixer.music.load(self.memory_file)
@@ -424,21 +433,21 @@ class PygamePlayer(AudioPlayer):
             self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                     "Try downloading it again.")
 
-    def make_sure_sample_rate_is_correct(self):
-        frequency = int(self.meta_data['sample rate'])
+    def make_sure_sample_rate_is_correct(self, path, meta):
+        frequency = meta['sample rate']
         if not frequency == 48000:
-            self._convert_sample_rate()
+            return self._convert_sample_rate(path)
+        return path
 
-    def _convert_sample_rate(self):
-        new_path = 'temp/' + os.path.basename(self._original_path)
-        self.close_file()
+    def _convert_sample_rate(self, path):
+        new_path = 'temp/' + os.path.basename(path)
         AudioConverter.set_sample_rate(48000, self._original_path, new_path)
         self.converted_paths.append(new_path)
-        self.path = new_path
         self._meta_data = self.get_meta_file()
+        return new_path
 
     def _reload(self, path):
-        self.make_sure_sample_rate_is_correct()
+        self.path = self.make_sure_sample_rate_is_correct(self.path, self.meta_data)
         self.set_file(self.path)
         try:
             pygame.mixer.music.load(self.memory_file)
