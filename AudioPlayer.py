@@ -333,7 +333,7 @@ class AudioPlayer:
     load_rest_of_segment = swap_file_with_complete_file
 
     def swap_file_with_incomplete_file(self, path, duration):
-        raise NotImplementedError
+        pass
         # current_time = self.current_time
         # self.stop()
         # self.current_time = current_time
