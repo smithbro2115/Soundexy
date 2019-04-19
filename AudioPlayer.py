@@ -231,8 +231,7 @@ class AudioPlayer:
         return MetaData.get_meta_file(self._original_path)
 
     def load(self, path):
-        self.path = path
-
+        self.path = self._prepare_file(path)
         self._meta_data = self.get_meta_file()
         self.loaded = True
         self._load(self.path)
@@ -241,7 +240,7 @@ class AudioPlayer:
         pass
 
     def reload(self, path, playing):
-        self.path = path
+        self.path = self._prepare_file(path)
         self._meta_data = self.get_meta_file()
         self.stop()
         self._reload(path)
@@ -311,30 +310,39 @@ class AudioPlayer:
         self.current_time_stop = time.time()
         self._ran_end = True
 
+    def _reload_and_return_previous_time(self, path):
+        self.path = self._prepare_file(path)
+        self._meta_data = self.get_meta_file()
+        current_time = self.current_time
+        playing = self.playing
+        self.stop()
+        self._reload(path)
+        self.loaded = True
+        if playing:
+            self.play()
+        return current_time
+
     def swap_file_with_complete_file(self, path):
         if self.passed_download_head:
             current_time = self.attempted_current_time
+            self.reload(path, self.playing)
         else:
-            current_time = self.current_time
-        print('trying to swap')
-        playing = self.playing
-        self.stop()
-        self.reload(path, playing)
+            current_time = self._reload_and_return_previous_time(path)
         self.goto(current_time)
 
     load_rest_of_segment = swap_file_with_complete_file
 
     def swap_file_with_incomplete_file(self, path, duration):
-        current_time = self.current_time
-        self._prepare_file(path)
-        self.stop()
-        self.current_time = current_time
-        self.load_segment(path, duration)
-        self.goto(current_time)
-        self.play()
+        raise NotImplementedError
+        # current_time = self.current_time
+        # self.stop()
+        # self.current_time = current_time
+        # self.load_segment(path, duration)
+        # self.goto(current_time)
+        # self.play()
 
     def _prepare_file(self, path):
-        pass
+        return path
 
     def load_segment(self, path, duration):
         self.segment = True
@@ -422,10 +430,9 @@ class PygamePlayer(AudioPlayer):
 
     def _prepare_file(self, path):
         meta = MetaData.get_meta_file(path)
-        self.make_sure_sample_rate_is_correct(path, meta)
+        return self.make_sure_sample_rate_is_correct(path, meta)
 
     def _load(self, path):
-        self.path = self.make_sure_sample_rate_is_correct(self.path, self.meta_data)
         self.set_file(self.path)
         try:
             pygame.mixer.music.load(self.memory_file)
@@ -441,13 +448,12 @@ class PygamePlayer(AudioPlayer):
 
     def _convert_sample_rate(self, path):
         new_path = 'temp/' + os.path.basename(path)
-        AudioConverter.set_sample_rate(48000, self._original_path, new_path)
+        AudioConverter.set_sample_rate(48000, path, new_path)
         self.converted_paths.append(new_path)
-        self._meta_data = self.get_meta_file()
+        self._meta_data = MetaData.get_meta_file(path)
         return new_path
 
     def _reload(self, path):
-        self.path = self.make_sure_sample_rate_is_correct(self.path, self.meta_data)
         self.set_file(self.path)
         try:
             pygame.mixer.music.load(self.memory_file)

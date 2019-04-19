@@ -6,7 +6,6 @@ import os
 
 def try_to_remove_file(path):
     try:
-        print('test')
         os.remove(path)
         return True
     except FileNotFoundError:

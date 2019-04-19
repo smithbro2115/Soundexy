@@ -91,7 +91,6 @@ def set_sample_rate(sample_rate, path, new_path):
     sound = pydub.AudioSegment.from_file(path)
     sound = sound.set_frame_rate(sample_rate)
     try_to_remove_file(new_path)
-    print('set sample rate')
     sound.export(new_path, format=os.path.splitext(new_path)[1][1:])
 
 
