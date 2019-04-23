@@ -195,11 +195,8 @@ class Gui(GUI.Ui_MainWindow):
 
     def new_sound_audio_player(self, result):
         self.audio_player.audio_player.stop()
-        if useful_utils.get_file_type_from_path(result.path) == '.wav':
-            self.load_then_play(result)
-        else:
-            self.audio_converter_worker(self.audio_player.load, result.path, self.pixel_time_conversion_rate,
-                                        finished_f=self.audio_player.play)
+        self.audio_converter_worker(result.path, self.audio_player.load, result.path, self.pixel_time_conversion_rate,
+                                    finished_f=self.audio_player.play)
 
     def load_then_play(self, result):
         self.audio_player.load(result.path, self.pixel_time_conversion_rate)
@@ -269,7 +266,8 @@ class Gui(GUI.Ui_MainWindow):
         file_type = os.path.splitext(new_result.path)[1].lower()
         if not file_type == '.flac' and self.current_result == new_result:
             self.download_button.done()
-            self.audio_converter_worker(self.audio_player.reload_sound_from_different_file, new_result.path)
+            self.audio_converter_worker(new_result.path,
+                                        self.audio_player.reload_sound_from_different_file, new_result.path)
         elif file_type == '.flac':
             self.converter = AudioConverter.Converter(new_result.path)
             self.converter.signals.done.connect(lambda x: self.converting_audio_done(new_result, x))
@@ -285,16 +283,16 @@ class Gui(GUI.Ui_MainWindow):
 
     def preview_download_already_exists(self, path):
         self.make_waveform(path)
-        self.audio_converter_worker(self.audio_player.load, path, self.pixel_time_conversion_rate,
+        self.audio_converter_worker(path, self.audio_player.load, path, self.pixel_time_conversion_rate,
                                     finished_f=self.audio_player.play)
 
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)
-        self.audio_converter_worker(self.audio_player.load_segment, sound_path,
+        self.audio_converter_worker(sound_path, self.audio_player.load_segment, sound_path,
                                     self.current_result.meta_file()['duration'], self.pixel_time_conversion_rate)
 
     def preview_download_done(self, path):
-        self.audio_converter_worker(self.audio_player.audio_player.load_rest_of_segment, path)
+        self.audio_converter_worker(path, self.audio_player.audio_player.load_rest_of_segment, path)
         self.make_waveform(path)
 
     def get_indexer(self, paths):
@@ -351,11 +349,16 @@ class Gui(GUI.Ui_MainWindow):
     def reset_cursor(self):
         self.waveform.reset_cursor()
 
-    def audio_converter_worker(self, function, *args, finished_f=None):
-        worker = useful_utils.Worker(function, *args)
-        if finished_f:
-            worker.signals.finished.connect(finished_f)
-        self.audio_converter_thread_pool.start(worker)
+    def audio_converter_worker(self, path, function, *args, finished_f=None):
+        if not useful_utils.get_file_type_from_path(path) == '.wav':
+            worker = useful_utils.Worker(function, *args)
+            if finished_f:
+                worker.signals.finished.connect(finished_f)
+            self.audio_converter_thread_pool.start(worker)
+        else:
+            function(*args)
+            if finished_f:
+                finished_f()
 
     @staticmethod
     def get_formatted_time_from_milliseconds(milliseconds):
