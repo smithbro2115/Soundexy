@@ -25,6 +25,10 @@ def get_yes_no_from_bool(value: bool) -> str:
     return 'No'
 
 
+def get_file_type_from_path(path):
+    return os.path.splitext(path)[1]
+
+
 class WorkerSignals(QObject):
     finished = pyqtSignal()
     error = pyqtSignal(tuple)

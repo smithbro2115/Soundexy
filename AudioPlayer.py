@@ -9,6 +9,8 @@ from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtWidgets import QSlider
 import mmap
+from ctypes import c_buffer, windll
+from sys import getfilesystemencoding
 
 # TODO Implement selection of a portion
 # TODO Allow search results to be dragged on to player
@@ -385,8 +387,6 @@ class WavPlayer(AudioPlayer):
 
     @staticmethod
     def win_command(*command):
-        from ctypes import c_buffer, windll
-        from sys import getfilesystemencoding
         buf = c_buffer(255)
         command = ' '.join(command).encode(getfilesystemencoding())
         errorCode = int(windll.winmm.mciSendStringA(command, buf, 254, 0))
