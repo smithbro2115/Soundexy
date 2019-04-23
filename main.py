@@ -377,10 +377,6 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform.move_to_current_time()
         self.set_label_text(current_time)
 
-    @staticmethod
-    def print_result():
-        print('download started')
-
     def open_directory(self):
         name = QtWidgets.QFileDialog.getExistingDirectory(caption='Open File')
         self.open_import_directory(name)

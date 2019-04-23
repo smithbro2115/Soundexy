@@ -174,6 +174,7 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.setSortingEnabled(True)
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers | QtWidgets.QAbstractItemView.SelectedClicked)
+        self.horizontalHeader().setSectionsMovable(True)
         self.verticalHeader().setVisible(False)
         self.setColumnHidden(self.get_column_index('id'), True)
 
