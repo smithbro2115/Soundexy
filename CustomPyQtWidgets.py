@@ -3,6 +3,7 @@ from PyQt5.QtCore import pyqtSignal
 import traceback
 import pyqt_utils
 from useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool
+import os
 
 
 class SearchResultSignals(QtCore.QObject):
@@ -159,6 +160,7 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.row_order = {'File Name': 0, 'Title': 1, 'Description': 2, 'Duration': 3,
                           'Library': 4, 'Artist': 5, 'Available Locally': 7, 'Id': 6}
         self.setAcceptDrops(True)
+        self.setDragEnabled(True)
         self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self)
         self.searchResultsTableModel.set_read_only_columns([self.get_column_index('Duration'),
                                                             self.get_column_index('Library'),
@@ -284,6 +286,16 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.searchResultsTableModel.setHorizontalHeaderLabels(self.headers)
         if hidden:
             self.setColumnHidden(self.searchResultsTableModel.columnCount() - 1, True)
+
+    def startDrag(self, *args, **kwargs):
+        a = QtGui.QDrag(self)
+        r_path = self.current_results[self.searchResultsTableModel.get_id_from_row(self.currentIndex().row())].path
+        path = os.path.abspath(r_path)
+        data = QtCore.QMimeData()
+        data.setUrls([QtCore.QUrl.fromLocalFile(path)])
+        a.setMimeData(data)
+        print(a.target())
+        a.exec_()
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
