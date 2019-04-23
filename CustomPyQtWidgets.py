@@ -293,6 +293,7 @@ class SearchResultsTable(QtWidgets.QTableView):
         path = os.path.abspath(r_path)
         data = QtCore.QMimeData()
         data.setUrls([QtCore.QUrl.fromLocalFile(path)])
+        a.defaultAction = QtCore.Qt.CopyAction
         a.setMimeData(data)
         print(a.target())
         a.exec_()
