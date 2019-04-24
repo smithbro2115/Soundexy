@@ -4,6 +4,7 @@ import traceback
 import pyqt_utils
 from useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool
 import os
+from CustomPyQtFunctionality import InternalMoveMimeData
 
 
 class SearchResultSignals(QtCore.QObject):
@@ -291,21 +292,20 @@ class SearchResultsTable(QtWidgets.QTableView):
         a = QtGui.QDrag(self)
         r_path = self.current_results[self.searchResultsTableModel.get_id_from_row(self.currentIndex().row())].path
         path = os.path.abspath(r_path)
-        data = QtCore.QMimeData()
+        data = InternalMoveMimeData()
         data.setUrls([QtCore.QUrl.fromLocalFile(path)])
-        a.defaultAction = QtCore.Qt.CopyAction
         a.setMimeData(data)
         print(a.target())
-        a.exec_()
+        a.exec_(QtCore.Qt.CopyAction)
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
+        if event.mimeData().hasUrls() and not isinstance(event.mimeData(), InternalMoveMimeData):
             event.accept()
         else:
             event.ignore()
 
     def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls:
+        if event.mimeData().hasUrls and not isinstance(event.mimeData(), InternalMoveMimeData):
             event.setDropAction(QtCore.Qt.LinkAction)
             event.accept()
         else:
