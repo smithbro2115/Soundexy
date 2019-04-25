@@ -109,12 +109,17 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTable.signals.drop_sig.connect(self.open_import_directory)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.audio_player.signals.time_changed.connect(self.set_current_time)
+        self.volumeSlider.valueChanged.connect(self.volume_changed)
+        self.loopCheckBox.stateChanged.connect(self.loop_changed)
+        self.volumeSlider.setStyleSheet("""QSlider::sub-page:horizontal {
+                                        background-color: #287399;
+                                        }""")
         self.audio_player.signals.error.connect(self.show_error)
         self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
         self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
         self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
         self.play_sound_thread_pool.start(self.audio_player)
-        self.player.layout().addWidget(self.waveform, 0, 1)
+        self.player.layout().addWidget(self.waveform, 1, 1)
         self.mainWidget.insertWidget(0, self.searchResultsTable)
         self.searchLineEdit.setStyleSheet("""
                                         QLineEdit{background-repeat: no-repeat; 
@@ -294,6 +299,12 @@ class Gui(GUI.Ui_MainWindow):
     def preview_download_done(self, path):
         self.audio_converter_worker(path, self.audio_player.audio_player.load_rest_of_segment, path)
         self.make_waveform(path)
+
+    def volume_changed(self):
+        self.audio_player.volume = self.volumeSlider.value()
+
+    def loop_changed(self):
+        self.audio_player.loop = self.loopCheckBox.checkState()
 
     def get_indexer(self, paths):
         indexer = LocalFileHandler.Indexer()

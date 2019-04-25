@@ -43,6 +43,26 @@ class SoundPlayer(QRunnable):
         self.pixel_time_conversion_rate = 0
         self.audio_player = AudioPlayer()
         self.audio_player.signals.error.connect(lambda x: self.signals.error.emit(x))
+        self._volume = 85
+        self._loop = False
+
+    @property
+    def volume(self):
+        return self._volume
+
+    @volume.setter
+    def volume(self, value):
+        self.audio_player.set_volume(value)
+        self._volume = value
+
+    @property
+    def loop(self):
+        return self._loop
+
+    @loop.setter
+    def loop(self, value):
+        self.audio_player.loop = value
+        self._loop = value
 
     def reset(self):
         self.audio_player.stop()
@@ -78,9 +98,9 @@ class SoundPlayer(QRunnable):
     def get_correct_audio_player(self, path):
         file_type = os.path.splitext(path)[1].lower()
         if file_type in self.wav_list:
-            return WavPlayer()
+            return WavPlayer(self.volume, self.loop)
         elif file_type in self.pygame_list:
-            return PygamePlayer()
+            return PygamePlayer(self.volume, self.loop)
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
         current_time = self.audio_player.current_time
@@ -128,11 +148,10 @@ class AudioPlayerSigs(QObject):
 
 
 class AudioPlayer:
-    def __init__(self):
+    def __init__(self, volume=85, loop=False):
         self.signals = AudioPlayerSigs()
         self.loaded = False
         self._playing = False
-        self.loop = False
         self.segment = False
         self._ran_end = False
         self._path = ''
@@ -147,13 +166,25 @@ class AudioPlayer:
         self._current_time_stop = 0
         self._current_time = 0
         self.current_time = 0
+        self._loop = loop
+        self.set_volume(volume)
 
     def __del__(self):
         self._meta_data = None
 
     @property
+    def loop(self):
+        return self._loop
+
+    @loop.setter
+    def loop(self, value):
+        if self.ended and value:
+            self.restart()
+        self._loop = value
+
+    @property
     def current_time_stop(self):
-        if not self.playing:
+        if not self.playing or self._ran_end:
             return self._current_time_stop
         return time.time()
 
@@ -285,6 +316,12 @@ class AudioPlayer:
     def _stop(self):
         pass
 
+    def set_volume(self, value):
+        self._set_volume(value)
+
+    def _set_volume(self, value):
+        pass
+
     def goto(self, position):
         self.current_time = position
         if self.segment and position >= self.true_duration:
@@ -292,7 +329,10 @@ class AudioPlayer:
             self.attempted_current_time = position
             self.passed_download_head = True
         else:
-            self._goto(position)
+            if position > self.duration:
+                self._goto(self.duration)
+            else:
+                self._goto(position)
 
     def _goto(self, position):
         pass
@@ -307,10 +347,13 @@ class AudioPlayer:
 
     def end(self):
         if self.loop:
-            self.goto(0)
-            self.play()
+            self.restart()
         self.current_time_stop = time.time()
         self._ran_end = True
+
+    def restart(self):
+        self.goto(0)
+        self.play()
 
     def _reload_and_return_previous_time(self, path):
         self.path = self._prepare_file(path)
@@ -353,9 +396,10 @@ class AudioPlayer:
 
 
 class WavPlayer(AudioPlayer):
-    def __init__(self):
-        super(WavPlayer, self).__init__()
+    def __init__(self, *args):
         self.alias = ''
+        super(WavPlayer, self).__init__(*args)
+        self.temp_volume = 0
 
     def __del__(self):
         self.win_command('close', self.alias)
@@ -367,6 +411,12 @@ class WavPlayer(AudioPlayer):
 
     def _reload(self, path):
         self._load(path)
+
+    def _set_volume(self, value):
+        if self.alias != '':
+            winmm = windll.LoadLibrary('winmm.dll')
+            winmm.waveOutSetVolume(None, value)
+            print(value)
 
     def _play(self):
         self.win_command('play', self.alias, 'from', str(round(self.current_time)), 'to', str(self.duration))
@@ -401,8 +451,8 @@ class WavPlayer(AudioPlayer):
 
 
 class PygamePlayer(AudioPlayer):
-    def __init__(self):
-        super(PygamePlayer, self).__init__()
+    def __init__(self, *args):
+        super(PygamePlayer, self).__init__(*args)
         pygame.mixer.pre_init(48000, -16, 2, 1024)
         pygame.mixer.init(48000, -16, 2, 1024)
         self.converted_paths = []
