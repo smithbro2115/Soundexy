@@ -167,7 +167,7 @@ class AudioPlayer:
         self._current_time = 0
         self.current_time = 0
         self._loop = loop
-        self.set_volume(volume)
+        self._volume = volume
 
     def __del__(self):
         self._meta_data = None
@@ -268,6 +268,7 @@ class AudioPlayer:
         self._meta_data = self.get_meta_file()
         self.loaded = True
         self._load(self.path)
+        self.set_volume(self._volume)
 
     def _load(self, path):
         pass
@@ -477,6 +478,9 @@ class PygamePlayer(AudioPlayer):
         self.close_file()
         with open(path) as f:
             self.memory_file = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+
+    def set_volume(self, value):
+        pygame.mixer.music.set_volume(value/100)
 
     def _prepare_file(self, path):
         meta = MetaData.get_meta_file(path)
