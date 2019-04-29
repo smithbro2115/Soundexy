@@ -97,10 +97,10 @@ class SoundPlayer(QRunnable):
 
     def get_correct_audio_player(self, path):
         file_type = os.path.splitext(path)[1].lower()
-        if file_type in self.wav_list:
-            return WavPlayer(self.volume, self.loop)
-        elif file_type in self.pygame_list:
-            return PygamePlayer(self.volume, self.loop)
+        # if file_type in self.wav_list:
+        #     return WavPlayer(self.volume, self.loop)
+        # elif file_type in self.pygame_list:
+        return PygamePlayer(self.volume, self.loop)
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
         current_time = self.audio_player.current_time
@@ -480,7 +480,7 @@ class PygamePlayer(AudioPlayer):
 
     def _prepare_file(self, path):
         meta = MetaData.get_meta_file(path)
-        return self.make_sure_sample_rate_is_correct(path, meta)
+        return self.make_sure_file_is_playable(path, meta)
 
     def _load(self, path):
         self.set_file(self.path)
@@ -490,15 +490,17 @@ class PygamePlayer(AudioPlayer):
             self.signals.error.emit("Couldn't play this file!  It may be that it's corrupted.  "
                                     "Try downloading it again.")
 
-    def make_sure_sample_rate_is_correct(self, path, meta):
+    def make_sure_file_is_playable(self, path, meta):
         frequency = meta['sample rate']
-        if not frequency == 48000:
-            return self._convert_sample_rate(path)
+        channels = meta['channels']
+        new_channels = 2 if channels > 2 else channels
+        if frequency != 48000 or channels > 2:
+            return self._convert(48000, new_channels, path)
         return path
 
-    def _convert_sample_rate(self, path):
+    def _convert(self, sample_rate, channels, path):
         new_path = 'temp/' + os.path.basename(path)
-        AudioConverter.set_sample_rate(48000, path, new_path)
+        AudioConverter.get_pygame_playable_version(sample_rate, channels, path, new_path)
         self.converted_paths.append(new_path)
         self._meta_data = MetaData.get_meta_file(path)
         return new_path

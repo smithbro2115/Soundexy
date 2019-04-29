@@ -2,6 +2,10 @@ import pydub
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
 import os
 from useful_utils import try_to_remove_file
+import subprocess
+
+
+ffmpeg_path = os.path.dirname(os.path.realpath(__file__)) + '/ffmpeg/ffmpeg/bin'
 
 
 class ConverterSigs(QObject):
@@ -87,11 +91,22 @@ def get_wav_from_flac(path, new_path):
     sound.export(new_path, format='wav')
 
 
+def get_pygame_playable_version(sample_rate, channels, path, new_path):
+    subprocess.call(ffmpeg_path + '/ffmpeg -i "' + path + '" -ac ' + str(channels) + ' -ar ' + str(sample_rate) +
+                    ' -y "' + new_path + '"', stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    return new_path
+
+
+def set_channels(channels, path, new_path):
+    subprocess.call(ffmpeg_path + '/ffmpeg -i "' + path + '" -ac ' + channels + ' -y "' + new_path + '"',
+                    stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    return new_path
+
+
 def set_sample_rate(sample_rate, path, new_path):
-    sound = pydub.AudioSegment.from_file(path)
-    sound = sound.set_frame_rate(sample_rate)
-    try_to_remove_file(new_path)
-    sound.export(new_path, format=os.path.splitext(new_path)[1][1:])
+    subprocess.call(ffmpeg_path + '/ffmpeg -i "' + path + '" -ar ' + sample_rate + ' -y "' + new_path + '"',
+                    stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    return new_path
 
 
 def test_flac():
