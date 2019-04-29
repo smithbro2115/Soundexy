@@ -493,14 +493,15 @@ class PygamePlayer(AudioPlayer):
     def make_sure_file_is_playable(self, path, meta):
         frequency = meta['sample rate']
         channels = meta['channels']
+        file_type = meta['file type']
         new_channels = 2 if channels > 2 else channels
-        if frequency != 48000 or channels > 2:
+        if frequency != 48000 or channels > 2 or file_type not in ('mp3', 'ogg'):
             return self._convert(48000, new_channels, path)
         return path
 
     def _convert(self, sample_rate, channels, path):
         new_path = 'temp/' + os.path.basename(path)
-        AudioConverter.get_pygame_playable_version(sample_rate, channels, path, new_path)
+        new_path = AudioConverter.get_pygame_playable_version(sample_rate, channels, path, new_path)
         self.converted_paths.append(new_path)
         self._meta_data = MetaData.get_meta_file(path)
         return new_path
