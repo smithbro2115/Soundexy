@@ -56,3 +56,4 @@ fabric.properties
 
 /obj/local_index.pkl
 /downloader_auth.ini
+/obj/downloaded_index.pkl
