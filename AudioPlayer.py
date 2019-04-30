@@ -4,6 +4,7 @@ import pygame
 import MetaData
 import os
 import time
+import traceback
 from random import random
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
 from PyQt5 import QtGui, QtWidgets
@@ -75,12 +76,15 @@ class SoundPlayer(QRunnable):
         self.label = label
 
     def space_bar(self):
-        if self.audio_player.ended:
-            self.audio_player.goto(0)
-        elif self.audio_player.playing:
-            self.audio_player.pause()
-        else:
-            self.audio_player.resume()
+        try:
+            if self.audio_player.ended:
+                self.audio_player.goto(0)
+            elif self.audio_player.playing:
+                self.audio_player.pause()
+            else:
+                self.audio_player.resume()
+        except TypeError:
+            traceback.print_exc()
 
     @pyqtSlot()
     def run(self):
@@ -160,7 +164,8 @@ class AudioPlayer:
         self._meta_data = None
         self._duration = 0
         self.attempted_current_time = 0
-        self.passed_download_head = False
+        self.passed_available_time = False
+        self.busy = True
         self._current_time_start = 0
         self.current_time_stop = 0
         self._current_time_stop = 0
@@ -264,23 +269,30 @@ class AudioPlayer:
         return MetaData.get_meta_file(self._original_path)
 
     def load(self, path):
+        self.busy = True
         self.path = self._prepare_file(path)
         self._meta_data = self.get_meta_file()
         self.loaded = True
         self._load(self.path)
+        self.busy = False
         self.set_volume(self._volume)
 
     def _load(self, path):
         pass
 
     def reload(self, path, playing):
+        self.busy = True
         self.path = self._prepare_file(path)
         self._meta_data = self.get_meta_file()
         self.stop()
         self._reload(path)
         self.loaded = True
+        self.busy = False
         if playing:
             self.play()
+        if self.passed_available_time:
+            self.goto(self.attempted_current_time)
+            self.passed_available_time = False
 
     def _reload(self, path):
         pass
@@ -289,6 +301,9 @@ class AudioPlayer:
         if not self.playing:
             self.playing = True
             self._play()
+            if self.passed_available_time:
+                self.goto(self.attempted_current_time)
+                self.passed_available_time = False
 
     def _play(self):
         pass
@@ -325,10 +340,14 @@ class AudioPlayer:
 
     def goto(self, position):
         self.current_time = position
-        if self.segment and position >= self.true_duration:
+        if self.busy and not self.segment:
             self.pause()
             self.attempted_current_time = position
-            self.passed_download_head = True
+            self.passed_available_time = True
+        elif self.segment and position >= self.true_duration:
+            self.pause()
+            self.attempted_current_time = position
+            self.passed_available_time = True
         else:
             if position > self.duration:
                 self._goto(self.duration)
@@ -343,7 +362,8 @@ class AudioPlayer:
         self.playing = False
         self.loop = False
         self.segment = False
-        self.passed_download_head = False
+        self.busy = True
+        self.passed_available_time = False
         self.current_time = 0
 
     def end(self):
@@ -369,7 +389,7 @@ class AudioPlayer:
         return current_time
 
     def swap_file_with_complete_file(self, path):
-        if self.passed_download_head:
+        if self.passed_available_time:
             current_time = self.attempted_current_time
             self.reload(path, self.playing)
         else:

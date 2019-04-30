@@ -1,7 +1,6 @@
 import pydub
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
 import os
-from useful_utils import try_to_remove_file
 import subprocess
 
 
