@@ -5,6 +5,8 @@ import pyqt_utils
 from useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool
 import os
 from CustomPyQtFunctionality import InternalMoveMimeData
+import loginDialog
+import qdarkstyle
 
 
 class SearchResultSignals(QtCore.QObject):
@@ -318,3 +320,17 @@ class SearchResultsTable(QtWidgets.QTableView):
             paths.append(f)
         self.signals.drop_sig.emit(paths)
 
+
+class LoginDialogSigs(QtCore.QObject):
+    accepted = pyqtSignal(tuple)
+    canceled = pyqtSignal()
+
+
+class LoginDialog(QtWidgets.QDialog):
+    def __init__(self, website, parent=None):
+        super(LoginDialog, self).__init__(parent)
+        self.signals = LoginDialogSigs()
+        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.ui = loginDialog.Ui_login()
+        self.ui.setupUi(self)
+        self.ui.loginSiteName.setText(f'Login into {website}')

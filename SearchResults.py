@@ -1,9 +1,10 @@
 import MetaData
 from PyQt5.QtCore import pyqtSignal, QObject
-import sys
+from Credentials import get_credentials
 import os
 import Downloader
 from abc import abstractmethod
+from CustomPyQtFunctionality import show_error
 
 
 class Local:
@@ -172,7 +173,7 @@ class Remote:
                 'file type': self.file_type, 'download link': self.link, 'available locally': self.downloaded}
 
     @abstractmethod
-    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f):
+    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f, cancel_f, error_f):
         pass
 
     def get_downloaded_index(self):
@@ -237,15 +238,31 @@ class Free(Remote):
     def site_name(self):
         return ''
 
-    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f):
-        self.downloader = self.get_downloader()(self.meta_file()['download link'])
+    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f, cancel_f, error_f):
+        self.downloader = self.construct_auth_session()
+        if not self.downloader:
+            return None
         self.downloader.download_path = self.download_path
         download_started_f(self.id)
-        self.downloader.signals.downloaded_some.connect(lambda x: downloaded_some_f(x, self.id))
-        self.downloader.signals.already_exists.connect(lambda x: self._download_done(x, download_done_f))
-        self.downloader.signals.download_done.connect(lambda x: self._download_done(x, download_done_f))
+        self.connect_downloader_signals(downloaded_some_f, download_done_f, cancel_f, error_f)
         threadpool.start(self.downloader)
         self.downloading = True
+
+    def connect_downloader_signals(self, d_some_f, d_done_f, d_cancel_f, d_error_f):
+        self.downloader.signals.error.connect(lambda x: self.download_error(x, d_cancel_f, d_error_f))
+        self.downloader.signals.downloaded_some.connect(lambda x: d_some_f(x, self.id))
+        self.downloader.signals.already_exists.connect(lambda x: self._download_done(x, d_done_f))
+        self.downloader.signals.download_done.connect(lambda x: self._download_done(x, d_done_f))
+
+    def download_error(self, msg, c_function, e_function):
+        e_function(msg)
+        self.cancel_download(c_function)
+
+    def construct_auth_session(self):
+        outcome = get_credentials(self.library)
+        if outcome[1]:
+            return self.get_downloader()(self.meta_file()['download link'], outcome[0])
+        return None
 
 
 class FreesoundResult(Free):
@@ -261,5 +278,5 @@ class Paid(Remote):
     def __init__(self):
         super(Paid, self).__init__()
 
-    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f):
+    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f, cancel_f, error_f):
         pass

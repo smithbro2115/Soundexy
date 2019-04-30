@@ -17,7 +17,8 @@ from sys import getfilesystemencoding
 # TODO Allow search results to be dragged on to player
 # TODO Allow sound to be dragged into an external program (maybe convert the file if its not a mp3 or wav
 # TODO Implement pitching and time shifting
-# FIXME Flac files don't play
+# FIXME Something to do with loading and playing segments when you try to sekk it plays from the beginning
+#  and stays that way
 
 
 class PlaysoundException(Exception):

@@ -13,6 +13,7 @@ from CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal
 from Searches import FreesoundSearch
 import pyqt_utils
 import useful_utils
+import Credentials
 
 
 # TODO Make the playlist functionality (it would be really cool if we can add remote sounds to a playlist)
@@ -84,6 +85,7 @@ class Gui(GUI.Ui_MainWindow):
         self.currently_downloading_results = {}
         self.indexer = LocalFileHandler.Indexer()
         self.converter = None
+        self.login = None
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
@@ -238,7 +240,9 @@ class Gui(GUI.Ui_MainWindow):
         self.download_button.set_button_function(lambda: result.download(self.download_pool,
                                                                          self.download_started,
                                                                          self.downloaded_some,
-                                                                         self.download_done))
+                                                                         self.download_done,
+                                                                         self.download_button.reset,
+                                                                         self.show_error))
         pyqt_utils.disconnect_all_signals(self.download_button.signals.cancel, self.download_button.signals.delete)
         self.download_button.signals.cancel.connect(lambda: result.cancel_download(self.download_button.reset))
         self.download_button.signals.delete.connect(lambda: result.delete_download(self.download_deleted))

@@ -3,7 +3,6 @@ import os
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
 import WebsiteAuth
 from abc import abstractmethod
-import configparser
 
 
 class DownloaderSigs(QObject):
@@ -12,6 +11,8 @@ class DownloaderSigs(QObject):
     downloaded = pyqtSignal(str)
     already_exists = pyqtSignal(str)
     download_done = pyqtSignal(str)
+    need_credentials = pyqtSignal()
+    error = pyqtSignal(str)
 
 
 class Downloader(QRunnable):
@@ -28,6 +29,8 @@ class Downloader(QRunnable):
     @pyqtSlot()
     def run(self):
         self.url = self.get_download_path()
+        if not self.url:
+            return None
         name = get_title_from_url(self.url)
         for root, dirs, files in os.walk(self.download_path):
             if name in files:
@@ -128,9 +131,9 @@ class PreviewDownloader(Downloader):
 
 
 class AuthDownloader(Downloader):
-    def __init__(self, url):
+    def __init__(self, url, credentials):
         super(AuthDownloader, self).__init__(url)
-        self.username, self.password = self.get_credentials()
+        self.username, self.password = credentials
 
     @property
     @abstractmethod
@@ -138,12 +141,10 @@ class AuthDownloader(Downloader):
         return ''
 
     def get_download_path(self):
-        return self.session.get_sound_link(self.url)
-
-    def get_credentials(self):
-        config = configparser.ConfigParser()
-        config.read('downloader_auth.ini')
-        return config[self.site_name]['user'], config[self.site_name]['password']
+        try:
+            return self.session.get_sound_link(self.url)
+        except TypeError:
+            self.signals.error.emit("Network error! You may want to try different credentials.")
 
 
 class FreesoundDownloader(AuthDownloader):
@@ -167,12 +168,3 @@ def freesound_download(threadpool, meta_file, username, password, done_function,
 
 def get_title_from_url(url):
     return url[url[:-2].rfind('/') + 1:]
-
-
-def set_username_pass(user, password, site):
-    config = configparser.ConfigParser()
-    config[site] = {}
-    config[site]['User'] = user
-    config[site]['Password'] = password
-    with open('downloader_auth.ini', 'w+') as config_file:
-        config.write(config_file)
