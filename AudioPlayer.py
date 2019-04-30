@@ -17,8 +17,6 @@ from sys import getfilesystemencoding
 # TODO Allow search results to be dragged on to player
 # TODO Allow sound to be dragged into an external program (maybe convert the file if its not a mp3 or wav
 # TODO Implement pitching and time shifting
-# FIXME Something to do with loading and playing segments when you try to sekk it plays from the beginning
-#  and stays that way
 
 
 class PlaysoundException(Exception):
@@ -378,6 +376,7 @@ class AudioPlayer:
         self.play()
 
     def _reload_and_return_previous_time(self, path):
+        self.busy = True
         self.path = self._prepare_file(path)
         self._meta_data = self.get_meta_file()
         current_time = self.current_time
@@ -385,6 +384,7 @@ class AudioPlayer:
         self.stop()
         self._reload(path)
         self.loaded = True
+        self.busy = False
         if playing:
             self.play()
         return current_time
@@ -395,6 +395,7 @@ class AudioPlayer:
             self.reload(path, self.playing)
         else:
             current_time = self._reload_and_return_previous_time(path)
+        self.segment = False
         self.goto(current_time)
 
     load_rest_of_segment = swap_file_with_complete_file
