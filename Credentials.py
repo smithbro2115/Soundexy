@@ -2,6 +2,14 @@ import configparser
 from CustomPyQtWidgets import LoginDialog
 
 
+def delete_saved_credentials(site_name):
+    config = configparser.ConfigParser()
+    config.read('downloader_auth.ini')
+    config.remove_section(site_name)
+    with open('downloader_auth.ini', 'w+') as config_file:
+        config.write(config_file)
+
+
 def get_saved_credentials(site_name):
     config = configparser.ConfigParser()
     config.read('downloader_auth.ini')

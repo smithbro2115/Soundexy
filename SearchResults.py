@@ -1,10 +1,9 @@
 import MetaData
 from PyQt5.QtCore import pyqtSignal, QObject
-from Credentials import get_credentials
+from Credentials import get_credentials, delete_saved_credentials
 import os
 import Downloader
 from abc import abstractmethod
-from CustomPyQtFunctionality import show_error
 
 
 class Local:
@@ -256,6 +255,7 @@ class Free(Remote):
 
     def download_error(self, msg, c_function, e_function):
         e_function(msg)
+        delete_saved_credentials(self.library)
         self.cancel_download(c_function)
 
     def construct_auth_session(self):
