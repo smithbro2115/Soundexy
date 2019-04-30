@@ -2,6 +2,9 @@ import configparser
 from CustomPyQtWidgets import LoginDialog
 
 
+# TODO encrypt credentials before saving them to ini file
+
+
 def delete_saved_credentials(site_name):
     config = configparser.ConfigParser()
     config.read('downloader_auth.ini')
