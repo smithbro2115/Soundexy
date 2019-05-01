@@ -177,18 +177,19 @@ class SearchResultsTable(QtWidgets.QTableView):
     def __init__(self):
         super(SearchResultsTable, self).__init__()
         self.row_order = {'File Name': 0, 'Title': 1, 'Description': 2, 'Duration': 3,
-                          'Library': 4, 'Artist': 5, 'Available Locally': 7, 'Id': 6}
+                          'Library': 4, 'Author': 5, 'Id': 6, 'Available Locally': 7}
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
         self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self)
         self.searchResultsTableModel.set_read_only_columns([self.get_column_index('Duration'),
                                                             self.get_column_index('Library'),
+                                                            self.get_column_index('Available Locally'),
                                                             self.get_column_index('Id')])
         self.setModel(self.searchResultsTableModel)
         self.headers = sorted(self.row_order, key=self.row_order.get)
         self.searchResultsTableModel.headers = self.headers
         self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
-        self.searchResultsTableModel.setColumnCount(7)
+        self.searchResultsTableModel.setColumnCount(8)
         self.current_results = {}
         self.horizontalHeader().setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.horizontalHeader().customContextMenuRequested.connect(self.show_context_menu)
@@ -244,16 +245,19 @@ class SearchResultsTable(QtWidgets.QTableView):
 
     def make_standard_items_from_result(self, result):
         meta_file = result.meta_file
+        print(meta_file())
         standard_items = {}
         for k, v in meta_file().items():
             if isinstance(v, list):
-                readable_version = self.convert_none_into_space(v[0])
+                readable_version = self.convert_none_into_space(', '.join(v))
             else:
                 readable_version = self.convert_none_into_space(v)
             checked_for_special = self.special_values(k, readable_version)
             item = QtGui.QStandardItem(str(checked_for_special))
             standard_items[k] = item
         standard_items['Id'] = QtGui.QStandardItem(str(result.id))
+        standard_items['Available Locally'] = QtGui.QStandardItem(self.special_values('available locally',
+                                                                                      result.available_locally))
         return standard_items
 
     def replace_result(self, new_result, old_result):
@@ -298,8 +302,8 @@ class SearchResultsTable(QtWidgets.QTableView):
             if index >= 0:
                 row[index] = v
             else:
-                self.add_new_column(k)
-                row.append(v)
+                new_index = self.add_new_column(k)
+                row.insert(new_index, v)
         return row
 
     def get_column_index(self, header):
@@ -316,8 +320,10 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.headers = sorted(self.row_order, key=self.row_order.get)
         self.searchResultsTableModel.setColumnCount(self.searchResultsTableModel.columnCount())
         self.searchResultsTableModel.setHorizontalHeaderLabels(self.headers)
+        new_index = self.searchResultsTableModel.columnCount()
         if hidden:
-            self.setColumnHidden(self.searchResultsTableModel.columnCount() - 1, True)
+            self.setColumnHidden(new_index - 1, True)
+        return new_index
 
     def startDrag(self, *args, **kwargs):
         a = QtGui.QDrag(self)
