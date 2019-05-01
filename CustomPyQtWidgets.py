@@ -245,7 +245,6 @@ class SearchResultsTable(QtWidgets.QTableView):
 
     def make_standard_items_from_result(self, result):
         meta_file = result.meta_file
-        print(meta_file())
         standard_items = {}
         for k, v in meta_file().items():
             if isinstance(v, list):
