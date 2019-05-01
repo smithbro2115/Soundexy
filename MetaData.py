@@ -6,6 +6,10 @@ from mutagen.flac import FLAC
 from mutagen.mp3 import EasyMP3
 
 
+# FIXME setting tags is not currently working
+# TODO need to figure out how to set metadata to wav files
+
+
 def get_meta_file(path):
     supported_file_types = {'.mp3': Mp3File, '.wav': WavFile,
                             '.flac': FlacFile, '.ogg': OggFile}

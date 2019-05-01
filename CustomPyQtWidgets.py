@@ -157,6 +157,22 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.progress_bar.setValue(value)
 
 
+class SearchResultTableHeaderContextMenu(QtWidgets.QMenu):
+    def __init__(self, parent):
+        super(SearchResultTableHeaderContextMenu, self).__init__(parent)
+        self.model = parent.searchResultsTableModel
+        self.main = parent
+        self.make_actions()
+
+    def make_actions(self):
+        for header_index in range(self.model.columnCount()):
+            is_visible = not self.main.isColumnHidden(header_index)
+            action = self.addAction(self.main.headers[header_index])
+            action.setCheckable(True)
+            action.setChecked(is_visible)
+            action.setData(header_index)
+
+
 class SearchResultsTable(QtWidgets.QTableView):
     def __init__(self):
         super(SearchResultsTable, self).__init__()
@@ -174,6 +190,8 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
         self.searchResultsTableModel.setColumnCount(7)
         self.current_results = {}
+        self.horizontalHeader().setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.horizontalHeader().customContextMenuRequested.connect(self.show_context_menu)
         self.signals = SearchResultSignals()
         self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -182,6 +200,17 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.horizontalHeader().setSectionsMovable(True)
         self.verticalHeader().setVisible(False)
         self.setColumnHidden(self.get_column_index('id'), True)
+
+    def show_context_menu(self, event):
+        context = SearchResultTableHeaderContextMenu(self)
+        action = context.exec_(self.mapToGlobal(event))
+        if action:
+            self.header_context_menu_clicked(action)
+
+    def header_context_menu_clicked(self, action):
+        checked = action.isChecked()
+        header_index = action.data()
+        self.setColumnHidden(header_index, not checked)
 
     @staticmethod
     def convert_none_into_space(result):

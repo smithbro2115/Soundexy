@@ -15,7 +15,6 @@ from sys import getfilesystemencoding
 
 # TODO Implement selection of a portion
 # TODO Allow search results to be dragged on to player
-# TODO Allow sound to be dragged into an external program (maybe convert the file if its not a mp3 or wav
 # TODO Implement pitching and time shifting
 
 
