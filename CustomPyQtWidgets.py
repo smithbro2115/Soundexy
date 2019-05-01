@@ -324,14 +324,18 @@ class SearchResultsTable(QtWidgets.QTableView):
             self.setColumnHidden(new_index - 1, True)
         return new_index
 
+    def get_mime_data(self):
+        result = self.current_results[self.searchResultsTableModel.get_id_from_row(self.currentIndex().row())]
+        data = InternalMoveMimeData()
+        if result.available_locally:
+            path = os.path.abspath(result.path)
+            data.setUrls([QtCore.QUrl.fromLocalFile(path)])
+        return data
+
     def startDrag(self, *args, **kwargs):
         a = QtGui.QDrag(self)
-        r_path = self.current_results[self.searchResultsTableModel.get_id_from_row(self.currentIndex().row())].path
-        path = os.path.abspath(r_path)
-        data = InternalMoveMimeData()
-        data.setUrls([QtCore.QUrl.fromLocalFile(path)])
+        data = self.get_mime_data()
         a.setMimeData(data)
-        print(a.target())
         a.exec_(QtCore.Qt.CopyAction)
 
     def dragEnterEvent(self, event):

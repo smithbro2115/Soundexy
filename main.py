@@ -600,6 +600,7 @@ class Window(QtWidgets.QMainWindow):
         self.settings.setValue('windowState', self.saveState())
         QtWidgets.QMainWindow.closeEvent(self, event)
         useful_utils.clear_folder("temp")
+        useful_utils.clear_folder('Cache')
 
 
 class WorkerSignals(QObject):
