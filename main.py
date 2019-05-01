@@ -599,6 +599,7 @@ class Window(QtWidgets.QMainWindow):
         self.settings.setValue('geometry', self.saveGeometry())
         self.settings.setValue('windowState', self.saveState())
         QtWidgets.QMainWindow.closeEvent(self, event)
+        useful_utils.clear_folder("temp")
 
 
 class WorkerSignals(QObject):

@@ -113,3 +113,13 @@ def downsample_wav(src, dst, inrate=44100, outrate=16000, inchannels=2, outchann
         return False
 
     return True
+
+
+def clear_folder(folder):
+    for the_file in os.listdir(folder):
+        file_path = os.path.join(folder, the_file)
+        try:
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+        except Exception as e:
+            print(e)
