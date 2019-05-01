@@ -155,6 +155,10 @@ class Remote:
                 return result
 
     @property
+    def available_locally(self):
+        return self.downloaded
+
+    @property
     @abstractmethod
     def site_name(self):
         return ''
