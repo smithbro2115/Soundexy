@@ -91,13 +91,14 @@ class Local:
         words.append(self.path)
         return words
 
-    def search(self, keywords, excluded_words=None):
-        for keyword in keywords:
-            if keyword.lower() in self.keywords:
-                if excluded_words is not None:
-                    if keyword.lower() in excluded_words:
-                        return False
-                return True
+    def search(self, search_words, excluded_words=None):
+        for word in search_words:
+            for keyword in self.keywords:
+                if word.lower() in keyword:
+                    if excluded_words is not None:
+                        if keyword.lower() in excluded_words:
+                            return False
+                    return True
         return False
 
     def get_dict_of_all_attributes(self):
