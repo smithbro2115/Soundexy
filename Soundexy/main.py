@@ -268,7 +268,7 @@ class Gui(GUI.Ui_MainWindow):
     def download_done(self, new_result):
         if self.current_result == new_result:
             self.download_button.done()
-            self.audio_converter_worker(self.audio_player.reload_sound_from_different_file, new_result.path)
+            self.audio_converter_worker(self.audio_player.audio_player.swap_file_with_complete_file, new_result.path)
         self.searchResultsTable.replace_result(new_result, new_result)
 
     def converting_audio_done(self, result, new_path):
