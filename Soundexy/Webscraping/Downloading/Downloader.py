@@ -102,7 +102,6 @@ class PreviewDownloader(Downloader):
     def download_preview(self, url, title):
         file_path = f"{self.preview_path}/{title}.ogg"
         file_downloader = f"{self.preview_path}/download_{title}.ogg"
-        print(self.preview_path, file_path, file_downloader)
         amount = 1024*200
         emitted_ready_for_preview = False
         fd = open(file_downloader, 'wb')
