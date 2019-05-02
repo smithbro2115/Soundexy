@@ -21,8 +21,6 @@ from Soundexy.Functionality import useful_utils
 class Gui(GUI.Ui_MainWindow):
     def __init__(self):
         self.freesound_thread_pool = QThreadPool()
-        self.cursor_pixmap = QtGui.QPixmap('Waveforms/Cursor.png')
-        self.cursor_graphic = QtWidgets.QGraphicsPixmapItem()
         self.waveform_thread_pool = QThreadPool()
         self.play_sound_thread_pool = QThreadPool()
         self.audio_converter_thread_pool = QThreadPool()
@@ -70,9 +68,8 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform.setOrientation(QtCore.Qt.Horizontal)
         self.waveform.setObjectName("waveform")
         self.single_clicked_result = None
-        self.play_button_graphic = QtGui.QIcon('graphics/play_button_graphic.png')
-        self.pause_button_graphic = QtGui.QIcon('graphics/pause_button_graphic.png')
-        self.busy_indicator_small = QtGui.QMovie('graphics/busy_indicator_small.gif')
+        self.busy_indicator_small = QtGui.QMovie(f'{useful_utils.get_app_data_folder("graphics")}/'
+                                                 f'busy_indicator_small.gif')
         self.window = None
         self.is_busy_searching = False
         self.background_active_search_indicator = False
@@ -552,8 +549,9 @@ class Gui(GUI.Ui_MainWindow):
 
     def change_frame_busy_indicator_search(self):
         current_frame = self.busy_indicator_small.currentPixmap()
-        current_frame.save('graphics/current_frame_small.png', "PNG")
-        self.add_file_too_background('graphics/current_frame_small.png')
+        path = f'{useful_utils.get_app_data_folder("graphics")}/current_frame_small.png'
+        current_frame.save(path, "PNG")
+        self.add_file_too_background(path)
 
     def stop__busy_indicator_search(self):
         self.clear_busy_indicator()
@@ -562,7 +560,7 @@ class Gui(GUI.Ui_MainWindow):
 
     def clear_busy_indicator(self):
         self.searchLineEdit.setStyleSheet(self.searchLineEdit.styleSheet().replace(
-            'graphics/current_frame_small.png', ''))
+            f'{useful_utils.get_app_data_folder("graphics")}/current_frame_small.png', ''))
 
     def add_file_too_background(self, file):
         if not self.background_active_search_indicator:

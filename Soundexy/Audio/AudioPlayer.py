@@ -601,6 +601,7 @@ class WaveformSlider(QSlider):
         self.waveform_active = False
         self.background_active = False
         self.is_busy = False
+        self.busy_indicator_path = f"{useful_utils.get_app_data_folder('graphics')}/current_frame.png"
         self.style_sheet_local = ("""
                                      QSlider {background-color: #232629; background-repeat: no-repeat; 
                                      background-position: center;
@@ -611,7 +612,7 @@ class WaveformSlider(QSlider):
                                       border: 0px; height: 100px; width: 1px; margin: 0 0;}
                                      """)
 
-        self.busy_indicator = QtGui.QMovie('graphics/busy_indicator.gif')
+        self.busy_indicator = QtGui.QMovie(f'{useful_utils.get_app_data_folder("graphics")}/busy_indicator.gif')
         self.setStyleSheet(self.style_sheet_local)
 
     def mousePressEvent(self, event):
@@ -650,8 +651,8 @@ class WaveformSlider(QSlider):
 
     def change_frame_busy_indicator_waveform(self):
         current_frame = self.busy_indicator.currentPixmap()
-        current_frame.save('graphics/current_frame.png', "PNG")
-        self.add_file_too_background('graphics/current_frame.png')
+        current_frame.save(self.busy_indicator_path, "PNG")
+        self.add_file_too_background(self.busy_indicator_path)
 
     def stop__busy_indicator_waveform(self):
         self.clear_busy_indicator()
@@ -659,7 +660,7 @@ class WaveformSlider(QSlider):
         self.is_busy = False
 
     def clear_busy_indicator(self):
-        self.style_sheet_local = self.style_sheet_local.replace('graphics/current_frame.png', '')
+        self.style_sheet_local = self.style_sheet_local.replace(self.busy_indicator_path, '')
 
     def clear_waveform(self):
         self.style_sheet_local = self.style_sheet_local.replace(f"{useful_utils.get_app_data_folder('Waveforms')}"
