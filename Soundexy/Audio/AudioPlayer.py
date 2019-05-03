@@ -1,6 +1,5 @@
 from Soundexy.Audio import AudioConverter
 from Soundexy.Functionality import useful_utils
-import pygame
 from Soundexy.MetaData import MetaData
 import os
 import time
@@ -12,6 +11,9 @@ from PyQt5.QtWidgets import QSlider
 import mmap
 from ctypes import c_buffer, windll
 from sys import getfilesystemencoding
+import contextlib
+with contextlib.redirect_stdout(None):
+    import pygame
 
 # TODO Implement selection of a portion
 # TODO Allow search results to be dragged on to player
