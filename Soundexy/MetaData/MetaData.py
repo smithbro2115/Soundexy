@@ -6,7 +6,6 @@ from mutagen.flac import FLAC
 from mutagen.mp3 import EasyMP3
 
 
-# FIXME setting tags is not currently working
 # TODO need to figure out how to set metadata to wav files
 
 

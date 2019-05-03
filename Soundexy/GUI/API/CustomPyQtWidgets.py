@@ -9,56 +9,6 @@ from Soundexy.GUI.DesignerFiles import loginDialog
 import qdarkstyle
 
 
-class SearchResultSignals(QtCore.QObject):
-    drop_sig = pyqtSignal(list)
-    meta_edit = pyqtSignal(dict)
-
-
-class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
-    def __init__(self, table_view):
-        super(SelectiveReadOnlyColumnModel, self).__init__()
-        self.read_only_columns = []
-        self.current_results = {}
-        self.table_view = table_view
-
-    def set_read_only_columns(self, column_indexes):
-        self.read_only_columns = column_indexes
-
-    def flags(self, QModelIndex):
-        base_flags = QtGui.QStandardItemModel.flags(self, QModelIndex)
-        if QModelIndex.column() in self.read_only_columns:
-            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
-        else:
-            return base_flags
-
-    def setData(self, QModelIndex, Any, role=None):
-        row_id = self.get_id_from_row(QModelIndex.row())
-        meta_label = self.horizontalHeaderItem(QModelIndex.column()).text().lower()
-        if self.change_result_meta(self.table_view.current_results[row_id], {meta_label: Any}):
-            super(SelectiveReadOnlyColumnModel, self).setData(QModelIndex, Any, role)
-            return True
-        else:
-            return False
-
-    @staticmethod
-    def change_result_meta(result, meta: dict):
-        for k, v in meta.items():
-            try:
-                result.set_tag(k, v)
-                return True
-            except Exception as e:
-                traceback.print_exc()
-                return False
-
-    def get_id_from_row(self, row_number: int) -> str:
-        return self.index(row_number, self.table_view.get_column_index('id')).data()
-
-    def get_row_from_id(self, id_number):
-        for row_number in range(self.rowCount()):
-            if self.get_id_from_row(row_number) == id_number:
-                return row_number
-
-
 class RemoveButtonSigs(QtCore.QObject):
     hover = pyqtSignal()
     unhover = pyqtSignal()
@@ -181,6 +131,56 @@ class SearchResultTableHeaderContextMenu(QtWidgets.QMenu):
             action.setData(header_index)
 
 
+class SearchResultSignals(QtCore.QObject):
+    drop_sig = pyqtSignal(list)
+    meta_edit = pyqtSignal(dict)
+
+
+class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
+    def __init__(self, table_view):
+        super(SelectiveReadOnlyColumnModel, self).__init__()
+        self.read_only_columns = []
+        self.current_results = {}
+        self.table_view = table_view
+
+    def set_read_only_columns(self, column_indexes):
+        self.read_only_columns = column_indexes
+
+    def flags(self, QModelIndex):
+        base_flags = QtGui.QStandardItemModel.flags(self, QModelIndex)
+        if QModelIndex.column() in self.read_only_columns:
+            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        else:
+            return base_flags
+
+    def setData(self, QModelIndex, Any, role=None):
+        row_id = self.get_id_from_row(QModelIndex.row())
+        meta_label = self.horizontalHeaderItem(QModelIndex.column()).text().lower()
+        if self.change_result_meta(self.table_view.current_results[row_id], {meta_label: Any}):
+            super(SelectiveReadOnlyColumnModel, self).setData(QModelIndex, Any, role)
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def change_result_meta(result, meta: dict):
+        for k, v in meta.items():
+            try:
+                result.set_tag(k, v)
+                return True
+            except Exception as e:
+                traceback.print_exc()
+                return False
+
+    def get_id_from_row(self, row_number: int) -> str:
+        return self.index(row_number, self.table_view.get_column_index('id')).data()
+
+    def get_row_from_id(self, id_number):
+        for row_number in range(self.rowCount()):
+            if self.get_id_from_row(row_number) == id_number:
+                return row_number
+
+
 class SearchResultsTable(QtWidgets.QTableView):
     def __init__(self):
         super(SearchResultsTable, self).__init__()
@@ -189,15 +189,15 @@ class SearchResultsTable(QtWidgets.QTableView):
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
         self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self)
+        self.headers = sorted(self.row_order, key=self.row_order.get)
+        self.searchResultsTableModel.headers = self.headers
+        self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
+        self.searchResultsTableModel.setColumnCount(8)
         self.searchResultsTableModel.set_read_only_columns([self.get_column_index('Duration'),
                                                             self.get_column_index('Library'),
                                                             self.get_column_index('Available Locally'),
                                                             self.get_column_index('Id')])
         self.setModel(self.searchResultsTableModel)
-        self.headers = sorted(self.row_order, key=self.row_order.get)
-        self.searchResultsTableModel.headers = self.headers
-        self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
-        self.searchResultsTableModel.setColumnCount(8)
         self.current_results = {}
         self.horizontalHeader().setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.horizontalHeader().customContextMenuRequested.connect(self.show_context_menu)
