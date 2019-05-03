@@ -45,11 +45,12 @@ class Downloader(QRunnable):
             self.file_size = self.session.get(self.url, stream=True).headers['Content-length']
         except KeyError:
             self.file_size = -1
-        amount = 1024 * 200
+        amount = 1024 * 1024
         fd = open(file_download_path, 'wb')
         r = self.session.get(self.url, stream=True)
         self.signals.download_started.emit()
         for chunk in r.iter_content(amount):
+            print('downloaded a chunk')
             if self.canceled:
                 fd.close()
                 self.remove(file_download_path)

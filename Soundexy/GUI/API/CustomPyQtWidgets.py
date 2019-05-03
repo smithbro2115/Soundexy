@@ -111,6 +111,7 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         progress_layout.setContentsMargins(0, 0, 0, 0)
         self.progress_bar.setLayout(progress_layout)
         self.progress_bar.setTextVisible(False)
+        self.animation = None
         self.progress_bar.layout().addWidget(self.button)
 
     def downloaded_started(self):
@@ -154,7 +155,14 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.button.clicked.connect(function)
 
     def set_progress(self, value: int):
-        self.progress_bar.setValue(value)
+        self.smooth_progress_bar_change(value)
+
+    def smooth_progress_bar_change(self, value):
+        self.animation = QtCore.QPropertyAnimation(self.progress_bar, b"value")
+        self.animation.setDuration(1500)
+        self.animation.setStartValue(self.progress_bar.value())
+        self.animation.setEndValue(value)
+        self.animation.start()
 
 
 class SearchResultTableHeaderContextMenu(QtWidgets.QMenu):
