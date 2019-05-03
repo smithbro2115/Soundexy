@@ -50,7 +50,6 @@ class Downloader(QRunnable):
         r = self.session.get(self.url, stream=True)
         self.signals.download_started.emit()
         for chunk in r.iter_content(amount):
-            print('downloaded a chunk')
             if self.canceled:
                 fd.close()
                 self.remove(file_download_path)
@@ -60,7 +59,6 @@ class Downloader(QRunnable):
             self.signals.downloaded_some.emit(self.get_file_progress())
         if not self.canceled:
             fd.close()
-            print('closed file')
             self.signals.download_done.emit(file_download_path)
         else:
             fd.close()
@@ -119,13 +117,11 @@ class PreviewDownloader(Downloader):
                 f = open(file_path, 'wb')
                 f.write(chunk)
                 f.close()
-                print('downloaded some')
                 self.signals.downloaded.emit(file_path)
                 emitted_ready_for_preview = True
 
         if not self.canceled:
             fd.close()
-            print('download done')
             self.signals.download_done.emit(file_downloader)
         else:
             fd.close()
