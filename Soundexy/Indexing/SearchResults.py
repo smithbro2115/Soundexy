@@ -27,6 +27,17 @@ class Local:
         self.index_file_name = 'local_index'
         self.available_locally = True
 
+    def __eq__(self, other):
+        try:
+            if self.id == other.id:
+                return True
+        except AttributeError:
+            pass
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def populate(self, path, identification_number):
         self.id = identification_number
         self.path = path

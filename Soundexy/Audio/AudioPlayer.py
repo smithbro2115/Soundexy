@@ -13,7 +13,6 @@ with contextlib.redirect_stdout(None):
     import pygame
 
 # TODO Implement selection of a portion
-# TODO Allow search results to be dragged on to player
 # TODO Implement pitching and time shifting
 
 
@@ -97,10 +96,6 @@ class SoundPlayer(QRunnable):
         self.audio_player.load(path)
 
     def get_correct_audio_player(self, path):
-        file_type = os.path.splitext(path)[1].lower()
-        # if file_type in self.wav_list:
-        #     return WavPlayer(self.volume, self.loop)
-        # elif file_type in self.pygame_list:
         return PygamePlayer(self.volume, self.loop)
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
