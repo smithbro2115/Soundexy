@@ -139,3 +139,33 @@ def get_app_data_folder(folder):
     app_data_path = os.getenv('APPDATA')
     soundexy_path = make_folder_if_it_does_not_exist(app_data_path, 'Soundexy')
     return make_folder_if_it_does_not_exist(soundexy_path, folder)
+
+
+def add_file_if_it_does_not_exist(path):
+    open(path, 'a').close()
+
+
+def check_if_file_exists(path):
+    try:
+        open(path, 'r')
+        return True
+    except FileNotFoundError:
+        return False
+
+
+def pickle_obj(path, obj):
+    import pickle
+    with open(f"{path}.pkl", 'wb') as f:
+        try:
+            pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+        except TypeError as e:
+            raise AttributeError(e)
+
+
+def load_pickle_obj(path):
+    import pickle
+    try:
+        with open(path, 'rb') as f:
+            return pickle.load(f)
+    except EOFError:
+        return []

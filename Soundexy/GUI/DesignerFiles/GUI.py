@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\Josh\PycharmProjects\Soundexy\Gui.ui'
+# Form implementation generated from reading ui file 'C:\Users\Josh\PycharmProjects\Soundexy\Soundexy\GUI\DesignerFiles\Gui.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.3
 #
@@ -206,17 +206,15 @@ class Ui_MainWindow(object):
         self.playlistsTab.setObjectName("playlistsTab")
         self.gridLayout_3 = QtWidgets.QGridLayout(self.playlistsTab)
         self.gridLayout_3.setObjectName("gridLayout_3")
-        self.playlistList = QtWidgets.QListView(self.playlistsTab)
-        self.playlistList.setDragEnabled(False)
-        self.playlistList.setDragDropMode(QtWidgets.QAbstractItemView.DropOnly)
-        self.playlistList.setObjectName("playlistList")
-        self.gridLayout_3.addWidget(self.playlistList, 0, 0, 1, 2)
         self.playlistAddBtn = QtWidgets.QPushButton(self.playlistsTab)
         self.playlistAddBtn.setObjectName("playlistAddBtn")
         self.gridLayout_3.addWidget(self.playlistAddBtn, 1, 0, 1, 1)
         self.playlistDeleteBtn = QtWidgets.QPushButton(self.playlistsTab)
         self.playlistDeleteBtn.setObjectName("playlistDeleteBtn")
         self.gridLayout_3.addWidget(self.playlistDeleteBtn, 1, 1, 1, 1)
+        self.playlistTreeView = QtWidgets.QTreeView(self.playlistsTab)
+        self.playlistTreeView.setObjectName("playlistTreeView")
+        self.gridLayout_3.addWidget(self.playlistTreeView, 0, 0, 1, 2)
         self.sidebar.addTab(self.playlistsTab, "")
         self.mainWidget.addWidget(self.sidebar)
         self.gridLayout.addLayout(self.mainWidget, 4, 0, 1, 1)
@@ -225,6 +223,8 @@ class Ui_MainWindow(object):
         self.lowerPlayer.setObjectName("lowerPlayer")
         self.volumeSlider = QtWidgets.QSlider(self.centralwidget)
         self.volumeSlider.setMaximumSize(QtCore.QSize(185, 16777215))
+        self.volumeSlider.setAutoFillBackground(False)
+        self.volumeSlider.setStyleSheet("")
         self.volumeSlider.setMaximum(100)
         self.volumeSlider.setProperty("value", 80)
         self.volumeSlider.setOrientation(QtCore.Qt.Horizontal)

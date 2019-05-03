@@ -1,5 +1,6 @@
 from Soundexy.GUI.API import pyqt_utils
 from Soundexy.GUI.DesignerFiles import GUI
+from Soundexy.GUI.API.CustomPyQtFunctionality import setup_playlist_tree
 import qdarkstyle
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThreadPool, QRunnable, pyqtSignal, pyqtSlot, QObject
@@ -99,6 +100,7 @@ class Gui(GUI.Ui_MainWindow):
         self.actionPlay.triggered.connect(self.spacebar)
         self.actionImport_Directory.triggered.connect(self.open_directory)
         self.actionImport_Audio_File.triggered.connect(self.open_file)
+        setup_playlist_tree(self.playlistTreeView)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
         self.searchResultsTable.signals.drop_sig.connect(self.open_import_directory)
