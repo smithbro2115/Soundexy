@@ -4,13 +4,10 @@ from Soundexy.MetaData import MetaData
 import os
 import time
 import traceback
-from random import random
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtWidgets import QSlider
 import mmap
-from ctypes import c_buffer, windll
-from sys import getfilesystemencoding
 import contextlib
 with contextlib.redirect_stdout(None):
     import pygame
@@ -417,60 +414,6 @@ class AudioPlayer:
         self.segment = True
         self._duration = duration
         self.load(path)
-
-
-class WavPlayer(AudioPlayer):
-    def __init__(self, *args):
-        self.alias = ''
-        super(WavPlayer, self).__init__(*args)
-        self.temp_volume = 0
-
-    def __del__(self):
-        self.win_command('close', self.alias)
-
-    def _load(self, path):
-        self.alias = 'playsound_' + str(random())
-        self.win_command('open "' + self.path + '" alias', self.alias)
-        self.win_command('set', self.alias, 'time format milliseconds')
-
-    def _reload(self, path):
-        self._load(path)
-
-    def _set_volume(self, value):
-        if self.alias != '':
-            winmm = windll.LoadLibrary('winmm.dll')
-            winmm.waveOutSetVolume(None, value)
-
-    def _play(self):
-        self.win_command('play', self.alias, 'from', str(round(self.current_time)), 'to', str(self.duration))
-
-    def _pause(self):
-        self.win_command('pause', self.alias)
-
-    def _resume(self):
-        self.win_command('play', self.alias)
-
-    def _stop(self):
-        self.win_command('stop', self.alias)
-
-    def _goto(self, position):
-        self.win_command('play', self.alias, 'from', str(round(position)), 'to', str(self.duration))
-        if not self.playing:
-            self._pause()
-
-    @staticmethod
-    def win_command(*command):
-        buf = c_buffer(255)
-        command = ' '.join(command).encode(getfilesystemencoding())
-        errorCode = int(windll.winmm.mciSendStringA(command, buf, 254, 0))
-        if errorCode:
-            errorBuffer = c_buffer(255)
-            windll.winmm.mciGetErrorStringA(errorCode, errorBuffer, 254)
-            exceptionMessage = ('\n    Error ' + str(errorCode) + ' for command:'
-                                                                  '\n        ' + command.decode() +
-                                '\n    ' + errorBuffer.value.decode())
-            raise PlaysoundException(exceptionMessage)
-        return buf.value
 
 
 class PygamePlayer(AudioPlayer):
