@@ -391,6 +391,7 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         self.setHeaderLabel('Name')
 
     def make_or_rename_playlist(self, item):
+        print('make_or_rename')
         if item.last_text is None:
             self.make_playlist_index_from_string(item)
         else:
@@ -412,7 +413,7 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
             self.edit_item(item)
 
     def edit_item(self, item):
+        self.closePersistentEditor(item)
         self.setFocus()
-        print(item)
-        self.editItem(item)
+        self.openPersistentEditor(item)
 

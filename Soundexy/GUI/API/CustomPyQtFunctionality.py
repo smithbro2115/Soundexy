@@ -30,7 +30,6 @@ def add_to_tree_object(parent, row):
 def make_playlist(tree):
     playlist_item = add_root_to_tree(tree, ['Playlist name'])
     tree.setFocus()
-    print(playlist_item)
     tree.editItem(playlist_item)
 
 
