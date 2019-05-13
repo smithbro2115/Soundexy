@@ -3,7 +3,8 @@ from PyQt5.QtCore import pyqtSignal
 import traceback
 from Soundexy.Functionality.useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool
 import os
-from Soundexy.GUI.API.CustomPyQtFunctionality import InternalMoveMimeData
+from Soundexy.GUI.API.CustomPyQtFunctionality import InternalMoveMimeData, show_error
+from Soundexy.Functionality import Playlists
 from Soundexy.GUI.API import pyqt_utils
 from Soundexy.GUI.DesignerFiles import loginDialog
 import qdarkstyle
@@ -154,6 +155,7 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
             return base_flags
 
     def setData(self, QModelIndex, Any, role=None):
+        print('test')
         row_id = self.get_id_from_row(QModelIndex.row())
         meta_label = self.horizontalHeaderItem(QModelIndex.column()).text().lower()
         if self.change_result_meta(self.table_view.current_results[row_id], {meta_label: Any}):
@@ -380,3 +382,37 @@ class LoginDialog(QtWidgets.QDialog):
         self.ui = loginDialog.Ui_login()
         self.ui.setupUi(self)
         self.ui.loginSiteName.setText(f'Login into {website}')
+
+
+class PlaylistTreeWidget(QtWidgets.QTreeWidget):
+    def __init__(self):
+        super(PlaylistTreeWidget, self).__init__()
+        self.itemChanged.connect(self.make_or_rename_playlist)
+        self.setHeaderLabel('Name')
+
+    def make_or_rename_playlist(self, item):
+        if item.last_text is None:
+            self.make_playlist_index_from_string(item)
+        else:
+            self.rename_playlist_from_item(item)
+
+    def rename_playlist_from_item(self, item):
+        try:
+            Playlists.rename_playlist_index(item.text(0), item.last_text)
+        except FileExistsError as e:
+            show_error(str(e))
+            print("continued")
+            self.edit_item(item)
+
+    def make_playlist_index_from_string(self, item):
+        try:
+            Playlists.make_playlist_index(item.text(0))
+        except FileExistsError as e:
+            show_error(str(e))
+            self.edit_item(item)
+
+    def edit_item(self, item):
+        self.setFocus()
+        print(item)
+        self.editItem(item)
+

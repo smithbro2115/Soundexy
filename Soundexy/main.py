@@ -1,6 +1,6 @@
 from Soundexy.GUI.API import pyqt_utils
 from Soundexy.GUI.DesignerFiles import GUI
-from Soundexy.GUI.API.CustomPyQtFunctionality import setup_playlist_tree
+from Soundexy.GUI.API.CustomPyQtFunctionality import make_playlist
 import qdarkstyle
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThreadPool, QRunnable, pyqtSignal, pyqtSlot, QObject
@@ -10,7 +10,7 @@ from Soundexy.Indexing import LocalFileHandler, SearchResults
 import traceback
 import os
 from Soundexy.Imaging.Wave import make_waveform
-from Soundexy.GUI.API.CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal
+from Soundexy.GUI.API.CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal, PlaylistTreeWidget
 from Soundexy.Indexing.Searches import FreesoundSearch
 from Soundexy.Functionality import useful_utils
 
@@ -56,6 +56,7 @@ class Gui(GUI.Ui_MainWindow):
         self.cache_thread_pool = QThreadPool()
         self.download_pool = QThreadPool()
         self.current_results = {}
+        self.playlistTreeWidget = PlaylistTreeWidget()
         self.searchResultsTable = SearchResultsTable()
         self.waveform = WaveformSlider(self.audio_player)
         self.audio_player.set_waveform(self.waveform)
@@ -100,7 +101,9 @@ class Gui(GUI.Ui_MainWindow):
         self.actionPlay.triggered.connect(self.spacebar)
         self.actionImport_Directory.triggered.connect(self.open_directory)
         self.actionImport_Audio_File.triggered.connect(self.open_file)
-        setup_playlist_tree(self.playlistTreeView)
+        self.playlistWidgetContainer.addWidget(self.playlistTreeWidget)
+        self.playlistAddBtn.clicked.connect(lambda: make_playlist(self.playlistTreeWidget))
+        self.playlistTreeWidget.setEditTriggers(QtWidgets.QAbstractItemView.SelectedClicked)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
         self.searchResultsTable.signals.drop_sig.connect(self.open_import_directory)
