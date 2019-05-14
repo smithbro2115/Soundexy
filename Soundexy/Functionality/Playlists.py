@@ -5,7 +5,7 @@ from os import rename
 def make_playlist_index(name):
     base_path = get_app_data_folder('playlists')
     path = f"{base_path}/{name}"
-    if not check_if_file_exists(path):
+    if not check_if_file_exists(f"{path}.pkl"):
         pickle_obj(path, [])
     else:
         raise FileExistsError("That playlist name is already taken")

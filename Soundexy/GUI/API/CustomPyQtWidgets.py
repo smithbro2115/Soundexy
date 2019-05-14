@@ -3,8 +3,7 @@ from PyQt5.QtCore import pyqtSignal
 import traceback
 from Soundexy.Functionality.useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool
 import os
-from Soundexy.GUI.API.CustomPyQtFunctionality import InternalMoveMimeData, show_error
-from Soundexy.Functionality import Playlists
+from Soundexy.GUI.API.CustomPyQtFunctionality import InternalMoveMimeData, PlaylistItemDelegate
 from Soundexy.GUI.API import pyqt_utils
 from Soundexy.GUI.DesignerFiles import loginDialog
 import qdarkstyle
@@ -387,33 +386,20 @@ class LoginDialog(QtWidgets.QDialog):
 class PlaylistTreeWidget(QtWidgets.QTreeWidget):
     def __init__(self):
         super(PlaylistTreeWidget, self).__init__()
-        self.itemChanged.connect(self.make_or_rename_playlist)
         self.setHeaderLabel('Name')
+        self.setItemDelegate(PlaylistItemDelegate(self))
+        self.close_editor = True
 
-    def make_or_rename_playlist(self, item):
-        print('make_or_rename')
-        if item.last_text is None:
-            self.make_playlist_index_from_string(item)
+    def closeEditor(self, *args, **kwargs):
+        if self.close_editor:
+            super(PlaylistTreeWidget, self).closeEditor(*args, **kwargs)
         else:
-            self.rename_playlist_from_item(item)
+            self.close_editor = True
 
-    def rename_playlist_from_item(self, item):
-        try:
-            Playlists.rename_playlist_index(item.text(0), item.last_text)
-        except FileExistsError as e:
-            show_error(str(e))
-            print("continued")
-            self.edit_item(item)
+    def get_editor(self, index):
+        return self.indexWidget(index)
 
-    def make_playlist_index_from_string(self, item):
-        try:
-            Playlists.make_playlist_index(item.text(0))
-        except FileExistsError as e:
-            show_error(str(e))
-            self.edit_item(item)
-
-    def edit_item(self, item):
-        self.closePersistentEditor(item)
-        self.setFocus()
-        self.openPersistentEditor(item)
-
+    def edit_item(self, item, index):
+        editor = self.get_editor(index)
+        self.closeEditor(editor, QtWidgets.QAbstractItemDelegate.NoHint)
+        self.editItem(item)
