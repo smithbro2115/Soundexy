@@ -169,3 +169,8 @@ def load_pickle_obj(path):
             return pickle.load(f)
     except EOFError:
         return []
+
+
+def get_all_file_paths_from_dir(dir):
+    for root, dirs, files in os.walk(dir):
+        return files

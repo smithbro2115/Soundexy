@@ -3,6 +3,8 @@ from PyQt5.QtCore import pyqtSignal
 import traceback
 from Soundexy.Functionality.useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool
 import os
+from Soundexy.Indexing import LocalFileHandler
+from Soundexy.Functionality import Playlists
 from Soundexy.GUI.API.CustomPyQtFunctionality import InternalMoveMimeData, PlaylistItemDelegate
 from Soundexy.GUI.API import pyqt_utils
 from Soundexy.GUI.DesignerFiles import loginDialog
@@ -339,6 +341,7 @@ class SearchResultsTable(QtWidgets.QTableView):
         if result.available_locally:
             path = os.path.abspath(result.path)
             data.setUrls([QtCore.QUrl.fromLocalFile(path)])
+        data.result = result
         return data
 
     def startDrag(self, *args, **kwargs):
@@ -389,6 +392,53 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         self.setHeaderLabel('Name')
         self.setItemDelegate(PlaylistItemDelegate(self))
         self.close_editor = True
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.populate()
+
+    def populate(self):
+        Playlists.add_all_playlist_items(self)
+
+    def dragEnterEvent(self, *args, **kwargs):
+        pos = self.indexAt(args[0].pos())
+        item = self.itemFromIndex(pos)
+        try:
+            if args[0].mimeData().result is not None and isinstance(item, PlaylistTreeWidgetItem):
+                args[0].accept()
+                self.setCurrentIndex(pos)
+            else:
+                args[0].ignore()
+        except AttributeError:
+            args[0].ignore()
+
+    def dragMoveEvent(self, *args, **kwargs):
+        pos = self.indexAt(args[0].pos())
+        item = self.itemFromIndex(pos)
+        try:
+            if args[0].mimeData().result is not None and isinstance(item, PlaylistTreeWidgetItem):
+                args[0].accept()
+                self.setCurrentIndex(pos)
+            else:
+                args[0].ignore()
+        except AttributeError:
+            args[0].ignore()
+
+    def dropEvent(self, QDropEvent):
+        playlist = self.itemFromIndex(self.indexAt(QDropEvent.pos()))
+        result = QDropEvent.mimeData().result
+        self.add_result_to_playlist(result, playlist)
+
+    def add_result_to_playlist(self, result, playlist):
+        self.add_result_to_playlist_index(result, playlist.text(0))
+        self.add_result_to_playlist_tree(result, playlist)
+
+    def add_result_to_playlist_index(self, result, playlist_name):
+        index_file = LocalFileHandler.IndexFile(playlist_name, 'playlists')
+        index_file.add_result_to_index(result)
+        index_file.save()
+
+    def add_result_to_playlist_tree(self, result, playlist_item):
+        return QtWidgets.QTreeWidgetItem(playlist_item, [result.meta_file['file name']])
 
     def closeEditor(self, *args, **kwargs):
         if self.close_editor:
@@ -403,3 +453,42 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         editor = self.get_editor(index)
         self.closeEditor(editor, QtWidgets.QAbstractItemDelegate.NoHint)
         self.editItem(item)
+
+    def make_or_rename_playlist(self, item, text):
+        if item.last_text is None:
+            self.make_playlist_index_from_string(text)
+        else:
+            self.rename_playlist_from_item(item, text)
+
+    def rename_playlist_from_item(self, item, text):
+        Playlists.rename_playlist_index(text, item.last_text)
+
+    def make_playlist_index_from_string(self, text):
+        Playlists.make_playlist_index(text)
+
+    def add_playlist_to_tree(self, row):
+        name_item = PlaylistTreeWidgetItem(self, row)
+        name_item.setFlags(name_item.flags() | QtCore.Qt.ItemIsEditable)
+        return name_item
+
+    def add_to_tree_object(self, row, parent=None):
+        if parent:
+            return QtWidgets.QTreeWidgetItem(parent, row)
+        return QtWidgets.QTreeWidgetItem(self, row)
+
+    def make_playlist(self):
+        playlist_item = self.add_playlist_to_tree(['Playlist name'])
+        self.setFocus()
+        self.editItem(playlist_item)
+
+
+class PlaylistTreeWidgetItem(QtWidgets.QTreeWidgetItem):
+    def __init__(self, parent, row):
+        super(PlaylistTreeWidgetItem, self).__init__(parent, row)
+        self.last_text = None
+
+    def setData(self, p_int, p_int_1, Any):
+        super(PlaylistTreeWidgetItem, self).setData(p_int, p_int_1, Any)
+        self.last_text = self.text(0)
+
+

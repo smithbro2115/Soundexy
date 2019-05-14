@@ -1,6 +1,5 @@
 from Soundexy.GUI.API import pyqt_utils
 from Soundexy.GUI.DesignerFiles import GUI
-from Soundexy.GUI.API.CustomPyQtFunctionality import make_playlist
 import qdarkstyle
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThreadPool, QRunnable, pyqtSignal, pyqtSlot, QObject
@@ -102,7 +101,7 @@ class Gui(GUI.Ui_MainWindow):
         self.actionImport_Directory.triggered.connect(self.open_directory)
         self.actionImport_Audio_File.triggered.connect(self.open_file)
         self.playlistWidgetContainer.addWidget(self.playlistTreeWidget)
-        self.playlistAddBtn.clicked.connect(lambda: make_playlist(self.playlistTreeWidget))
+        self.playlistAddBtn.clicked.connect(lambda: self.playlistTreeWidget.make_playlist())
         self.playlistTreeWidget.setEditTriggers(QtWidgets.QAbstractItemView.SelectedClicked)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)

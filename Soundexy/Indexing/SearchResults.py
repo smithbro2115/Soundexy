@@ -74,7 +74,7 @@ class Local:
         self.meta_file.set_tag(tag, value)
         self.repopulate()
         from Soundexy.Indexing.LocalFileHandler import IndexFile
-        index = IndexFile(self.index_file_name)
+        index = IndexFile(self.index_file_name, 'obj')
         index.changed_meta_data(self)
 
     def get_words(self):
@@ -162,7 +162,7 @@ class Remote:
 
     def check_if_already_downloaded(self):
         from Soundexy.Indexing.LocalFileHandler import IndexFile
-        for result in IndexFile(self.index_file_name).index:
+        for result in IndexFile(self.index_file_name, obj).index:
             if self == result:
                 return result
 
@@ -194,7 +194,7 @@ class Remote:
 
     def get_downloaded_index(self):
         from Soundexy.Indexing.LocalFileHandler import IndexFile
-        return IndexFile(self.index_file_name)
+        return IndexFile(self.index_file_name, 'obj')
 
     def _download_done(self, filename, function):
         self.path = filename
