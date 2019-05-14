@@ -162,7 +162,7 @@ class Remote:
 
     def check_if_already_downloaded(self):
         from Soundexy.Indexing.LocalFileHandler import IndexFile
-        for result in IndexFile(self.index_file_name, obj).index:
+        for result in IndexFile(self.index_file_name, 'obj').index:
             if self == result:
                 return result
 
