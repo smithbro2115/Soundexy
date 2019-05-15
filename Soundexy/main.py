@@ -103,6 +103,7 @@ class Gui(GUI.Ui_MainWindow):
         self.playlistWidgetContainer.addWidget(self.playlistTreeWidget)
         self.playlistAddBtn.clicked.connect(self.playlistTreeWidget.make_playlist)
         self.playlistDeleteBtn.clicked.connect(self.playlistTreeWidget.delete_items)
+        self.playlistTreeWidget.double_clicked.connect(lambda x: self.init_sound_by_type(x[0]))
         self.playlistTreeWidget.setEditTriggers(QtWidgets.QAbstractItemView.SelectedClicked)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
@@ -141,6 +142,7 @@ class Gui(GUI.Ui_MainWindow):
         self.single_clicked_result = None
 
     def init_sound_by_type(self, result):
+        self.single_clicked_result = None
         if isinstance(result, SearchResults.Local):
             self.local_sound_init(result)
             self.add_album_image_to_player(result.album_image)

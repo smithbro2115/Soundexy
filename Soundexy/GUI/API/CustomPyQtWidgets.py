@@ -387,10 +387,13 @@ class LoginDialog(QtWidgets.QDialog):
 
 
 class PlaylistTreeWidget(QtWidgets.QTreeWidget):
+    double_clicked = pyqtSignal(list)
+
     def __init__(self):
         super(PlaylistTreeWidget, self).__init__()
         self.setHeaderLabel('Name')
         self.setItemDelegate(PlaylistItemDelegate(self))
+        self.itemDoubleClicked.connect(self.item_double_clicked)
         self.close_editor = True
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
@@ -471,6 +474,10 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         name_item = PlaylistTreeWidgetItem(self, row)
         name_item.setFlags(name_item.flags() | QtCore.Qt.ItemIsEditable)
         return name_item
+
+    def item_double_clicked(self, QTreeWidgetItem, p_int):
+        if isinstance(QTreeWidgetItem, PlaylistResultTreeWidgetItem):
+            self.double_clicked.emit([QTreeWidgetItem.result])
 
     @staticmethod
     def add_all_result_items(results, item):
