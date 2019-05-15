@@ -374,11 +374,12 @@ class AudioPlayer:
         self._meta_data = self.get_meta_file()
         current_time = self.current_time
         playing = self.playing
+        ended = self.ended
         self.stop()
         self._reload(path)
         self.loaded = True
         self.busy = False
-        if playing:
+        if playing and not ended:
             self.play()
         return current_time
 
