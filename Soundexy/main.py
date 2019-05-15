@@ -104,6 +104,7 @@ class Gui(GUI.Ui_MainWindow):
         self.playlistAddBtn.clicked.connect(self.playlistTreeWidget.make_playlist)
         self.playlistDeleteBtn.clicked.connect(self.playlistTreeWidget.delete_items)
         self.playlistTreeWidget.double_clicked.connect(lambda x: self.init_sound_by_type(x[0]))
+        self.playlistTreeWidget.double_clicked.connect(lambda x: self.single_clicked_playlist_result(x[0]))
         self.playlistTreeWidget.setEditTriggers(QtWidgets.QAbstractItemView.SelectedClicked)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
@@ -142,7 +143,6 @@ class Gui(GUI.Ui_MainWindow):
         self.single_clicked_result = None
 
     def init_sound_by_type(self, result):
-        self.single_clicked_result = None
         if isinstance(result, SearchResults.Local):
             self.local_sound_init(result)
             self.add_album_image_to_player(result.album_image)
@@ -226,6 +226,9 @@ class Gui(GUI.Ui_MainWindow):
         id_column_index = self.searchResultsTable.row_order['Id']
         sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
         self.single_clicked_result = self.searchResultsTable.current_results[sound_id]
+
+    def single_clicked_playlist_result(self, result):
+        self.single_clicked_result = result
 
     def add_download_button(self, result):
         self.download_button.setHidden(True)

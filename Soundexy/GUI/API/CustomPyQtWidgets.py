@@ -388,6 +388,7 @@ class LoginDialog(QtWidgets.QDialog):
 
 class PlaylistTreeWidget(QtWidgets.QTreeWidget):
     double_clicked = pyqtSignal(list)
+    single_clicked = pyqtSignal(list)
 
     def __init__(self):
         super(PlaylistTreeWidget, self).__init__()
@@ -478,6 +479,10 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
     def item_double_clicked(self, QTreeWidgetItem, p_int):
         if isinstance(QTreeWidgetItem, PlaylistResultTreeWidgetItem):
             self.double_clicked.emit([QTreeWidgetItem.result])
+
+    def item_single_clicked(self, item, p_int):
+        if isinstance(item, PlaylistResultTreeWidgetItem):
+            self.single_clicked.emit([item.result])
 
     @staticmethod
     def add_all_result_items(results, item):
