@@ -154,9 +154,14 @@ class Gui(GUI.Ui_MainWindow):
         self.sound_init(result)
 
     def remote_sound_init(self, result):
+        if result.downloaded and not useful_utils.check_if_file_exists(result.path):
+            result.downloaded = False
+            result.delete_from_index()
+            result.add_to_index()
+            self.searchResultsTable.replace_result(result, result)
         self.add_download_button(result)
         if result.downloaded or self.current_result == result:
-            self.sound_init(result)
+                self.sound_init(result)
         else:
             self.new_sound_meta(result)
             self.current_result = result

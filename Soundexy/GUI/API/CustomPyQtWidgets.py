@@ -434,6 +434,8 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         self.add_result_to_playlist(result, playlist)
 
     def add_result_to_playlist(self, result, playlist):
+        result.index_path = 'playlists'
+        result.index_file_name = playlist.text(0)
         self.add_result_to_playlist_index(result, playlist.text(0))
         self.add_result_to_playlist_tree(result, playlist)
 
@@ -443,7 +445,7 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         index_file.save()
 
     def add_result_to_playlist_tree(self, result, playlist_item):
-        return PlaylistResultTreeWidgetItem(playlist_item, [result.meta_file['file name']], result)
+        return PlaylistResultTreeWidgetItem(playlist_item, [result.meta_file()['file name']], result)
 
     def closeEditor(self, *args, **kwargs):
         if self.close_editor:
@@ -487,7 +489,7 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
     @staticmethod
     def add_all_result_items(results, item):
         for result in results:
-            PlaylistResultTreeWidgetItem(item, [result.meta_file['file name']], result)
+            PlaylistResultTreeWidgetItem(item, [result.meta_file()['file name']], result)
 
     def add_to_tree_object(self, row, parent=None):
         if parent:

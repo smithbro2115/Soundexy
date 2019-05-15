@@ -24,6 +24,7 @@ class Local:
         self.album_image = None
         self.sample_rate = 48000
         self.meta_file = None
+        self.index_path = 'obj'
         self.index_file_name = 'local_index'
         self.available_locally = True
 
@@ -74,7 +75,7 @@ class Local:
         self.meta_file.set_tag(tag, value)
         self.repopulate()
         from Soundexy.Indexing.LocalFileHandler import IndexFile
-        index = IndexFile(self.index_file_name, 'obj')
+        index = IndexFile(self.index_file_name, self.index_path)
         index.changed_meta_data(self)
 
     def get_words(self):
@@ -144,6 +145,7 @@ class Remote:
         self.library = ''
         self.file_type = ''
         self.download_path = f"{get_app_data_folder('downloads')}"
+        self.index_path = 'obj'
         self.index_file_name = 'downloaded_index'
         self.downloader = None
         self.downloading = False
@@ -162,7 +164,7 @@ class Remote:
 
     def check_if_already_downloaded(self):
         from Soundexy.Indexing.LocalFileHandler import IndexFile
-        for result in IndexFile(self.index_file_name, 'obj').index:
+        for result in IndexFile(self.index_file_name, self.index_path).index:
             if self == result:
                 return result
 
@@ -194,7 +196,7 @@ class Remote:
 
     def get_downloaded_index(self):
         from Soundexy.Indexing.LocalFileHandler import IndexFile
-        return IndexFile(self.index_file_name, 'obj')
+        return IndexFile(self.index_file_name, self.index_path)
 
     def _download_done(self, filename, function):
         self.path = filename
