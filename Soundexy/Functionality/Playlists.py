@@ -1,8 +1,7 @@
 from Soundexy.Functionality.useful_utils import get_app_data_folder, pickle_obj, load_pickle_obj, check_if_file_exists,\
     get_all_file_paths_from_dir
 from Soundexy.Indexing import LocalFileHandler
-from PyQt5.QtWidgets import QTreeWidgetItem
-from os import rename
+from os import rename, remove
 
 
 def make_playlist_index(name):
@@ -44,9 +43,15 @@ def add_to_playlist_index(name, result):
 
 
 def remove_from_playlist_index(name, result):
-    existing_playlist = load_playlist_index(name)
-    existing_playlist.pop(result)
+    existing_playlist = load_playlist_index(f"{name}.pkl")
+    existing_playlist.remove(result)
     save_playlist_index(name, existing_playlist)
+
+
+def delete_playlist_index(name):
+    base_path = get_app_data_folder('playlists')
+    path = f"{base_path}/{name}.pkl"
+    remove(path)
 
 
 def add_all_playlist_items(tree):
@@ -56,11 +61,6 @@ def add_all_playlist_items(tree):
             playlist_name = playlist_file[:-4]
             results = LocalFileHandler.IndexFile(playlist_name, 'playlists').index
             playlist_item = tree.add_playlist_to_tree([playlist_name])
-            add_all_result_items(results, playlist_item)
+            tree.add_all_result_items(results, playlist_item)
         else:
             continue
-
-
-def add_all_result_items(results, item):
-    for result in results:
-        item.addChild(QTreeWidgetItem([result.meta_file['file name']]))

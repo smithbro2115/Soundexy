@@ -5,7 +5,7 @@ from Soundexy.Functionality.useful_utils import get_formatted_duration_from_mill
 import os
 from Soundexy.Indexing import LocalFileHandler
 from Soundexy.Functionality import Playlists
-from Soundexy.GUI.API.CustomPyQtFunctionality import InternalMoveMimeData, PlaylistItemDelegate
+from Soundexy.GUI.API.CustomPyQtFunctionality import InternalMoveMimeData, PlaylistItemDelegate, show_are_you_sure
 from Soundexy.GUI.API import pyqt_utils
 from Soundexy.GUI.DesignerFiles import loginDialog
 import qdarkstyle
@@ -438,7 +438,7 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         index_file.save()
 
     def add_result_to_playlist_tree(self, result, playlist_item):
-        return QtWidgets.QTreeWidgetItem(playlist_item, [result.meta_file['file name']])
+        return PlaylistResultTreeWidgetItem(playlist_item, [result.meta_file['file name']], result)
 
     def closeEditor(self, *args, **kwargs):
         if self.close_editor:
@@ -471,6 +471,11 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         name_item.setFlags(name_item.flags() | QtCore.Qt.ItemIsEditable)
         return name_item
 
+    @staticmethod
+    def add_all_result_items(results, item):
+        for result in results:
+            PlaylistResultTreeWidgetItem(item, [result.meta_file['file name']], result)
+
     def add_to_tree_object(self, row, parent=None):
         if parent:
             return QtWidgets.QTreeWidgetItem(parent, row)
@@ -481,6 +486,24 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         self.setFocus()
         self.editItem(playlist_item)
 
+    def delete_item(self):
+        item = self.currentItem()
+        if isinstance(item, PlaylistTreeWidgetItem):
+            if show_are_you_sure('Are you sure you want to delete this playlist?'):
+                self.delete_playlist(item)
+                return True
+            return False
+        self.remove_item_from_playlist(item)
+        return True
+
+    def delete_playlist(self, item):
+        self.takeTopLevelItem(self.indexOfTopLevelItem(item))
+        Playlists.delete_playlist_index(item.text(0))
+
+    def remove_item_from_playlist(self, item):
+        Playlists.remove_from_playlist_index(item.parent().text(0), item.result)
+        item.parent().removeChild(item)
+
 
 class PlaylistTreeWidgetItem(QtWidgets.QTreeWidgetItem):
     def __init__(self, parent, row):
@@ -490,5 +513,11 @@ class PlaylistTreeWidgetItem(QtWidgets.QTreeWidgetItem):
     def setData(self, p_int, p_int_1, Any):
         super(PlaylistTreeWidgetItem, self).setData(p_int, p_int_1, Any)
         self.last_text = self.text(0)
+
+
+class PlaylistResultTreeWidgetItem(QtWidgets.QTreeWidgetItem):
+    def __init__(self, parent, row, result):
+        super(PlaylistResultTreeWidgetItem, self).__init__(parent, row)
+        self.result = result
 
 

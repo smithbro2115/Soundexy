@@ -1,5 +1,5 @@
-from PyQt5.QtCore import QMimeData, Qt
-from PyQt5.QtWidgets import QMessageBox, QTreeWidgetItem, QStyledItemDelegate
+from PyQt5.QtCore import QMimeData
+from PyQt5.QtWidgets import QMessageBox, QStyledItemDelegate
 import qdarkstyle
 
 
@@ -7,6 +7,16 @@ class InternalMoveMimeData(QMimeData):
     def __init__(self):
         super(InternalMoveMimeData, self).__init__()
         self.result = None
+
+
+def show_are_you_sure(msg):
+    dialog = QMessageBox()
+    dialog.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    dialog.setText(msg)
+    dialog.setWindowTitle('Are You Sure?')
+    dialog.setStandardButtons(dialog.No | dialog.Yes)
+    dialog.setDefaultButton(dialog.Yes)
+    return dialog.exec_()
 
 
 def show_error(msg):
