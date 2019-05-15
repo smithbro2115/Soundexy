@@ -16,7 +16,7 @@ def show_are_you_sure(msg):
     dialog.setWindowTitle('Are You Sure?')
     dialog.setStandardButtons(dialog.No | dialog.Yes)
     dialog.setDefaultButton(dialog.Yes)
-    return dialog.exec_()
+    return dialog.exec_() == dialog.Yes
 
 
 def show_error(msg):

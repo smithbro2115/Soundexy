@@ -394,6 +394,7 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         self.close_editor = True
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
+        self.setSelectionMode(self.ExtendedSelection)
         self.populate()
 
     def populate(self):
@@ -486,8 +487,12 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
         self.setFocus()
         self.editItem(playlist_item)
 
-    def delete_item(self):
-        item = self.currentItem()
+    def delete_items(self):
+        items = [self.itemFromIndex(index) for index in self.selectedIndexes()]
+        for item in items:
+            self.delete_item(item)
+
+    def delete_item(self, item):
         if isinstance(item, PlaylistTreeWidgetItem):
             if show_are_you_sure('Are you sure you want to delete this playlist?'):
                 self.delete_playlist(item)

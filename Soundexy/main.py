@@ -102,7 +102,7 @@ class Gui(GUI.Ui_MainWindow):
         self.actionImport_Audio_File.triggered.connect(self.open_file)
         self.playlistWidgetContainer.addWidget(self.playlistTreeWidget)
         self.playlistAddBtn.clicked.connect(self.playlistTreeWidget.make_playlist)
-        self.playlistDeleteBtn.clicked.connect(self.playlistTreeWidget.delete_item)
+        self.playlistDeleteBtn.clicked.connect(self.playlistTreeWidget.delete_items)
         self.playlistTreeWidget.setEditTriggers(QtWidgets.QAbstractItemView.SelectedClicked)
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
