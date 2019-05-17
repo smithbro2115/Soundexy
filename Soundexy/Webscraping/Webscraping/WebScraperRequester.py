@@ -3,6 +3,19 @@ from requests.exceptions import RequestException
 from contextlib import closing
 
 
+def get_with_headers(url):
+    try:
+        s = requests.Session()
+        headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                                 'Chrome/74.0.3729.157 Safari/537.36'}
+        r = s.get(url, headers=headers)
+        if is_good_response(r):
+            return r
+        return r
+    except RequestException as e:
+        log_error(e)
+
+
 def simple_get(url):
     """
     Attempts to get the content at `url` by making an HTTP GET request.

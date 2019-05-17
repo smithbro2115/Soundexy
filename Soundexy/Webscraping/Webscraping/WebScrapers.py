@@ -1,4 +1,4 @@
-from Soundexy.Webscraping.Webscraping.WebScraperRequester import simple_get
+from Soundexy.Webscraping.Webscraping.WebScraperRequester import simple_get, get_with_headers
 from bs4 import BeautifulSoup
 from math import ceil
 from Soundexy.Indexing import SearchResults
@@ -31,6 +31,9 @@ class Scraper(QRunnable):
     def get_results(raw_html):
         pass
 
+    def make_result_from_raw(self, raw_result):
+        pass
+
     def cancel(self):
         self.canceled = True
 
@@ -55,44 +58,82 @@ class FreesoundScraper(Scraper):
     @pyqtSlot()
     def run(self):
         if not self.canceled:
-            page_number = self.page_number
-            url = self.url
-            raw_html = simple_get(url + '&page=' + str(page_number))
+            raw_html = simple_get(self.url + '&page=' + str(self.page_number))
             results = []
-
-            raw_results = self.get_results(raw_html)
-            for raw_result in raw_results:
+            for raw_result in self.get_results(raw_html):
                 if self.canceled:
                     break
                 if raw_result.has_attr('id'):
                     if self.check_attribution(raw_result):
-                        result = SearchResults.FreesoundResult()
-                        result.preview = 'https://freesound.org' + \
-                                         str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
-                        result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
-                                             .find('a', {'class': 'title'}).get('title')))
-                        result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text))
-                        result.description = raw_result.find('div', {'class': 'sound_description'}).find('p').text
-                        result.library = 'Freesound'
-                        result.author = raw_result.find('a', {'class': 'user'}).text
-                        result.link = 'https://freesound.org' + \
-                                      str(raw_result.find('div', {'class': 'sound_filename'})
-                                          .find('a', {'class': 'title'}).get('href'))
-                        result.id = raw_result.get('id')
+                        result = self.make_result_from_raw(raw_result)
                         existing_result = result.check_if_already_downloaded()
                         if existing_result:
                             results.append(existing_result)
                         else:
                             results.append(result)
-
             self.signals.sig_results.emit(results)
         self.signals.sig_finished.emit()
 
+    def make_result_from_raw(self, raw_result):
+        result = SearchResults.FreesoundResult()
+        result.preview = 'https://freesound.org' + \
+                         str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
+        result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
+                             .find('a', {'class': 'title'}).get('title')))
+        result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text))
+        result.description = raw_result.find('div', {'class': 'sound_description'}).find('p').text
+        result.library = 'Freesound'
+        result.author = raw_result.find('a', {'class': 'user'}).text
+        result.link = 'https://freesound.org' + \
+                      str(raw_result.find('div', {'class': 'sound_filename'})
+                          .find('a', {'class': 'title'}).get('href'))
+        result.id = raw_result.get('id')
+        return result
 
-class Website(QRunnable):
+
+class ProSoundScraper(Scraper):
+    @staticmethod
+    def get_results(json):
+        raw_results = []
+        for raw_result in json['content']:
+            if 'id' in raw_result.keys():
+                raw_results.append(raw_result)
+        return raw_results
+
+    @pyqtSlot()
+    def run(self):
+        if not self.canceled:
+            raw_json = get_with_headers(self.url + '&page=' + str(self.page_number)).json()
+            results = []
+            for raw_result in self.get_results(raw_json):
+                if self.canceled:
+                    break
+                result = self.make_result_from_raw(raw_result)
+                existing_result = result.check_if_already_downloaded()
+                if existing_result:
+                    results.append(existing_result)
+                else:
+                    results.append(result)
+            self.signals.sig_results.emit(results)
+        self.signals.sig_finished.emit()
+
+    def make_result_from_raw(self, raw_result):
+        result = SearchResults.ProSoundResult()
+        result.preview = raw_result['file']['playHtml5']
+        result.set_title(raw_result['title'])
+        result.duration = ceil(float(raw_result['actualLength'])*1000)
+        result.description = raw_result['description']
+        result.library = 'Pro Sound'
+        result.author = raw_result['artist']['name']
+        result.link = raw_result['file']['waveform']
+        result.id = raw_result['id']
+        return result
+
+
+class PageAmountScraper(QRunnable):
 
     def __init__(self, keywords):
-        super(Website, self).__init__()
+        super(PageAmountScraper, self).__init__()
         self.amount_of_pages = None
         self.keywords = keywords
         self.url = None
@@ -106,8 +147,7 @@ class Website(QRunnable):
         return int
 
 
-class Freesound(Website):
-
+class FreesoundPageAmountScraper(PageAmountScraper):
     def make_url(self):
         url = 'https://freesound.org/search/?q='
         for keyword in self.keywords:
@@ -128,6 +168,26 @@ class Freesound(Website):
                 number_of_results_string = number_of_results_string + s
         number_of_results = int(number_of_results_string)
         return ceil(number_of_results/15)
+
+    @pyqtSlot()
+    def run(self):
+        self.url = self.make_url()
+        self.amount_of_pages = self.get_amount_of_pages()
+        self.signals.sig_amount_of_pages.emit(self.amount_of_pages)
+        self.signals.sig_url.emit(self.url)
+        self.signals.sig_finished.emit()
+
+
+class ProSoundPageAmountScraper(PageAmountScraper):
+    def make_url(self):
+        url = 'https://download.prosoundeffects.com/ajax.php?p=track_info&show=30&s='
+        for keyword in self.keywords:
+            url = url + '+' + keyword
+        return url
+
+    def get_amount_of_pages(self):
+        json = get_with_headers(self.url).json()
+        return ceil(json['content'][0]['facets']['tracks']/30)
 
     @pyqtSlot()
     def run(self):

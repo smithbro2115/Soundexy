@@ -294,8 +294,16 @@ class FreesoundResult(Free):
 
 
 class Paid(Remote):
-    def __init__(self):
-        super(Paid, self).__init__()
+    @property
+    def site_name(self):
+        return ''
 
     def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f, cancel_f, error_f):
         pass
+
+
+class ProSoundResult(Paid):
+    @property
+    def site_name(self):
+        return 'Pro Sound'
+

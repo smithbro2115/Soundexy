@@ -26,11 +26,11 @@ class Search:
 
     @property
     @abstractmethod
-    def site_type(self):
-        return WebScrapers.Website
+    def page_scraper(self):
+        return WebScrapers.PageAmountScraper
 
     def run(self):
-        site = self.site_type(self.keywords)
+        site = self.page_scraper(self.keywords)
         site.signals.sig_url.connect(self.set_url)
         site.signals.sig_amount_of_pages.connect(self.set_amount_of_pages)
         site.signals.sig_finished.connect(self.scrape)
@@ -83,5 +83,15 @@ class FreesoundSearch(Search):
         return WebScrapers.FreesoundScraper
 
     @property
-    def site_type(self):
-        return WebScrapers.Freesound
+    def page_scraper(self):
+        return WebScrapers.FreesoundPageAmountScraper
+
+
+class ProSoundSearch(Search):
+    @property
+    def scraper_type(self):
+        return WebScrapers.ProSoundScraper
+
+    @property
+    def page_scraper(self):
+        return WebScrapers.ProSoundPageAmountScraper

@@ -10,7 +10,7 @@ import traceback
 import os
 from Soundexy.Imaging.Wave import make_waveform
 from Soundexy.GUI.API.CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal, PlaylistTreeWidget
-from Soundexy.Indexing.Searches import FreesoundSearch
+from Soundexy.Indexing.Searches import FreesoundSearch, ProSoundSearch
 from Soundexy.Functionality import useful_utils
 
 
@@ -536,7 +536,7 @@ class Gui(GUI.Ui_MainWindow):
             if self.running_free_search:
                 self.free_search.cancel()
             self.running_free_search = True
-            self.free_search = FreesoundSearch(keywords, self.freesound_thread_pool)
+            self.free_search = ProSoundSearch(keywords, self.freesound_thread_pool)
             self.free_search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
             self.free_search.signals.finished.connect(lambda: self.finished_search(2))
             self.free_search.run()
