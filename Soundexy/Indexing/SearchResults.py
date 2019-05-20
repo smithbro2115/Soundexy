@@ -7,7 +7,7 @@ from Soundexy.Webscraping.Downloading import Downloader
 from abc import abstractmethod
 
 
-class Local:
+class Result:
     def __init__(self):
         self.title = ''
         self.name = ''
@@ -15,7 +15,7 @@ class Local:
         self.description = ''
         self.id = None
         self.author = ''
-        self.library = 'Local'
+        self.library = ''
         self.channels = 0
         self.file_type = ''
         self.path = ''
@@ -24,8 +24,8 @@ class Local:
         self.album_image = None
         self.sample_rate = 48000
         self.meta_file = None
-        self.index_path = 'obj'
-        self.index_file_name = 'local_index'
+        self.index_path = ''
+        self.index_file_name = ''
         self.available_locally = True
 
     def __eq__(self, other):
@@ -39,6 +39,16 @@ class Local:
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def get_dict_of_all_attributes(self):
+        return {'Filename': self.meta_file.filename, 'Title': self.title,
+                'Duration': str(self.duration) + ' ms', 'Description': self.description, 'ID': self.id,
+
+                'Author': self.author, 'Library': self.library, 'Channels': self.channels,
+                'File Type': self.file_type, 'File Path': self.path, 'Bit Rate': self.bitrate,
+                'Keywords': self.keywords, 'Sample Rate': self.sample_rate, 'Available Locally': self.available_locally}
+
+
+class Local(Result):
     def populate(self, path, identification_number):
         self.id = identification_number
         self.path = path
@@ -113,13 +123,6 @@ class Local:
                             return False
                     return True
         return False
-
-    def get_dict_of_all_attributes(self):
-        return {'Filename': self.meta_file.filename, 'Title': self.title,
-                'Duration': str(self.duration) + ' ms', 'Description': self.description, 'ID': self.id,
-                'Author': self.author, 'Library': self.library, 'Channels': self.channels,
-                'File Type': self.file_type, 'File Path': self.path, 'Bit Rate': self.bitrate,
-                'Keywords': self.keywords, 'Sample Rate': self.sample_rate, 'Available Locally': self.available_locally}
 
 
 class RemoteSigs(QObject):
