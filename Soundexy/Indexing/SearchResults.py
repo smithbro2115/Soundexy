@@ -1,6 +1,5 @@
 from Soundexy.MetaData import MetaData
 from Soundexy.Functionality.useful_utils import get_app_data_folder
-from PyQt5.QtCore import pyqtSignal, QObject
 from Soundexy.Webscraping.Authorization.Credentials import get_credentials, delete_saved_credentials
 import os
 from Soundexy.Webscraping.Downloading import Downloader
@@ -9,6 +8,8 @@ from abc import abstractmethod
 
 class Result:
     def __init__(self):
+        self._meta_file = None
+        self.meta_file = None
         self.title = ''
         self.name = ''
         self.duration = 0
@@ -23,10 +24,16 @@ class Result:
         self.keywords = []
         self.album_image = None
         self.sample_rate = 48000
-        self.meta_file = None
         self.index_path = ''
         self.index_file_name = ''
-        self.available_locally = True
+
+    @property
+    def meta_file(self):
+        return self._meta_file
+
+    @meta_file.setter
+    def meta_file(self, value):
+        self._meta_file = value
 
     def __eq__(self, other):
         try:
@@ -39,10 +46,13 @@ class Result:
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def get_dict_of_all_attributes(self):
-        return {'Filename': self.meta_file.filename, 'Title': self.title,
-                'Duration': str(self.duration) + ' ms', 'Description': self.description, 'ID': self.id,
+    @property
+    def available_locally(self):
+        return True
 
+    def get_dict_of_all_attributes(self):
+        return {'Filename': self._meta_file.filename, 'Title': self.title,
+                'Duration': str(self.duration) + ' ms', 'Description': self.description, 'ID': self.id,
                 'Author': self.author, 'Library': self.library, 'Channels': self.channels,
                 'File Type': self.file_type, 'File Path': self.path, 'Bit Rate': self.bitrate,
                 'Keywords': self.keywords, 'Sample Rate': self.sample_rate, 'Available Locally': self.available_locally}
@@ -125,45 +135,17 @@ class Local(Result):
         return False
 
 
-class RemoteSigs(QObject):
-    downloaded_some = pyqtSignal(int)
-    download_done = pyqtSignal(str)
-    ready_for_preview = pyqtSignal(str)
-    preview_done = pyqtSignal(str)
-    preview_already_exists = pyqtSignal(str)
-    download_started = pyqtSignal()
-    download_already_exists = pyqtSignal(str)
-    download_deleted = pyqtSignal()
-
-
-class Remote:
+class Remote(Result):
     def __init__(self):
-        self.title = ''
-        self.preview = ''
-        self.duration = 0
-        self.description = ''
-        self.id = None
-        self.author = ''
-        self.link = ''
-        self.library = ''
-        self.file_type = ''
+        super(Remote, self).__init__()
         self.download_path = f"{get_app_data_folder('downloads')}"
         self.index_path = 'obj'
+        self.preview = ''
+        self.link = ''
         self.index_file_name = 'downloaded_index'
         self.downloader = None
         self.downloading = False
         self.downloaded = False
-        self.path = ''
-        self.sample_rate = 44100
-
-    def __eq__(self, other):
-        try:
-            return self.meta_file()['id'] == other.meta_file()['id']
-        except (AttributeError, KeyError):
-            return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     def check_if_already_downloaded(self):
         from Soundexy.Indexing.LocalFileHandler import IndexFile
@@ -188,14 +170,17 @@ class Remote:
         else:
             self.title = title
 
+    @property
     def meta_file(self):
-        return {'file name': self.title, 'title': self.title, 'duration': self.duration, 'description': self.description, 'id': self.id,
-                'author': self.author, 'library': self.library, 'preview Link': self.preview, 'sample rate': self.sample_rate,
+        return {'file name': self.title, 'title': self.title, 'duration': self.duration,
+                'description': self.description, 'id': self.id,
+                'author': self.author, 'library': self.library, 'preview Link': self.preview,
+                'sample rate': self.sample_rate,
                 'file type': self.file_type, 'download link': self.link, 'available locally': self.downloaded}
 
-    @abstractmethod
-    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f, cancel_f, error_f):
-        pass
+    @meta_file.setter
+    def meta_file(self, value):
+        self._meta_file = value
 
     def get_downloaded_index(self):
         from Soundexy.Indexing.LocalFileHandler import IndexFile
@@ -242,7 +227,7 @@ class Remote:
     def download_preview(self, threadpool, current, downloaded_some_f, done_f, downloaded_already_f):
         if threadpool.activeThreadCount() > 0:
             current.cancel()
-        downloader = Downloader.PreviewDownloader(self.meta_file()['preview Link'], self.meta_file()['id'])
+        downloader = Downloader.PreviewDownloader(self.meta_file['preview Link'], self.meta_file['id'])
         downloader.signals.downloaded.connect(lambda x: downloaded_some_f(x))
         downloader.signals.already_exists.connect(lambda x: self._preview_download_done(x, downloaded_already_f))
         downloader.signals.download_done.connect(lambda x: self._preview_download_done(x, done_f))
@@ -251,13 +236,6 @@ class Remote:
 
     def get_downloader(self):
         return Downloader.Downloader
-
-
-class Free(Remote):
-    @property
-    @abstractmethod
-    def site_name(self):
-        return ''
 
     def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f, cancel_f, error_f):
         self.downloader = self.construct_auth_session()
@@ -283,11 +261,11 @@ class Free(Remote):
     def construct_auth_session(self):
         outcome = get_credentials(self.library)
         if outcome[1]:
-            return self.get_downloader()(self.meta_file()['download link'], outcome[0])
+            return self.get_downloader()(self.meta_file['download link'], outcome[0])
         return None
 
 
-class FreesoundResult(Free):
+class FreesoundResult(Remote):
     @property
     def site_name(self):
         return 'Freesound'
@@ -297,11 +275,15 @@ class FreesoundResult(Free):
 
 
 class Paid(Remote):
+    def __init__(self):
+        super(Paid, self).__init__()
+        self.bought = False
+
     @property
     def site_name(self):
         return ''
 
-    def download(self, threadpool, download_started_f, downloaded_some_f, download_done_f, cancel_f, error_f):
+    def buy(self):
         pass
 
 
@@ -309,4 +291,7 @@ class ProSoundResult(Paid):
     @property
     def site_name(self):
         return 'Pro Sound'
+
+    def get_downloader(self):
+        return Downloader.ProSoundDownloader
 

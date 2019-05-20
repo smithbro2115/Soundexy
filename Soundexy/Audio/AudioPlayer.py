@@ -565,7 +565,7 @@ class WaveformSlider(QSlider):
     def load_result(self, result):
         self.reset_cursor()
         self.current_result = result
-        self.current_sound_duration = result.meta_file()['duration']
+        self.current_sound_duration = result.meta_file['duration']
 
     def move_to_current_time(self):
         sound_duration = self.current_sound_duration

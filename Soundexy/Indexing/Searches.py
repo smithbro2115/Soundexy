@@ -1,6 +1,7 @@
 from PyQt5.QtCore import QObject, pyqtSignal
 from abc import abstractmethod
 from Soundexy.Webscraping.Webscraping import WebScrapers
+from Soundexy.Indexing.LocalFileHandler import IndexSearch
 
 
 class SearchSigs(QObject):
@@ -10,14 +11,39 @@ class SearchSigs(QObject):
 
 
 class Search:
-    def __init__(self, keywords, thread_pool):
+    def __init__(self, keywords, excluded_words, thread_pool):
         self.keywords = keywords
         self.signals = SearchSigs()
         self.canceled = False
         self.thread_pool = thread_pool
+        self.excluded_words = excluded_words
+        self.threads = []
+
+    def run(self):
+        pass
+
+    def cancel(self):
+        self.canceled = True
+        self.cancel_all_threads()
+
+    def emit_batch(self, results):
+        if not self.canceled:
+            self.signals.found_batch.emit(results)
+
+    def cancel_all_threads(self):
+        for thread in self.threads:
+            thread.cancel()
+
+    def emit_finished(self):
+        if self.thread_pool.activeThreadCount() == 0:
+            self.signals.finished.emit()
+
+
+class RemoteSearch(Search):
+    def __init__(self, keywords, excluded_words, thread_pool):
+        super(RemoteSearch, self).__init__(keywords, excluded_words, thread_pool)
         self.url = ''
         self.amount_of_pages = 0
-        self.threads = []
 
     @property
     @abstractmethod
@@ -54,30 +80,50 @@ class Search:
         else:
             self.emit_finished()
 
-    def cancel(self):
-        self.canceled = True
-        self.cancel_all_threads()
-
-    def emit_batch(self, results):
-        if not self.canceled:
-            self.signals.found_batch.emit(results)
-
-    def cancel_all_threads(self):
-        for thread in self.threads:
-            thread.cancel()
-
     def set_url(self, url):
         self.url = url
 
     def set_amount_of_pages(self, amount):
         self.amount_of_pages = amount
 
-    def emit_finished(self):
-        if self.thread_pool.activeThreadCount() == 0:
-            self.signals.finished.emit()
+
+class FreeSearch(RemoteSearch):
+    @property
+    def scraper_type(self):
+        return WebScrapers.Scraper
+
+    @property
+    def page_scraper(self):
+        return WebScrapers.PageAmountScraper
 
 
-class FreesoundSearch(Search):
+class PaidSearch(RemoteSearch):
+    @property
+    def scraper_type(self):
+        return WebScrapers.Scraper
+
+    @property
+    def page_scraper(self):
+        return WebScrapers.PageAmountScraper
+
+
+class LocalSearch(Search):
+    def __init__(self, keywords, excluded_words, thread_pool):
+        super(LocalSearch, self).__init__(keywords, excluded_words, thread_pool)
+        self.excluded_words = excluded_words
+
+    def run(self):
+        search = IndexSearch(self.keywords, self.excluded_words)
+        search.signals.batch_found.connect(self.emit_batch)
+        search.signals.finished.connect(self.emit_finished)
+        self.thread_pool.start(search)
+
+
+class DefaultLocalSearch(LocalSearch):
+    pass
+
+
+class FreesoundSearch(FreeSearch):
     @property
     def scraper_type(self):
         return WebScrapers.FreesoundScraper
@@ -87,7 +133,7 @@ class FreesoundSearch(Search):
         return WebScrapers.FreesoundPageAmountScraper
 
 
-class ProSoundSearch(Search):
+class ProSoundSearch(PaidSearch):
     @property
     def scraper_type(self):
         return WebScrapers.ProSoundScraper

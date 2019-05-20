@@ -9,8 +9,9 @@ from Soundexy.Indexing import LocalFileHandler, SearchResults
 import traceback
 import os
 from Soundexy.Imaging.Wave import make_waveform
-from Soundexy.GUI.API.CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal, PlaylistTreeWidget
-from Soundexy.Indexing.Searches import FreesoundSearch, ProSoundSearch
+from Soundexy.GUI.API.CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal, PlaylistTreeWidget, \
+    SearchCheckBoxContextMenu
+from Soundexy.Indexing.Searches import LocalSearch, FreeSearch, PaidSearch
 from Soundexy.Functionality import useful_utils
 
 
@@ -20,14 +21,14 @@ from Soundexy.Functionality import useful_utils
 
 class Gui(GUI.Ui_MainWindow):
     def __init__(self):
-        self.freesound_thread_pool = QThreadPool()
+        self.remote_search_thread_pool = QThreadPool()
         self.waveform_thread_pool = QThreadPool()
         self.play_sound_thread_pool = QThreadPool()
         self.audio_converter_thread_pool = QThreadPool()
         self.local_search_thread_pool = QThreadPool()
         self.local_search_thread_pool.setMaxThreadCount(1)
         self.play_sound_thread_pool.setMaxThreadCount(1)
-        self.freesound_thread_pool.setMaxThreadCount(4)
+        self.remote_search_thread_pool.setMaxThreadCount(4)
         self.index_thread_pool = QThreadPool()
         self.index_thread_pool.setMaxThreadCount(1)
         self.current_downloader = None
@@ -76,12 +77,15 @@ class Gui(GUI.Ui_MainWindow):
         self.background_active_search_indicator = False
         self.waveform_maker = None
         self.local_search = None
-        self.free_search = None
+        self.free_searches = []
+        self.paid_searches = []
         self.download_button = DownloadButtonLocal()
         self.currently_downloading_results = {}
         self.indexer = LocalFileHandler.Indexer()
         self.converter = None
         self.login = None
+        self.freeSearchCheckboxContext = None
+        self.paidSearchCheckboxContext = None
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
@@ -114,9 +118,17 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.signals.time_changed.connect(self.set_current_time)
         self.volumeSlider.valueChanged.connect(self.volume_changed)
         self.loopCheckBox.stateChanged.connect(self.loop_changed)
+        self.freeSearchCheckboxContext = SearchCheckBoxContextMenu(FreeSearch.__subclasses__(),
+                                                                   self.topbarLibraryFreeCheckbox)
+        self.paidSearchCheckboxContext = SearchCheckBoxContextMenu(PaidSearch.__subclasses__(),
+                                                                   self.topbarLibraryPaidCheckbox)
         self.volumeSlider.setStyleSheet("""QSlider::sub-page:horizontal {
                                         background-color: #287399;
                                         }""")
+        self.topbarLibraryFreeCheckbox.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.topbarLibraryFreeCheckbox.customContextMenuRequested.connect(self.free_checkbox_right_clicked)
+        self.topbarLibraryPaidCheckbox.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.topbarLibraryPaidCheckbox.customContextMenuRequested.connect(self.paid_search_right_clicked)
         self.audio_player.signals.error.connect(self.show_error)
         self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
         self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
@@ -180,7 +192,7 @@ class Gui(GUI.Ui_MainWindow):
 
     def sound_init(self, result):
         try:
-            self.pixel_time_conversion_rate = self.waveform.maximum() / result.meta_file()['duration']
+            self.pixel_time_conversion_rate = self.waveform.maximum() / result.meta_file['duration']
         except ZeroDivisionError:
             self.show_error("This sound can't be played because it has no duration")
         else:
@@ -195,7 +207,7 @@ class Gui(GUI.Ui_MainWindow):
 
     def new_sound_meta(self, result):
         self.clear_meta_tab()
-        self.add_metadata_to_meta_tab(result.meta_file())
+        self.add_metadata_to_meta_tab(result.meta_file)
 
     def clear_meta_tab(self):
         self.clear_meta_from_meta_tab()
@@ -300,7 +312,7 @@ class Gui(GUI.Ui_MainWindow):
     def downloaded_ready_for_preview(self, sound_path):
         # self.make_waveform(sound_path)
         self.audio_converter_worker(self.audio_player.load_segment, sound_path,
-                                    self.current_result.meta_file()['duration'], self.pixel_time_conversion_rate)
+                                    self.current_result.meta_file['duration'], self.pixel_time_conversion_rate)
 
     def preview_download_done(self, path):
         self.audio_converter_worker(self.audio_player.audio_player.load_rest_of_segment, path)
@@ -415,6 +427,12 @@ class Gui(GUI.Ui_MainWindow):
             print('error')
             pass
 
+    def free_checkbox_right_clicked(self, event):
+        self.freeSearchCheckboxContext.exec_(self.topbarLibraryFreeCheckbox.mapToGlobal(event))
+
+    def paid_search_right_clicked(self, event):
+        self.paidSearchCheckboxContext.exec_(self.topbarLibraryPaidCheckbox.mapToGlobal(event))
+
     def show_error(self, error):
         msg_box = QtWidgets.QMessageBox()
         msg_box.about(self.window, "ERROR", str(error))
@@ -468,7 +486,7 @@ class Gui(GUI.Ui_MainWindow):
         if self.current_result is not None:
             self.pixel_time_conversion_rate = (
                 self.audio_player.calculate_px_time_conversion_rate(self.waveform.maximum(),
-                                                                    self.current_result.meta_file()['duration']))
+                                                                    self.current_result.meta_file['duration']))
 
     def get_waveform_width_minus_margin(self):
         horizontal_margin = self.waveform.contentsMargins().left() + self.waveform.contentsMargins().right()
@@ -528,32 +546,50 @@ class Gui(GUI.Ui_MainWindow):
             if self.running_local_search and self.local_search is not None:
                 self.local_search.cancel()
             self.running_local_search = True
-            self.local_search = LocalFileHandler.LocalSearch(keywords, excluded_words)
+            self.local_search = LocalFileHandler.IndexSearch(keywords, excluded_words)
             self.local_search.signals.batch_found.connect(self.searchResultsTable.add_results_to_search_results_table)
             self.local_search.signals.finished.connect(lambda: self.finished_search(1))
             self.local_search_thread_pool.start(self.local_search)
         if free:
             if self.running_free_search:
-                self.free_search.cancel()
-            self.running_free_search = True
-            self.free_search = ProSoundSearch(keywords, self.freesound_thread_pool)
-            self.free_search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
-            self.free_search.signals.finished.connect(lambda: self.finished_search(2))
-            self.free_search.run()
+                self.cancel_searches(self.free_searches)
+            for action in self.freeSearchCheckboxContext.actions():
+                if action.isChecked():
+                    self.running_free_search = True
+                    search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
+                    search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
+                    search.signals.finished.connect(lambda: self.finished_search(2, search))
+                    self.free_searches.append(search)
+                    search.run()
         if paid:
-            self.running_paid_search = True
-            print('test paid ' + str(keywords))
+            if self.running_paid_search:
+                self.cancel_searches(self.paid_searches)
+            for action in self.paidSearchCheckboxContext.actions():
+                if action.isChecked():
+                    self.running_paid_search = True
+                    search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
+                    search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
+                    search.signals.finished.connect(lambda: self.finished_search(3, search))
+                    self.paid_searches.append(search)
+                    search.run()
         if 1 not in (local, free, paid):
             self.finished_search(0)
 
-    def finished_search(self, search):
-        if search == 1:
+    def cancel_searches(self, searches):
+        for search in searches:
+            search.cancel()
+
+    def finished_search(self, search_number, search=None):
+        if search_number == 1:
             self.running_local_search = False
-        elif search == 2:
-            if self.freesound_thread_pool.activeThreadCount() == 0:
+        elif search_number == 2:
+            self.free_searches.remove(search)
+            if self.remote_search_thread_pool.activeThreadCount() == 0:
                 self.running_free_search = False
-        elif search == 3:
-            self.running_paid_search = False
+        elif search_number == 3:
+            self.paid_searches.remove(search)
+            if self.remote_search_thread_pool.activeThreadCount() == 0:
+                self.running_paid_search = False
         if 1 not in (self.running_paid_search, self.running_free_search, self.running_local_search):
             self.stop__busy_indicator_search()
 

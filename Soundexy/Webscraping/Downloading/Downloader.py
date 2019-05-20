@@ -6,6 +6,10 @@ from Soundexy.Webscraping.Authorization import WebsiteAuth
 from abc import abstractmethod
 
 
+class NotOwned(Exception):
+    pass
+
+
 class DownloaderSigs(QObject):
     download_started = pyqtSignal()
     downloaded_some = pyqtSignal(int)
@@ -153,6 +157,16 @@ class FreesoundDownloader(AuthDownloader):
     @property
     def site_name(self):
         return 'Freesound'
+
+
+class ProSoundDownloader(AuthDownloader):
+    def run(self):
+        self.session = WebsiteAuth.ProSound(self.username, self.password)
+        super(ProSoundDownloader, self).run()
+
+    @property
+    def site_name(self):
+        return 'Pro Sound'
 
 
 def freesound_download(threadpool, meta_file, username, password, done_function, progress_function):

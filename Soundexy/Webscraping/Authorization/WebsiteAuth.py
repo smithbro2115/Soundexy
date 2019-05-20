@@ -56,3 +56,14 @@ class FreeSound(AuthSession):
         def find_sound_url(self, html):
             s = BeautifulSoup(html, 'html.parser')
             return self.base_url + s.find('a', attrs={'id': 'download_button'})['href']
+
+
+class ProSound(AuthSession):
+    def __init__(self, username, password):
+        super(ProSound, self).__init__(username, password)
+        self.url = 'https://download.prosoundeffects.com/ajax.php?p=login&action=login'
+        self.login()
+        self.base_url = 'https://download.prosoundeffects.com'
+
+    def find_sound_url(self, json):
+        pass
