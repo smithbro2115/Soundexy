@@ -104,6 +104,12 @@ class PreviewDownloader(Downloader):
                 self.download_preview(self.url, self.title)
 
     def find_file_type_from_url(self, url):
+        file_type = self.find_file_type_regex(url)
+        if file_type == url:
+            file_type = url[url.rindex('.')+1:]
+        return file_type
+
+    def find_file_type_regex(self, url):
         try:
             file_type = re.search(r'(?<=\.)(.*?\?)', url)
             return self.find_file_type_from_url(file_type.group(0))
