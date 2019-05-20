@@ -156,7 +156,9 @@ class AudioPlayer:
         self._meta_data = None
         self._duration = 0
         self.attempted_current_time = 0
+        self._passed_available_time = False
         self.passed_available_time = False
+        self.passed_available_time_playing = False
         self.busy = True
         self._current_time_start = 0
         self.current_time_stop = 0
@@ -168,6 +170,14 @@ class AudioPlayer:
 
     def __del__(self):
         self._meta_data = None
+
+    @property
+    def passed_available_time(self):
+        return self._passed_available_time
+
+    @passed_available_time.setter
+    def passed_available_time(self, value):
+        self._passed_available_time = value
 
     @property
     def loop(self):
@@ -218,7 +228,14 @@ class AudioPlayer:
     @property
     def current_time(self) -> int:
         if self.playing:
-            return int((self.current_time_stop - self._current_time_start)*1000) + self._current_time
+            c_t = int((self.current_time_stop - self._current_time_start)*1000) + self._current_time
+            if c_t > self.true_duration:
+                if not self.passed_available_time:
+                    self.passed_available_time_playing = self.playing
+                    self.passed_available_time = True
+                    self.attempted_current_time = c_t
+                    self.pause()
+            return c_t
         return self._current_time
 
     @current_time.setter
@@ -280,11 +297,11 @@ class AudioPlayer:
         self._reload(path)
         self.loaded = True
         self.busy = False
-        if playing:
+        if playing or self.passed_available_time_playing:
             self.play()
         if self.passed_available_time:
-            self.goto(self.attempted_current_time)
             self.passed_available_time = False
+            self.goto(self.attempted_current_time)
 
     def _reload(self, path):
         pass
@@ -294,8 +311,8 @@ class AudioPlayer:
             self.playing = True
             self._play()
             if self.passed_available_time:
-                self.goto(self.attempted_current_time)
                 self.passed_available_time = False
+                self.goto(self.attempted_current_time)
 
     def _play(self):
         pass
@@ -332,19 +349,21 @@ class AudioPlayer:
 
     def goto(self, position):
         self.current_time = position
-        if self.busy and not self.segment:
-            self.pause()
-            self.attempted_current_time = position
-            self.passed_available_time = True
-        elif self.segment and position >= self.true_duration:
-            self.pause()
-            self.attempted_current_time = position
-            self.passed_available_time = True
+        # if self.busy and not self.segment:
+        #     self.passed_available_time_playing = self.playing
+        #     self.pause()
+        #     self.attempted_current_time = position
+        #     self.passed_available_time = True
+        # elif self.segment and position >= self.true_duration:
+        #     self.passed_available_time_playing = self.playing
+        #     self.pause()
+        #     self.attempted_current_time = position
+        #     self.passed_available_time = True
+        # else:
+        if position > self.duration:
+            self._goto(self.duration)
         else:
-            if position > self.duration:
-                self._goto(self.duration)
-            else:
-                self._goto(position)
+            self._goto(position)
 
     def _goto(self, position):
         pass
@@ -379,14 +398,14 @@ class AudioPlayer:
         self._reload(path)
         self.loaded = True
         self.busy = False
-        if playing and not ended:
+        if (playing or self.passed_available_time_playing) and not ended:
             self.play()
         return current_time
 
     def swap_file_with_complete_file(self, path):
         if self.passed_available_time:
             current_time = self.attempted_current_time
-            self.reload(path, self.playing)
+            self.reload(path, self.passed_available_time_playing)
         else:
             current_time = self._reload_and_return_previous_time(path)
         self.segment = False

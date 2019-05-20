@@ -1,4 +1,5 @@
 import requests
+import re
 import os
 from Soundexy.Functionality.useful_utils import get_app_data_folder
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
@@ -102,9 +103,17 @@ class PreviewDownloader(Downloader):
             else:
                 self.download_preview(self.url, self.title)
 
+    def find_file_type_from_url(self, url):
+        try:
+            file_type = re.search(r'(?<=\.)(.*?\?)', url)
+            return self.find_file_type_from_url(file_type.group(0))
+        except AttributeError:
+            return url.replace('?', '')
+
     def download_preview(self, url, title):
-        file_path = f"{self.preview_path}/{title}.ogg"
-        file_downloader = f"{self.preview_path}/download_{title}.ogg"
+        file_type = self.find_file_type_from_url(url)
+        file_path = f"{self.preview_path}/{title}.{file_type}"
+        file_downloader = f"{self.preview_path}/download_{title}.{file_type}"
         amount = 1024*200
         emitted_ready_for_preview = False
         fd = open(file_downloader, 'wb')
@@ -180,3 +189,9 @@ def freesound_download(threadpool, meta_file, username, password, done_function,
 
 def get_title_from_url(url):
     return url[url[:-2].rfind('/') + 1:]
+
+
+def pro_sound_get_preview_auth(track_id):
+    r = requests.get(f"https://download.prosoundeffects.com/ajax.php?p=download_auth&trackId="
+                     f"{track_id}&source=track_list_explorer&type=&embedCode=13")
+    return r.json()['content'][0]['params']

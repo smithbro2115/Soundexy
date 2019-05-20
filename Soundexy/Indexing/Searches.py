@@ -44,6 +44,7 @@ class RemoteSearch(Search):
         super(RemoteSearch, self).__init__(keywords, excluded_words, thread_pool)
         self.url = ''
         self.amount_of_pages = 0
+        self.start_page = 1
 
     @property
     @abstractmethod
@@ -68,15 +69,15 @@ class RemoteSearch(Search):
         keywords = self.keywords
         page_number = 0
         if amount_of_pages > 0:
-            while page_number < amount_of_pages:
+            while page_number <= amount_of_pages:
                 if self.canceled:
                     break
-                page_number += 1
                 search = self.scraper_type(keywords, page_number, url)
                 search.signals.sig_results.connect(self.emit_batch)
                 search.signals.sig_finished.connect(self.emit_finished)
                 self.threads.append(search)
                 self.thread_pool.start(search)
+                page_number += 1
         else:
             self.emit_finished()
 
@@ -98,6 +99,10 @@ class FreeSearch(RemoteSearch):
 
 
 class PaidSearch(RemoteSearch):
+    def __init__(self, keywords, excluded_words, thread_pool):
+        super(PaidSearch, self).__init__(keywords, excluded_words, thread_pool)
+        self.start_page = 0
+
     @property
     def scraper_type(self):
         return WebScrapers.Scraper

@@ -87,7 +87,8 @@ class FreesoundScraper(Scraper):
         result.link = 'https://freesound.org' + \
                       str(raw_result.find('div', {'class': 'sound_filename'})
                           .find('a', {'class': 'title'}).get('href'))
-        result.id = raw_result.get('id')
+        result.original_id = raw_result.get('id')
+        result.id = 'freesound_' + str(result.original_id)
         return result
 
 
@@ -103,7 +104,7 @@ class ProSoundScraper(Scraper):
     @pyqtSlot()
     def run(self):
         if not self.canceled:
-            raw_json = get_with_headers(self.url + '&page=' + str(self.page_number)).json()
+            raw_json = get_with_headers(self.url + '&pg=' + str(self.page_number)).json()
             results = []
             for raw_result in self.get_results(raw_json):
                 if self.canceled:
@@ -126,7 +127,8 @@ class ProSoundScraper(Scraper):
         result.library = 'Pro Sound'
         result.author = raw_result['artist']['name']
         result.link = raw_result['file']['waveform']
-        result.id = raw_result['id']
+        result.original_id = raw_result['id']
+        result.id = 'prosound_' + str(raw_result['id'])
         return result
 
 

@@ -583,12 +583,15 @@ class Gui(GUI.Ui_MainWindow):
         if search_number == 1:
             self.running_local_search = False
         elif search_number == 2:
-            self.free_searches.remove(search)
             if self.remote_search_thread_pool.activeThreadCount() == 0:
+                self.free_searches.remove(search)
                 self.running_free_search = False
         elif search_number == 3:
-            self.paid_searches.remove(search)
             if self.remote_search_thread_pool.activeThreadCount() == 0:
+                try:
+                    self.paid_searches.remove(search)
+                except ValueError:
+                    pass
                 self.running_paid_search = False
         if 1 not in (self.running_paid_search, self.running_free_search, self.running_local_search):
             self.stop__busy_indicator_search()

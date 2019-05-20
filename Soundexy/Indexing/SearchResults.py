@@ -146,6 +146,11 @@ class Remote(Result):
         self.downloader = None
         self.downloading = False
         self.downloaded = False
+        self.original_id = 0
+
+    @property
+    def preview_link(self):
+        return self.meta_file['preview Link']
 
     def check_if_already_downloaded(self):
         from Soundexy.Indexing.LocalFileHandler import IndexFile
@@ -227,12 +232,16 @@ class Remote(Result):
     def download_preview(self, threadpool, current, downloaded_some_f, done_f, downloaded_already_f):
         if threadpool.activeThreadCount() > 0:
             current.cancel()
-        downloader = Downloader.PreviewDownloader(self.meta_file['preview Link'], self.meta_file['id'])
+        downloader = self.preview_downloader(self.preview_link, self.meta_file['id'])
         downloader.signals.downloaded.connect(lambda x: downloaded_some_f(x))
         downloader.signals.already_exists.connect(lambda x: self._preview_download_done(x, downloaded_already_f))
         downloader.signals.download_done.connect(lambda x: self._preview_download_done(x, done_f))
         threadpool.start(downloader)
         return downloader
+
+    @property
+    def preview_downloader(self):
+        return Downloader.PreviewDownloader
 
     def get_downloader(self):
         return Downloader.Downloader
@@ -288,6 +297,11 @@ class Paid(Remote):
 
 
 class ProSoundResult(Paid):
+    @property
+    def preview_link(self):
+        auth = Downloader.pro_sound_get_preview_auth(self.original_id)
+        return f"{self.meta_file['preview Link']}?{auth}"
+
     @property
     def site_name(self):
         return 'Pro Sound'
