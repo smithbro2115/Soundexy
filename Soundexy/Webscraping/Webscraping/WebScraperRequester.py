@@ -3,9 +3,12 @@ from requests.exceptions import RequestException
 from contextlib import closing
 
 
-def get_with_headers(url):
+def get_with_headers(url, session=None):
     try:
-        s = requests.Session()
+        if session:
+            s = session
+        else:
+            s = requests.Session()
         headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                                  'Chrome/74.0.3729.157 Safari/537.36'}
         r = s.get(url, headers=headers)

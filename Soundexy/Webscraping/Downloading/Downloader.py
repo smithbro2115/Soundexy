@@ -36,9 +36,9 @@ class Downloader(QRunnable):
     @pyqtSlot()
     def run(self):
         self.url = self.get_download_path()
-        response = self.session.get(self.url, stream=True)
         if not self.url:
             return None
+        response = self.session.get(self.url, stream=True)
         name = self.check_filename(response)
         if name:
             for root, dirs, files in os.walk(self.download_path):
@@ -184,8 +184,11 @@ class AuthDownloader(Downloader):
 
 class FreesoundDownloader(AuthDownloader):
     def run(self):
-        self.session = WebsiteAuth.FreeSound(self.username, self.password)
-        super(FreesoundDownloader, self).run()
+        try:
+            self.session = WebsiteAuth.FreeSound(self.username, self.password)
+            super(FreesoundDownloader, self).run()
+        except WebsiteAuth.LoginError as e:
+            self.signals.wrong_credentials.emit(str(e))
 
     @property
     def site_name(self):
