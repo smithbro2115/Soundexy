@@ -47,8 +47,7 @@ class Gui(GUI.Ui_MainWindow):
         self.current_result = None
         self.running_search = False
         self.running_local_search = False
-        self.running_free_search = False
-        self.running_paid_search = False
+        self.running_remote_search = False
         self.running_search_keywords = []
         self.running_search_librarys = {'Free': 0, 'Paid': 0, 'Local': 0}
         self.freesound_amount_of_pages = None
@@ -77,8 +76,7 @@ class Gui(GUI.Ui_MainWindow):
         self.background_active_search_indicator = False
         self.waveform_maker = None
         self.local_search = None
-        self.free_searches = []
-        self.paid_searches = []
+        self.remote_searches = []
         self.download_button = DownloadButtonLocal()
         self.currently_downloading_results = {}
         self.indexer = LocalFileHandler.Indexer()
@@ -542,36 +540,35 @@ class Gui(GUI.Ui_MainWindow):
         clear_cache_worker = Worker(self.clear_cache)
         self.cache_thread_pool.start(clear_cache_worker)
         self.searchResultsTable.current_results = {}
+        if self.running_local_search and self.local_search is not None:
+            self.local_search.cancel()
         if local:
-            if self.running_local_search and self.local_search is not None:
-                self.local_search.cancel()
             self.running_local_search = True
             self.local_search = LocalFileHandler.IndexSearch(keywords, excluded_words)
             self.local_search.signals.batch_found.connect(self.searchResultsTable.add_results_to_search_results_table)
             self.local_search.signals.finished.connect(lambda: self.finished_search(1))
             self.local_search_thread_pool.start(self.local_search)
+        if self.running_remote_search:
+            self.cancel_searches(self.remote_searches)
+            self.remote_searches = []
         if free:
-            if self.running_free_search:
-                self.cancel_searches(self.free_searches)
             for action in self.freeSearchCheckboxContext.actions():
                 if action.isChecked():
-                    self.running_free_search = True
-                    search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
-                    search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
-                    search.signals.finished.connect(lambda: self.finished_search(2, search))
-                    self.free_searches.append(search)
-                    search.run()
+                    self.running_remote_search = True
+                    free_search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
+                    self.remote_searches.append(free_search)
+                    free_search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
+                    free_search.signals.finished.connect(lambda: self.finished_search(2))
+                    free_search.run()
         if paid:
-            if self.running_paid_search:
-                self.cancel_searches(self.paid_searches)
             for action in self.paidSearchCheckboxContext.actions():
                 if action.isChecked():
-                    self.running_paid_search = True
-                    search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
-                    search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
-                    search.signals.finished.connect(lambda: self.finished_search(3, search))
-                    self.paid_searches.append(search)
-                    search.run()
+                    self.running_remote_search = True
+                    paid_search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
+                    self.remote_searches.append(paid_search)
+                    paid_search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
+                    paid_search.signals.finished.connect(lambda: self.finished_search(2))
+                    paid_search.run()
         if 1 not in (local, free, paid):
             self.finished_search(0)
 
@@ -579,21 +576,14 @@ class Gui(GUI.Ui_MainWindow):
         for search in searches:
             search.cancel()
 
-    def finished_search(self, search_number, search=None):
+    def finished_search(self, search_number):
         if search_number == 1:
             self.running_local_search = False
         elif search_number == 2:
             if self.remote_search_thread_pool.activeThreadCount() == 0:
-                self.free_searches.remove(search)
-                self.running_free_search = False
-        elif search_number == 3:
-            if self.remote_search_thread_pool.activeThreadCount() == 0:
-                try:
-                    self.paid_searches.remove(search)
-                except ValueError:
-                    pass
-                self.running_paid_search = False
-        if 1 not in (self.running_paid_search, self.running_free_search, self.running_local_search):
+                self.running_remote_search = False
+                self.remote_searches = []
+        if 1 not in (self.running_remote_search, self.running_local_search):
             self.stop__busy_indicator_search()
 
     def start_busy_indicator_search(self):

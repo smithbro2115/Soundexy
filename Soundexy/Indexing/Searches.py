@@ -18,6 +18,7 @@ class Search:
         self.thread_pool = thread_pool
         self.excluded_words = excluded_words
         self.threads = []
+        self.running = True
 
     def run(self):
         pass
@@ -25,6 +26,7 @@ class Search:
     def cancel(self):
         self.canceled = True
         self.cancel_all_threads()
+        self.running = False
 
     def emit_batch(self, results):
         if not self.canceled:
@@ -37,6 +39,7 @@ class Search:
     def emit_finished(self):
         if self.thread_pool.activeThreadCount() == 0:
             self.signals.finished.emit()
+            self.running = False
 
 
 class RemoteSearch(Search):
