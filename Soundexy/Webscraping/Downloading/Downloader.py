@@ -7,7 +7,7 @@ from Soundexy.Webscraping.Authorization import WebsiteAuth
 from abc import abstractmethod
 
 
-class NotOwned(Exception):
+class NotOwnedError(Exception):
     pass
 
 
@@ -19,6 +19,7 @@ class DownloaderSigs(QObject):
     download_done = pyqtSignal(str)
     need_credentials = pyqtSignal()
     error = pyqtSignal(str)
+    wrong_credentials = pyqtSignal(str)
 
 
 class Downloader(QRunnable):
@@ -35,24 +36,36 @@ class Downloader(QRunnable):
     @pyqtSlot()
     def run(self):
         self.url = self.get_download_path()
+        response = self.session.get(self.url, stream=True)
         if not self.url:
             return None
-        name = get_title_from_url(self.url)
-        for root, dirs, files in os.walk(self.download_path):
-            if name in files:
-                self.signals.already_exists.emit(os.path.join(root, name))
-            else:
-                self.download(name)
+        name = self.check_filename(response)
+        if name:
+            for root, dirs, files in os.walk(self.download_path):
+                if name in files:
+                    self.signals.already_exists.emit(os.path.join(root, name))
+                else:
+                    self.download(name, response)
 
-    def download(self, name):
+    def check_filename(self, r):
+        try:
+            return self.get_filename(r)
+        except NotOwnedError as e:
+            self.signals.error.emit(str(e))
+            self.cancel()
+        return None
+
+    def get_file_size(self, headers):
+        return headers['Content-length']
+
+    def download(self, name, r):
         file_download_path = f'{self.download_path}\\{name}'
         try:
-            self.file_size = self.session.get(self.url, stream=True).headers['Content-length']
+            self.file_size = self.get_file_size(r.headers)
         except KeyError:
             self.file_size = -1
         amount = 1024 * 1024
         fd = open(file_download_path, 'wb')
-        r = self.session.get(self.url, stream=True)
         self.signals.download_started.emit()
         for chunk in r.iter_content(amount):
             if self.canceled:
@@ -87,21 +100,25 @@ class Downloader(QRunnable):
     def get_download_path(self):
         return self.url
 
+    def get_filename(self, r):
+        return get_title_from_url(self.url)
+
 
 class PreviewDownloader(Downloader):
-    def __init__(self, url, title):
+    def __init__(self, url, sound_id):
         super(PreviewDownloader, self).__init__(url)
-        self.title = title
         self.preview_path = get_app_data_folder('Cache')
+        self.filename = sound_id
 
     @pyqtSlot()
     def run(self):
-        name = 'download_' + self.title + '.ogg'
+        file_type = self.find_file_type_from_url(self.url)
+        name = f'download_{self.filename}.{file_type}'
         for root, dirs, files in os.walk(self.preview_path):
             if name in files:
                 self.signals.already_exists.emit(os.path.join(root, name))
             else:
-                self.download_preview(self.url, self.title)
+                self.download_preview(self.url, self.filename)
 
     def find_file_type_from_url(self, url):
         file_type = self.find_file_type_regex(url)
@@ -148,8 +165,9 @@ class PreviewDownloader(Downloader):
 
 
 class AuthDownloader(Downloader):
-    def __init__(self, url, credentials):
-        super(AuthDownloader, self).__init__(url)
+    def __init__(self, result, credentials):
+        super(AuthDownloader, self).__init__('')
+        self.result = result
         self.username, self.password = credentials
 
     @property
@@ -159,9 +177,9 @@ class AuthDownloader(Downloader):
 
     def get_download_path(self):
         try:
-            return self.session.get_sound_link(self.url)
+            return self.session.get_sound_link(self.result)
         except TypeError:
-            self.signals.error.emit("Network error! You may want to try different credentials.")
+            self.signals.wrong_credentials.emit("Network error! You may want to try different credentials.")
 
 
 class FreesoundDownloader(AuthDownloader):
@@ -176,12 +194,31 @@ class FreesoundDownloader(AuthDownloader):
 
 class ProSoundDownloader(AuthDownloader):
     def run(self):
-        self.session = WebsiteAuth.ProSound(self.username, self.password)
-        super(ProSoundDownloader, self).run()
+        try:
+            self.session = WebsiteAuth.ProSound(self.username, self.password)
+            super(ProSoundDownloader, self).run()
+        except WebsiteAuth.LoginError as e:
+            self.signals.wrong_credentials.emit(str(e))
 
     @property
     def site_name(self):
         return 'Pro Sound'
+
+    def get_file_size(self, headers):
+        return headers['Content-Length']
+
+    def get_filename(self, r):
+        try:
+            cd = self.session.get_content_disposition(r)
+        except KeyError:
+            raise NotOwnedError('You do not own this sound!')
+        if not cd:
+            return None
+        fname = re.findall('filename="(.+)"', cd)
+        if len(fname) == 0:
+            return None
+        print(fname[0])
+        return fname[0]
 
 
 def freesound_download(threadpool, meta_file, username, password, done_function, progress_function):

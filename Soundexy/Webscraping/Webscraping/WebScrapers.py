@@ -125,9 +125,11 @@ class ProSoundScraper(Scraper):
         result.duration = ceil(float(raw_result['actualLength'])*1000)
         result.description = raw_result['description']
         result.library = 'Pro Sound'
+        result.file_type = 'wav'
         result.author = raw_result['artist']['name']
         result.link = raw_result['file']['waveform']
         result.original_id = raw_result['id']
+        result.bought = bool(raw_result['can_download'])
         result.id = 'prosound_' + str(raw_result['id'])
         return result
 

@@ -1,6 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
 from PyQt5.QtCore import QRunnable
+import base64
+
+
+class LoginError(Exception):
+    pass
 
 
 class AuthSession(QRunnable):
@@ -27,12 +32,8 @@ class AuthSession(QRunnable):
     def find_sound_url(self, url):
         return ''
 
-    def get_sound_page_html(self, url):
-        response = self.session.get(url, headers=self.headers)
-        return response.content
-
-    def get_sound_link(self, url):
-        return self.find_sound_url(self.get_sound_page_html(url))
+    def get_sound_link(self, result):
+        return self.find_sound_url(result)
 
     def set_token_id(self, html):
         soup = BeautifulSoup(html, 'html.parser')
@@ -44,6 +45,9 @@ class AuthSession(QRunnable):
     def get(self, url, **kwargs):
         return self.session.get(url, **kwargs)
 
+    def get_content_disposition(self, r):
+        return r.headers['Content-disposition']
+
 
 class FreeSound(AuthSession):
         def __init__(self, username, password):
@@ -53,7 +57,12 @@ class FreeSound(AuthSession):
             self.login()
             self.base_url = 'http://freesound.org'
 
-        def find_sound_url(self, html):
+        def get_sound_page_html(self, url):
+            response = self.session.get(url, headers=self.headers)
+            return response.content
+
+        def find_sound_url(self, result):
+            html = self.get_sound_page_html(result.meta_file['download link'])
             s = BeautifulSoup(html, 'html.parser')
             return self.base_url + s.find('a', attrs={'id': 'download_button'})['href']
 
@@ -62,8 +71,21 @@ class ProSound(AuthSession):
     def __init__(self, username, password):
         super(ProSound, self).__init__(username, password)
         self.url = 'https://download.prosoundeffects.com/ajax.php?p=login&action=login'
+        self.login_data = {'email': username, 'password': base64.b64encode(password.encode())}
         self.login()
-        self.base_url = 'https://download.prosoundeffects.com'
+        self.base_url = 'https://download.prosoundeffects.com/ajax.php'
 
-    def find_sound_url(self, json):
-        pass
+    def find_sound_url(self, result):
+        key_url = f"https://download.prosoundeffects.com/download.php?track_id={result.original_id}&type=wav"
+        return self.session.head(key_url, headers=self.headers).headers['location']
+
+    def login(self):
+        with requests.Session() as s:
+            self.session = s
+            r = s.post(self.url, self.login_data, headers=self.headers)
+            try:
+                if r.json()['content']['loginFailed']:
+                    raise LoginError('Incorrect Credentials')
+            except KeyError:
+                pass
+            self.session = s

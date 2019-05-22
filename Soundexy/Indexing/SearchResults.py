@@ -232,7 +232,7 @@ class Remote(Result):
     def download_preview(self, threadpool, current, downloaded_some_f, done_f, downloaded_already_f):
         if threadpool.activeThreadCount() > 0:
             current.cancel()
-        downloader = self.preview_downloader(self.preview_link, self.meta_file['id'])
+        downloader = self.preview_downloader(self.preview_link, self.id)
         downloader.signals.downloaded.connect(lambda x: downloaded_some_f(x))
         downloader.signals.already_exists.connect(lambda x: self._preview_download_done(x, downloaded_already_f))
         downloader.signals.download_done.connect(lambda x: self._preview_download_done(x, done_f))
@@ -258,11 +258,16 @@ class Remote(Result):
 
     def connect_downloader_signals(self, d_some_f, d_done_f, d_cancel_f, d_error_f):
         self.downloader.signals.error.connect(lambda x: self.download_error(x, d_cancel_f, d_error_f))
+        self.downloader.signals.wrong_credentials.connect(lambda x: self.wrong_credentials(x, d_cancel_f, d_error_f))
         self.downloader.signals.downloaded_some.connect(lambda x: d_some_f(x, self.id))
         self.downloader.signals.already_exists.connect(lambda x: self._download_done(x, d_done_f))
         self.downloader.signals.download_done.connect(lambda x: self._download_done(x, d_done_f))
 
     def download_error(self, msg, c_function, e_function):
+        e_function(msg)
+        self.cancel_download(c_function)
+
+    def wrong_credentials(self, msg, c_function, e_function):
         e_function(msg)
         delete_saved_credentials(self.library)
         self.cancel_download(c_function)
@@ -270,7 +275,7 @@ class Remote(Result):
     def construct_auth_session(self):
         outcome = get_credentials(self.library)
         if outcome[1]:
-            return self.get_downloader()(self.meta_file['download link'], outcome[0])
+            return self.get_downloader()(self, outcome[0])
         return None
 
 
@@ -287,6 +292,16 @@ class Paid(Remote):
     def __init__(self):
         super(Paid, self).__init__()
         self.bought = False
+
+    @property
+    def meta_file(self):
+        m = super(Paid, self).meta_file
+        m['bought'] = self.bought
+        return m
+
+    @meta_file.setter
+    def meta_file(self, value):
+        self._meta_file = value
 
     @property
     def site_name(self):
@@ -308,4 +323,3 @@ class ProSoundResult(Paid):
 
     def get_downloader(self):
         return Downloader.ProSoundDownloader
-
