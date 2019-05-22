@@ -1,6 +1,9 @@
 from PyQt5.QtCore import QObject, pyqtSignal
 from abc import abstractmethod
+from Soundexy.Functionality.useful_utils import Worker
 from Soundexy.Webscraping.Webscraping import WebScrapers
+from Soundexy.Webscraping.Authorization.Credentials import get_saved_credentials
+from Soundexy.Webscraping.Authorization.WebsiteAuth import ProSound
 from Soundexy.Indexing.LocalFileHandler import IndexSearch
 
 
@@ -48,6 +51,7 @@ class RemoteSearch(Search):
         self.url = ''
         self.amount_of_pages = 0
         self.start_page = 1
+        self.session = None
 
     @property
     @abstractmethod
@@ -75,7 +79,7 @@ class RemoteSearch(Search):
             while page_number <= amount_of_pages:
                 if self.canceled:
                     break
-                search = self.scraper_type(keywords, page_number, url)
+                search = self.scraper_type(keywords, page_number, url, session=self.session)
                 search.signals.sig_results.connect(self.emit_batch)
                 search.signals.sig_finished.connect(self.emit_finished)
                 self.threads.append(search)
@@ -142,6 +146,19 @@ class FreesoundSearch(FreeSearch):
 
 
 class ProSoundSearch(PaidSearch):
+    def set_session(self, session):
+        self.session = session
+        super(ProSoundSearch, self).scrape()
+
+    def scrape(self):
+        try:
+            credentials = get_saved_credentials('Pro Sound')
+            worker = Worker(ProSound, *credentials)
+            worker.signals.result.connect(self.set_session)
+            self.thread_pool.start(worker)
+        except KeyError:
+            super(ProSoundSearch, self).scrape()
+
     @property
     def scraper_type(self):
         return WebScrapers.ProSoundScraper

@@ -220,7 +220,6 @@ class ProSoundDownloader(AuthDownloader):
         fname = re.findall('filename="(.+)"', cd)
         if len(fname) == 0:
             return None
-        print(fname[0])
         return fname[0]
 
 

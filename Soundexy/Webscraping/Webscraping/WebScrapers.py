@@ -19,8 +19,9 @@ class ScraperSigs(QObject):
 
 
 class Scraper(QRunnable):
-    def __init__(self, keywords, page_number, url):
+    def __init__(self, keywords, page_number, url, session=None):
         super(Scraper, self).__init__()
+        self.session = session
         self.keywords = keywords
         self.signals = ScraperSigs()
         self.page_number = page_number
@@ -104,7 +105,7 @@ class ProSoundScraper(Scraper):
     @pyqtSlot()
     def run(self):
         if not self.canceled:
-            raw_json = get_with_headers(self.url + '&pg=' + str(self.page_number)).json()
+            raw_json = get_with_headers(self.url + '&pg=' + str(self.page_number), self.session).json()
             results = []
             for raw_result in self.get_results(raw_json):
                 if self.canceled:

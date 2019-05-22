@@ -188,14 +188,14 @@ class SearchResultsTable(QtWidgets.QTableView):
     def __init__(self):
         super(SearchResultsTable, self).__init__()
         self.row_order = {'File Name': 0, 'Title': 1, 'Description': 2, 'Duration': 3,
-                          'Library': 4, 'Author': 5, 'Id': 6, 'Available Locally': 7}
+                          'Library': 4, 'Author': 5, 'Id': 6, 'Available Locally': 7, 'Bought': 8}
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
         self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self)
         self.headers = sorted(self.row_order, key=self.row_order.get)
         self.searchResultsTableModel.headers = self.headers
         self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
-        self.searchResultsTableModel.setColumnCount(8)
+        self.searchResultsTableModel.setColumnCount(9)
         self.searchResultsTableModel.set_read_only_columns([self.get_column_index('Duration'),
                                                             self.get_column_index('Library'),
                                                             self.get_column_index('Available Locally'),
