@@ -292,11 +292,13 @@ class Paid(Remote):
     def __init__(self):
         super(Paid, self).__init__()
         self.bought = False
+        self.price = 0
 
     @property
     def meta_file(self):
         m = super(Paid, self).meta_file
         m['bought'] = self.bought
+        m['price'] = self.price
         return m
 
     @meta_file.setter

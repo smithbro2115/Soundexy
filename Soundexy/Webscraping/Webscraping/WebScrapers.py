@@ -130,6 +130,7 @@ class ProSoundScraper(Scraper):
         result.author = raw_result['artist']['name']
         result.link = raw_result['file']['waveform']
         result.original_id = raw_result['id']
+        result.price = int(raw_result['price'])
         result.bought = bool(raw_result['can_download'])
         result.id = 'prosound_' + str(raw_result['id'])
         return result
