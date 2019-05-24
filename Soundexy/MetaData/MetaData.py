@@ -70,6 +70,9 @@ class MutagenFile:
     def bitrate(file):
         return file.info.bitrate
 
+    def items(self):
+        return self.meta.items()
+
     def get_tag(self, tag, file):
         try:
             return file[tag][0]
@@ -107,6 +110,9 @@ class WavFile:
 
     def __getitem__(self, item):
         return self.meta[item]
+
+    def items(self):
+        return self.meta.items()
 
     @property
     def title(self):
