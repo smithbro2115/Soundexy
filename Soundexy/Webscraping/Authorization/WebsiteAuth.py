@@ -11,8 +11,7 @@ class LoginError(Exception):
 class AuthSession(QRunnable):
     def __init__(self, username, password):
         super(AuthSession, self).__init__()
-        self.headers = {'Referer': 'https://freesound.org/home/login/?next=/',
-                        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        self.headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                                       'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36'}
         self.login_data = {'username': username, 'password': password}
         self.download_canceled = False
@@ -45,6 +44,9 @@ class AuthSession(QRunnable):
     def get(self, url, **kwargs):
         return self.session.get(url, **kwargs)
 
+    def post(self, url, data, **kwargs):
+        return self.session.post(url, data, **kwargs)
+
     def get_content_disposition(self, r):
         return r.headers['Content-disposition']
 
@@ -53,6 +55,7 @@ class FreeSound(AuthSession):
         def __init__(self, username, password):
             super(FreeSound, self).__init__(username, password)
             self.url = 'https://freesound.org/home/login/?next=/'
+            self.headers['Referer'] = 'https://freesound.org/home/login/?next=/'
             self.token_id_form = ['csrfmiddlewaretoken', 'input', 'name']
             self.login()
             self.base_url = 'http://freesound.org'
