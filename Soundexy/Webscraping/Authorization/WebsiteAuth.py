@@ -44,8 +44,8 @@ class AuthSession(QRunnable):
     def get(self, url, **kwargs):
         return self.session.get(url, **kwargs)
 
-    def post(self, url, data, **kwargs):
-        return self.session.post(url, data, **kwargs)
+    def post(self, url, **kwargs):
+        return self.session.post(url, **kwargs)
 
     def get_content_disposition(self, r):
         return r.headers['Content-disposition']
