@@ -141,9 +141,9 @@ class Gui(GUI.Ui_MainWindow):
                                         """)
         self.metaArea.setStyleSheet("""QWidget{background-color: #232629; overflow-y}""")
         self.metaArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.metaTab.layout().insertWidget(2, self.download_button)
         self.metaTab.layout().insertWidget(1, self.buyButton)
-        self.buyButton.setHidden(False)
+        self.metaTab.layout().insertWidget(2, self.download_button)
+        self.buyButton.setHidden(True)
         self.buyButton.button.clicked.connect(lambda: self.buyButton.started())
         self.download_button.setHidden(True)
 
