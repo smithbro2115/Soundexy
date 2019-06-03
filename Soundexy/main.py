@@ -9,8 +9,8 @@ from Soundexy.Indexing import LocalFileHandler, SearchResults
 import traceback
 import os
 from Soundexy.Imaging.Wave import make_waveform
-from Soundexy.GUI.API.CustomPyQtWidgets import SearchResultsTable, DownloadButtonLocal, PlaylistTreeWidget, \
-    SearchCheckBoxContextMenu
+from Soundexy.GUI.API.CustomPyQtWidgets import SearchResultsTable, DownloadButton, PlaylistTreeWidget, \
+    SearchCheckBoxContextMenu, BuyButton
 from Soundexy.Indexing.Searches import LocalSearch, FreeSearch, PaidSearch
 from Soundexy.Functionality import useful_utils
 
@@ -77,7 +77,8 @@ class Gui(GUI.Ui_MainWindow):
         self.waveform_maker = None
         self.local_search = None
         self.remote_searches = []
-        self.download_button = DownloadButtonLocal()
+        self.download_button = DownloadButton()
+        self.buyButton = BuyButton()
         self.currently_downloading_results = {}
         self.indexer = LocalFileHandler.Indexer()
         self.converter = None
@@ -141,7 +142,9 @@ class Gui(GUI.Ui_MainWindow):
         self.metaArea.setStyleSheet("""QWidget{background-color: #232629; overflow-y}""")
         self.metaArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.metaTab.layout().insertWidget(2, self.download_button)
-        self.buyButton.setHidden(True)
+        self.metaTab.layout().insertWidget(1, self.buyButton)
+        self.buyButton.setHidden(False)
+        self.buyButton.button.clicked.connect(lambda: self.buyButton.started())
         self.download_button.setHidden(True)
 
     def double_clicked_row(self, signal):
@@ -251,7 +254,7 @@ class Gui(GUI.Ui_MainWindow):
         if result.downloading:
             self.make_download_button(result)
             self.download_button.set_progress(result.downloader.get_file_progress())
-            self.download_button.downloaded_started()
+            self.download_button.started()
         else:
             self.make_download_button(result)
         self.download_button.setHidden(False)
@@ -288,7 +291,7 @@ class Gui(GUI.Ui_MainWindow):
 
     def download_started(self, result_id):
         if self.current_result.id == result_id:
-            self.download_button.downloaded_started()
+            self.download_button.started()
 
     def download_done(self, new_result):
         if self.current_result == new_result:

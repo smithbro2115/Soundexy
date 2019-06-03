@@ -350,7 +350,7 @@
          <enum>QTabWidget::Triangular</enum>
         </property>
         <property name="currentIndex">
-         <number>1</number>
+         <number>0</number>
         </property>
         <property name="elideMode">
          <enum>Qt::ElideNone</enum>
@@ -404,16 +404,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="buyButton">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string>Buy</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QScrollArea" name="metaArea">
             <property name="widgetResizable">
              <bool>true</bool>
@@ -424,7 +414,7 @@
                <x>0</x>
                <y>0</y>
                <width>274</width>
-               <height>232</height>
+               <height>261</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_3">

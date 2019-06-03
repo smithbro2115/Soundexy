@@ -186,15 +186,11 @@ class Ui_MainWindow(object):
         self.metaAlbumImageLbl.setScaledContents(True)
         self.metaAlbumImageLbl.setObjectName("metaAlbumImageLbl")
         self.verticalLayout_2.addWidget(self.metaAlbumImageLbl)
-        self.buyButton = QtWidgets.QPushButton(self.metaTab)
-        self.buyButton.setEnabled(True)
-        self.buyButton.setObjectName("buyButton")
-        self.verticalLayout_2.addWidget(self.buyButton)
         self.metaArea = QtWidgets.QScrollArea(self.metaTab)
         self.metaArea.setWidgetResizable(True)
         self.metaArea.setObjectName("metaArea")
         self.metaAreaContents = QtWidgets.QWidget()
-        self.metaAreaContents.setGeometry(QtCore.QRect(0, 0, 274, 232))
+        self.metaAreaContents.setGeometry(QtCore.QRect(0, 0, 274, 261))
         self.metaAreaContents.setObjectName("metaAreaContents")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.metaAreaContents)
         self.verticalLayout_3.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
@@ -278,7 +274,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuPlayer.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.sidebar.setCurrentIndex(1)
+        self.sidebar.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -305,7 +301,6 @@ class Ui_MainWindow(object):
         self.pushButton_6.setText(_translate("MainWindow", "PushButton"))
         self.pushButton_5.setText(_translate("MainWindow", "PushButton"))
         self.pushButton_2.setText(_translate("MainWindow", "PushButton"))
-        self.buyButton.setText(_translate("MainWindow", "Buy"))
         self.sidebar.setTabText(self.sidebar.indexOf(self.metaTab), _translate("MainWindow", "Metadata"))
         self.playlistDeleteBtn.setText(_translate("MainWindow", "Delete"))
         self.playlistAddBtn.setText(_translate("MainWindow", "Add"))

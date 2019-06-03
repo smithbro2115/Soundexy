@@ -11,37 +11,12 @@ from Soundexy.GUI.DesignerFiles import loginDialog
 import qdarkstyle
 
 
-class RemoveButtonSigs(QtCore.QObject):
-    hover = pyqtSignal()
-    unhover = pyqtSignal()
-
-
-class DownloadButtonRemove(QtWidgets.QPushButton):
-    def __init__(self):
-        self.signals = RemoveButtonSigs()
-        super(DownloadButtonRemove, self).__init__()
-        font = QtGui.QFont("Segoe UI Symbol")
-        self.setFont(font)
-
-    def enterEvent(self, *args, **kwargs):
-        self.signals.hover.emit()
-        super(DownloadButtonRemove, self).enterEvent(*args, **kwargs)
-
-    def leaveEvent(self, *args, **kwargs):
-        self.signals.unhover.emit()
-        super(DownloadButtonRemove, self).leaveEvent(*args, **kwargs)
-
-
-class DownloadButtonSigs(QtCore.QObject):
-    delete = pyqtSignal()
-    cancel = pyqtSignal()
-
-
-class DownloadButtonLocal(QtWidgets.QWidget):
-    def __init__(self, parent=None):
-        super(DownloadButtonLocal, self).__init__(parent=parent)
-        self.current_result = None
-        self.signals = DownloadButtonSigs()
+class ProgressButton(QtWidgets.QWidget):
+    def __init__(self, parent=None, idle_text='Start', in_progress_text='Working', finished_text='Finished'):
+        super(ProgressButton, self).__init__(parent=parent)
+        self.idle_text = idle_text
+        self.in_progress_text = in_progress_text
+        self.finished_text = finished_text
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
@@ -49,14 +24,8 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.setLayout(layout)
         self.progress_bar = QtWidgets.QProgressBar()
         self.layout().addWidget(self.progress_bar)
-        self.delete_button = DownloadButtonRemove()
-        self.delete_button.setMinimumWidth(27)
-        self.delete_button.setText(' X ')
-        self.delete_button.setStyleSheet('background-color: #00ffff00')
-        self.layout().addWidget(self.delete_button)
-        self.delete_button.setHidden(True)
         self.button = QtWidgets.QPushButton()
-        self.button.setText('Download')
+        self.button.setText(idle_text)
         self.button.setStyleSheet('background-color: #00ffff00')
         self.button.setFocusPolicy(QtCore.Qt.NoFocus)
         progress_layout = QtWidgets.QHBoxLayout()
@@ -66,41 +35,19 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.animation = None
         self.progress_bar.layout().addWidget(self.button)
 
-    def downloaded_started(self):
-        self.button.setText('Downloading')
+    def started(self):
+        self.button.setText(self.in_progress_text)
         self.button.setEnabled(False)
-        self.delete_button.setHidden(False)
-        self.remove_button_downloading_mode()
 
     def done(self):
         self.progress_bar.setValue(100)
         self.button.setEnabled(False)
-        self.button.setText('Downloaded')
-        self.delete_button.setHidden(False)
-        self.remove_button_downloaded_mode()
-
-    def remove_button_downloaded_mode(self):
-        self.delete_button.setText(' ✓ ')
-        self.delete_button.signals.hover.connect(lambda: self.delete_button.setText(' X '))
-        self.delete_button.signals.unhover.connect(lambda: self.delete_button.setText(' ✓ '))
-        pyqt_utils.disconnect_all_signals(self.delete_button.clicked)
-        self.delete_button.clicked.connect(lambda: self.signals.delete.emit())
-
-    def remove_button_downloading_mode(self):
-        pyqt_utils.disconnect_all_signals(self.delete_button.signals.hover, self.delete_button.signals.unhover,
-                                          self.delete_button.clicked)
-        self.delete_button.clicked.connect(lambda: self.signals.cancel.emit())
+        self.button.setText(self.finished_text)
 
     def reset(self):
         self.progress_bar.setValue(0)
         self.button.setEnabled(True)
-        self.delete_button.setHidden(True)
-        self.button.setText('Download')
-        self.delete_button.setText(' X ')
-
-    def set_delete_button_function(self, function):
-        pyqt_utils.disconnect_all_signals(self.delete_button.clicked)
-        self.delete_button.clicked.connect(function)
+        self.button.setText(self.idle_text)
 
     def set_button_function(self, function):
         pyqt_utils.disconnect_all_signals(self.button.clicked)
@@ -115,6 +62,104 @@ class DownloadButtonLocal(QtWidgets.QWidget):
         self.animation.setStartValue(self.progress_bar.value())
         self.animation.setEndValue(value)
         self.animation.start()
+
+
+class CancelButtonSigs(QtCore.QObject):
+    delete = pyqtSignal()
+    cancel = pyqtSignal()
+
+
+class ProgressButtonWithCancel(ProgressButton):
+    def __init__(self, parent=None, idle_text='Start', in_progress_text='Working', finished_text='Finished'):
+        super(ProgressButtonWithCancel, self).__init__(parent=parent, idle_text=idle_text,
+                                                       in_progress_text=in_progress_text, finished_text=finished_text)
+        self.signals = CancelButtonSigs()
+        self.cancel_button = ButtonRemove()
+        self.cancel_button.setMinimumWidth(27)
+        self.cancel_button.setText(' X ')
+        self.cancel_button.setStyleSheet('background-color: #00ffff00')
+        self.layout().addWidget(self.cancel_button)
+        self.cancel_is_also_remove = False
+        self.cancel_button.setHidden(True)
+
+    def started(self):
+        super(ProgressButtonWithCancel, self).started()
+        self.cancel_button.setHidden(False)
+        self.remove_button_in_progress_mode()
+
+    def done(self):
+        super(ProgressButtonWithCancel, self).done()
+        self.cancel_button.setHidden(not self.cancel_is_also_remove)
+        self.remove_button_finished_mode()
+
+    def reset(self):
+        super(ProgressButtonWithCancel, self).reset()
+        self.cancel_button.setHidden(True)
+        self.cancel_button.setText(' X ')
+
+    def remove_button_finished_mode(self):
+        self.cancel_button.setText(' ✓ ')
+        self.cancel_button.signals.hover.connect(lambda: self.cancel_button.setText(' X '))
+        self.cancel_button.signals.unhover.connect(lambda: self.cancel_button.setText(' ✓ '))
+        pyqt_utils.disconnect_all_signals(self.cancel_button.clicked)
+        self.cancel_button.clicked.connect(lambda: self.signals.delete.emit())
+
+    def remove_button_in_progress_mode(self):
+        pyqt_utils.disconnect_all_signals(self.cancel_button.signals.hover, self.cancel_button.signals.unhover,
+                                          self.cancel_button.clicked)
+        self.cancel_button.clicked.connect(lambda: self.signals.cancel.emit())
+
+    def set_remove_button_function(self, function):
+        pyqt_utils.disconnect_all_signals(self.cancel_button.clicked)
+        self.cancel_button.clicked.connect(function)
+
+
+class RemoveButtonSigs(QtCore.QObject):
+    hover = pyqtSignal()
+    unhover = pyqtSignal()
+
+
+class ButtonRemove(QtWidgets.QPushButton):
+    def __init__(self):
+        self.signals = RemoveButtonSigs()
+        super(ButtonRemove, self).__init__()
+        font = QtGui.QFont("Segoe UI Symbol")
+        self.setFont(font)
+
+    def enterEvent(self, *args, **kwargs):
+        self.signals.hover.emit()
+        super(ButtonRemove, self).enterEvent(*args, **kwargs)
+
+    def leaveEvent(self, *args, **kwargs):
+        self.signals.unhover.emit()
+        super(ButtonRemove, self).leaveEvent(*args, **kwargs)
+
+
+class DownloadButton(ProgressButtonWithCancel):
+    def __init__(self, parent=None):
+        super(DownloadButton, self).__init__(parent=parent, idle_text='Download', in_progress_text='Downloading',
+                                             finished_text='Downloaded')
+        self.cancel_is_also_remove = True
+
+
+class BuyButton(ProgressButtonWithCancel):
+    def __init__(self, parent=None):
+        super(BuyButton, self).__init__(parent=parent, idle_text='Buy', in_progress_text='Buying',
+                                        finished_text='Bought')
+
+    def started(self):
+        super(BuyButton, self).started()
+        self.progress_bar.setMaximum(0)
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setValue(0)
+
+    def done(self):
+        super(BuyButton, self).done()
+        self.progress_bar.setMaximum(10)
+
+    def reset(self):
+        super(BuyButton, self).reset()
+        self.progress_bar.setMaximum(10)
 
 
 class SearchResultTableHeaderContextMenu(QtWidgets.QMenu):
