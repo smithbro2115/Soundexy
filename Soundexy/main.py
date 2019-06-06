@@ -15,7 +15,6 @@ from Soundexy.Indexing.Searches import LocalSearch, FreeSearch, PaidSearch
 from Soundexy.Functionality import useful_utils
 
 
-# TODO Make the playlist functionality (it would be really cool if we can add remote sounds to a playlist)
 # TODO Make marking system
 
 
@@ -159,8 +158,14 @@ class Gui(GUI.Ui_MainWindow):
         if isinstance(result, SearchResults.Local):
             self.local_sound_init(result)
             self.add_album_image_to_player(result.album_image)
-        elif isinstance(result, SearchResults.Remote or SearchResults.Paid):
+        elif isinstance(result, SearchResults.Remote) and not isinstance(result, SearchResults.Paid):
             self.remote_sound_init(result)
+        elif isinstance(result, SearchResults.Paid):
+            self.paid_sound_init(result)
+
+    def paid_sound_init(self, result: SearchResults.Paid):
+        self.add_buy_button(result)
+        self.remote_sound_init(result)
 
     def local_sound_init(self, result):
         self.download_button.setHidden(True)
@@ -248,15 +253,16 @@ class Gui(GUI.Ui_MainWindow):
     def single_clicked_playlist_result(self, result):
         self.single_clicked_result = result
 
+    def add_buy_button(self, result):
+        self.buyButton.setHidden(True)
+        self.buyButton.reset()
+        self.make_buy_button(result)
+        self.buyButton.setHidden(False)
+
     def add_download_button(self, result):
         self.download_button.setHidden(True)
         self.download_button.reset()
-        if result.downloading:
-            self.make_download_button(result)
-            self.download_button.set_progress(result.downloader.get_file_progress())
-            self.download_button.started()
-        else:
-            self.make_download_button(result)
+        self.make_download_button(result)
         self.download_button.setHidden(False)
 
     def make_download_button(self, result):
@@ -271,6 +277,18 @@ class Gui(GUI.Ui_MainWindow):
         self.download_button.signals.delete.connect(lambda: result.delete_download(self.download_deleted))
         if result.downloaded:
             self.download_button.done()
+        if result.downloading:
+            self.download_button.set_progress(result.downloader.get_file_progress())
+            self.download_button.started()
+
+    def make_buy_button(self, result):
+        self.buyButton.set_button_function(lambda: result.buy())
+        pyqt_utils.disconnect_all_signals(self.buyButton.signals.cancel)
+        self.buyButton.signals.cancel.connect(lambda: result.cancel_buy())
+        if result.bought:
+            self.buyButton.done()
+        if result.buying:
+            self.buyButton.started()
 
     def download_deleted(self):
         self.reset_waveform()
@@ -278,7 +296,9 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.reset()
         self.set_current_time()
         self.download_button.reset()
+        self.buyButton.reset()
         self.download_button.setVisible(False)
+        self.buyButton.setVisible(False)
         self.searchResultsTable.replace_result(self.current_result, self.current_result)
         self.current_result = None
 

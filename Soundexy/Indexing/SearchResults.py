@@ -292,6 +292,7 @@ class Paid(Remote):
     def __init__(self):
         super(Paid, self).__init__()
         self.bought = False
+        self.buying = False
         self.price = 0
 
     @property

@@ -11,8 +11,9 @@ class LoginError(Exception):
 class AuthSession(QRunnable):
     def __init__(self, username, password):
         super(AuthSession, self).__init__()
-        self.headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                                      'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36'}
+        self.headers = {
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/74.0.3729.169 Safari/537.36'}
         self.login_data = {'username': username, 'password': password}
         self.download_canceled = False
         self.url = ''
@@ -79,8 +80,9 @@ class ProSound(AuthSession):
         self.base_url = 'https://download.prosoundeffects.com/ajax.php'
 
     def find_sound_url(self, result):
-        key_url = f"https://download.prosoundeffects.com/download.php?track_id={result.original_id}&type=wav"
-        return self.session.head(key_url, headers=self.headers).headers['location']
+        key_url = f"https://download.prosoundeffects.com/download.php"
+        params = {'track_id': result.original_id, 'type': 'wav', 'source': 'details'}
+        return self.session.get(key_url, params=params, headers=self.headers, allow_redirects=False).headers['location']
 
     def login(self):
         with requests.Session() as s:
