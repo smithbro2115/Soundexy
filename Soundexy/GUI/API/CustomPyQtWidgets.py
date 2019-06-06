@@ -156,6 +156,7 @@ class BuyButton(ProgressButtonWithCancel):
     def done(self):
         super(BuyButton, self).done()
         self.progress_bar.setMaximum(10)
+        self.progress_bar.setValue(10)
 
     def reset(self):
         super(BuyButton, self).reset()
@@ -201,7 +202,6 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
             return base_flags
 
     def setData(self, QModelIndex, Any, role=None):
-        print('test')
         row_id = self.get_id_from_row(QModelIndex.row())
         meta_label = self.horizontalHeaderItem(QModelIndex.column()).text().lower()
         if self.change_result_meta(self.table_view.current_results[row_id], {meta_label: Any}):
