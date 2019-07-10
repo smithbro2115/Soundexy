@@ -93,6 +93,52 @@ class FreesoundScraper(Scraper):
         return result
 
 
+class SoundDogsScraper(Scraper):
+    @staticmethod
+    def get_results(raw_html):
+        try:
+            html = BeautifulSoup(raw_html, 'html.parser')
+            return html.find_all('div', {'class': 'sample_player_small'})
+        except Exception:
+            print("Something didn't work!")
+
+    @pyqtSlot()
+    def run(self):
+        if not self.canceled:
+            raw_html = simple_get(self.url + '&page=' + str(self.page_number))
+            results = []
+            for raw_result in self.get_results(raw_html):
+                if self.canceled:
+                    break
+                if raw_result.has_attr('id'):
+                    if self.check_attribution(raw_result):
+                        result = self.make_result_from_raw(raw_result)
+                        existing_result = result.check_if_already_downloaded()
+                        if existing_result:
+                            results.append(existing_result)
+                        else:
+                            results.append(result)
+            self.signals.sig_results.emit(results)
+        self.signals.sig_finished.emit()
+
+    def make_result_from_raw(self, raw_result):
+        result = SearchResults.FreesoundResult()
+        result.preview = 'https://freesound.org' + \
+                         str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
+        result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
+                             .find('a', {'class': 'title'}).get('title')))
+        result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text))
+        result.description = raw_result.find('div', {'class': 'sound_description'}).find('p').text
+        result.library = 'Freesound'
+        result.author = raw_result.find('a', {'class': 'user'}).text
+        result.link = 'https://freesound.org' + \
+                      str(raw_result.find('div', {'class': 'sound_filename'})
+                          .find('a', {'class': 'title'}).get('href'))
+        result.original_id = raw_result.get('id')
+        result.id = 'freesound_' + str(result.original_id)
+        return result
+
+
 class ProSoundScraper(Scraper):
     @staticmethod
     def get_results(json):
