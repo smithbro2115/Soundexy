@@ -27,7 +27,7 @@ class Gui(GUI.Ui_MainWindow):
         self.local_search_thread_pool = QThreadPool()
         self.local_search_thread_pool.setMaxThreadCount(1)
         self.play_sound_thread_pool.setMaxThreadCount(1)
-        self.remote_search_thread_pool.setMaxThreadCount(4)
+        self.remote_search_thread_pool.setMaxThreadCount(1)
         self.index_thread_pool = QThreadPool()
         self.index_thread_pool.setMaxThreadCount(1)
         self.current_downloader = None

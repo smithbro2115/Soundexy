@@ -1,11 +1,17 @@
 from Soundexy.Webscraping.Webscraping.WebScraperRequester import simple_get, get_with_headers
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, SoupStrainer
+import timeit
 from math import ceil
 from Soundexy.Indexing import SearchResults
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 
 
 # TODO add the rest of the websites
+
+
+class TestObject:
+    pass
+
 
 class WebsiteSigs(QObject):
     sig_amount_of_pages = pyqtSignal(int)
@@ -97,10 +103,13 @@ class SoundDogsScraper(Scraper):
     @staticmethod
     def get_results(raw_html):
         try:
-            html = BeautifulSoup(raw_html, 'html.parser')
-            return html.find_all('div', {'class': 'sample_player_small'})
-        except Exception:
-            print("Something didn't work!")
+            print('first')
+            strainer = SoupStrainer('table', attrs={'id': 'searchResultsTable'})
+            html = BeautifulSoup(raw_html, 'lxml', parse_only=strainer)
+            table = html.find_all('table', {'id': 'searchResultsTable'})
+            return table[0].find('tbody').find_all('tr')
+        except Exception as e:
+            print("Something didn't work!  " + str(e))
 
     @pyqtSlot()
     def run(self):
@@ -110,32 +119,34 @@ class SoundDogsScraper(Scraper):
             for raw_result in self.get_results(raw_html):
                 if self.canceled:
                     break
-                if raw_result.has_attr('id'):
-                    if self.check_attribution(raw_result):
-                        result = self.make_result_from_raw(raw_result)
-                        existing_result = result.check_if_already_downloaded()
-                        if existing_result:
-                            results.append(existing_result)
-                        else:
-                            results.append(result)
-            self.signals.sig_results.emit(results)
+                result = self.make_result_from_raw(raw_result)
+                existing_result = result.check_if_already_downloaded()
+                if existing_result:
+                    results.append(existing_result)
+                else:
+                    results.append(result)
+                if len(results) >= 15:
+                    self.signals.sig_results.emit(results)
+                    results = []
+            if results:
+                self.signals.sig_results.emit(results)
         self.signals.sig_finished.emit()
 
     def make_result_from_raw(self, raw_result):
-        result = SearchResults.FreesoundResult()
-        result.preview = 'https://freesound.org' + \
-                         str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
-        result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
-                             .find('a', {'class': 'title'}).get('title')))
-        result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text))
-        result.description = raw_result.find('div', {'class': 'sound_description'}).find('p').text
-        result.library = 'Freesound'
-        result.author = raw_result.find('a', {'class': 'user'}).text
-        result.link = 'https://freesound.org' + \
-                      str(raw_result.find('div', {'class': 'sound_filename'})
-                          .find('a', {'class': 'title'}).get('href'))
-        result.original_id = raw_result.get('id')
-        result.id = 'freesound_' + str(result.original_id)
+        result = SearchResults.SoundDogsResult()
+        result.preview = 'https://sounddogs.com' + \
+                         str(raw_result.find('td', {'class': 'preview'}).find('a').get('href'))
+        result.duration = ceil(float(raw_result.find('td', {'class': 'duration'}).text.strip())*1000)
+        result.description = raw_result.find('td', {'class': 'description'}).text.strip()
+        result.set_title(result.description)
+        result.channels = raw_result.find('td', {'class': 'channels'}).text.strip()
+        result.library = 'Sounddogs'
+        result.price = int(float(raw_result.find('th', {'class': 'price'}).find('span').text.strip().replace('$', '')
+                                 )*100)
+        result.link = 'https://sounddogs.com' + \
+                      str(raw_result.find('td', {'class': 'description'}).find_all('a')[1].get('href'))
+        result.original_id = (str(raw_result.find('td', {'class': 'preview'}).find('a').text.strip()))
+        result.id = 'sounddogs_' + str(result.original_id)
         return result
 
 
@@ -248,3 +259,39 @@ class ProSoundPageAmountScraper(PageAmountScraper):
         self.signals.sig_amount_of_pages.emit(self.amount_of_pages)
         self.signals.sig_url.emit(self.url)
         self.signals.sig_finished.emit()
+
+
+class SoundDogsPageAmountScraper(PageAmountScraper):
+    def make_url(self):
+        url = 'https://sounddogs.com/search?keywords='
+        for index, keyword in enumerate(self.keywords):
+            if index > 0:
+                url = url + '+' + keyword
+            else:
+                url = url + keyword
+        return url
+
+    def get_amount_of_pages(self):
+        raw_html = simple_get(self.url)
+        strainer = SoupStrainer('span', attrs={'class': 'quantity'})
+        soup = BeautifulSoup(raw_html, 'lxml', parse_only=strainer)
+        return ceil(int(soup.find('span', {'class': 'quantity'}).text.replace('(', '').replace(')', '').replace(',', '')
+                        )/100)
+
+    @pyqtSlot()
+    def run(self):
+        self.url = self.make_url()
+        self.amount_of_pages = self.get_amount_of_pages()
+        self.signals.sig_amount_of_pages.emit(self.amount_of_pages)
+        self.signals.sig_url.emit(self.url)
+        self.signals.sig_finished.emit()
+
+
+# thread_pool = QThreadPool()
+# scraper = SoundDogsPageAmountScraper(['gobblygooo'])
+# scraper.signals.sig_amount_of_pages.connect(print)
+# thread_pool.start(scraper)
+#
+# import time
+# while thread_pool.activeThreadCount() > 0:
+#     time.sleep(.5)

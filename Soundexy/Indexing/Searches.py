@@ -145,6 +145,16 @@ class FreesoundSearch(FreeSearch):
         return WebScrapers.FreesoundPageAmountScraper
 
 
+class SoundDogsSearch(PaidSearch):
+    @property
+    def scraper_type(self):
+        return WebScrapers.SoundDogsScraper
+
+    @property
+    def page_scraper(self):
+        return WebScrapers.SoundDogsPageAmountScraper
+
+
 class ProSoundSearch(PaidSearch):
     def set_session(self, session):
         self.session = session

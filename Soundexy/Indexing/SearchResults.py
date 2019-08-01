@@ -326,3 +326,12 @@ class ProSoundResult(Paid):
 
     def get_downloader(self):
         return Downloader.ProSoundDownloader
+
+
+class SoundDogsResult(Paid):
+    @property
+    def site_name(self):
+        return 'Sound Dogs'
+
+    def get_downloader(self):
+        return Downloader.ProSoundDownloader
