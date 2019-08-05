@@ -1,6 +1,6 @@
 from Soundexy.Webscraping.Webscraping.WebScraperRequester import simple_get, get_with_headers
 from bs4 import BeautifulSoup, SoupStrainer
-import timeit
+from lxml import html as lxml_html
 from math import ceil
 from Soundexy.Indexing import SearchResults
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
@@ -103,11 +103,9 @@ class SoundDogsScraper(Scraper):
     @staticmethod
     def get_results(raw_html):
         try:
-            print('first')
-            strainer = SoupStrainer('table', attrs={'id': 'searchResultsTable'})
-            html = BeautifulSoup(raw_html, 'lxml', parse_only=strainer)
-            table = html.find_all('table', {'id': 'searchResultsTable'})
-            return table[0].find('tbody').find_all('tr')
+            root = lxml_html.fromstring(raw_html)
+            table = root.xpath('//table[@id="searchResultsTable"]')
+            return table[0].xpath('//tbody/tr')
         except Exception as e:
             print("Something didn't work!  " + str(e))
 
@@ -125,27 +123,24 @@ class SoundDogsScraper(Scraper):
                     results.append(existing_result)
                 else:
                     results.append(result)
-                if len(results) >= 15:
-                    self.signals.sig_results.emit(results)
-                    results = []
-            if results:
-                self.signals.sig_results.emit(results)
+            self.signals.sig_results.emit(results)
         self.signals.sig_finished.emit()
 
     def make_result_from_raw(self, raw_result):
         result = SearchResults.SoundDogsResult()
         result.preview = 'https://sounddogs.com' + \
-                         str(raw_result.find('td', {'class': 'preview'}).find('a').get('href'))
-        result.duration = ceil(float(raw_result.find('td', {'class': 'duration'}).text.strip())*1000)
-        result.description = raw_result.find('td', {'class': 'description'}).text.strip()
+                         str(raw_result.xpath("td[contains(@class, 'preview')]/a")[0].get('href'))
+        result.duration = ceil(float(raw_result.xpath("td[contains(@class, 'duration')]/text()")[0].strip()
+                                     .replace(',', ''))*1000)
+        result.description = raw_result.xpath("td[contains(@class, 'description')]/a")[0].text.strip()
         result.set_title(result.description)
-        result.channels = raw_result.find('td', {'class': 'channels'}).text.strip()
+        result.channels = raw_result.xpath("td[contains(@class, 'channels')]")[0].text.strip()
         result.library = 'Sounddogs'
-        result.price = int(float(raw_result.find('th', {'class': 'price'}).find('span').text.strip().replace('$', '')
+        result.price = int(float(raw_result.xpath("th[contains(@class, 'price')]/span")[0].text.strip().replace('$', '')
                                  )*100)
         result.link = 'https://sounddogs.com' + \
-                      str(raw_result.find('td', {'class': 'description'}).find_all('a')[1].get('href'))
-        result.original_id = (str(raw_result.find('td', {'class': 'preview'}).find('a').text.strip()))
+                      str(raw_result.xpath("td[contains(@class, 'description')]/a")[1].get('href'))
+        result.original_id = (str(raw_result.xpath("td[contains(@class, 'preview')]/a")[0].text.strip()))
         result.id = 'sounddogs_' + str(result.original_id)
         return result
 
@@ -273,10 +268,8 @@ class SoundDogsPageAmountScraper(PageAmountScraper):
 
     def get_amount_of_pages(self):
         raw_html = simple_get(self.url)
-        strainer = SoupStrainer('span', attrs={'class': 'quantity'})
-        soup = BeautifulSoup(raw_html, 'lxml', parse_only=strainer)
-        return ceil(int(soup.find('span', {'class': 'quantity'}).text.replace('(', '').replace(')', '').replace(',', '')
-                        )/100)
+        root = lxml_html.fromstring(raw_html)
+        return ceil(int(root.xpath('//span[@class="quantity"]/text()')[0].replace(',', ''))/30)
 
     @pyqtSlot()
     def run(self):
