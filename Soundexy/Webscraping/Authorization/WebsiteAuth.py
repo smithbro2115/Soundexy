@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from PyQt5.QtCore import QRunnable
 import base64
+from lxml import html as lxml_html
 
 
 class LoginError(Exception):
@@ -112,9 +113,7 @@ class SoundDogs(AuthSession):
         with requests.Session() as s:
             self.session = s
             r = s.post(self.url, self.login_data, headers=self.headers)
-            try:
-                if r.json()['content']['loginFailed']:
+            html = lxml_html.fromstring(r.content)
+            if len(html.xpath('//font')) > 0:
                     raise LoginError('Incorrect Credentials')
-            except KeyError:
-                pass
             self.session = s
