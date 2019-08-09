@@ -184,11 +184,11 @@ class Gui(GUI.Ui_MainWindow):
             self.new_sound_meta(result)
             self.current_result = result
             try:
-                self.pixel_time_conversion_rate = self.waveform.maximum() / result.duration
+                self.pixel_time_conversion_rate = self.waveform.maximum() / result.precise_duration
             except ZeroDivisionError:
                 self.show_error("This sound can't be played because it has no duration")
             else:
-                self.audio_player.preload(result.duration, self.pixel_time_conversion_rate)
+                self.audio_player.preload(result.precise_duration, self.pixel_time_conversion_rate)
                 self.new_sound_waveform(result)
                 self.current_downloader = self.current_result.download_preview(self.cache_thread_pool,
                                                                                self.current_downloader,

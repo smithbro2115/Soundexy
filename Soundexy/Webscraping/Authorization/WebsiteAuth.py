@@ -94,3 +94,27 @@ class ProSound(AuthSession):
             except KeyError:
                 pass
             self.session = s
+
+
+class SoundDogs(AuthSession):
+    def __init__(self, username, password):
+        super(SoundDogs, self).__init__(username, password)
+        self.url = "https://www.sounddogs.com/signin/login"
+        self.login_data = {'email': username, 'password': password}
+        self.login()
+
+    def find_sound_url(self, result):
+        key_url = f"https://download.prosoundeffects.com/download.php"
+        params = {'track_id': result.original_id, 'type': 'wav', 'source': 'details'}
+        return self.session.get(key_url, params=params, headers=self.headers, allow_redirects=False).headers['location']
+
+    def login(self):
+        with requests.Session() as s:
+            self.session = s
+            r = s.post(self.url, self.login_data, headers=self.headers)
+            try:
+                if r.json()['content']['loginFailed']:
+                    raise LoginError('Incorrect Credentials')
+            except KeyError:
+                pass
+            self.session = s

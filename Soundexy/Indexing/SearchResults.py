@@ -28,6 +28,10 @@ class Result:
         self.index_file_name = ''
 
     @property
+    def precise_duration(self):
+        return self.duration
+
+    @property
     def meta_file(self):
         return self._meta_file
 
@@ -329,9 +333,28 @@ class ProSoundResult(Paid):
 
 
 class SoundDogsResult(Paid):
+    def __init__(self):
+        super(SoundDogsResult, self).__init__()
+        self.got_true_duration = False
+        self._precise_duration = 0
+
+    @property
+    def precise_duration(self):
+        if not self.got_true_duration:
+            self._precise_duration = self.get_true_duration()
+        return self._precise_duration
+
+    @precise_duration.setter
+    def precise_duration(self, value):
+        self._precise_duration = value
+
     @property
     def site_name(self):
         return 'Sound Dogs'
+
+    def get_true_duration(self):
+        self.got_true_duration = True
+        return Downloader.get_sound_dogs_true_duration(self.original_id)
 
     def get_downloader(self):
         return Downloader.ProSoundDownloader

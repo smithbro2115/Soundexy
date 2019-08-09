@@ -164,6 +164,15 @@ class PreviewDownloader(Downloader):
             self.remove(file_path)
 
 
+class SoundDogsPreviewDownloader(PreviewDownloader):
+    @pyqtSlot()
+    def run(self):
+
+        super(SoundDogsPreviewDownloader, self).run()
+
+
+
+
 class AuthDownloader(Downloader):
     def __init__(self, result, credentials):
         super(AuthDownloader, self).__init__('')
@@ -223,6 +232,34 @@ class ProSoundDownloader(AuthDownloader):
         return fname[0]
 
 
+class SoundDogsDownloader(AuthDownloader):
+    def run(self):
+        try:
+            self.session = WebsiteAuth.ProSound(self.username, self.password)
+            super(SoundDogsDownloader, self).run()
+        except WebsiteAuth.LoginError as e:
+            self.signals.wrong_credentials.emit(str(e))
+
+    @property
+    def site_name(self):
+        return 'Pro Sound'
+
+    def get_file_size(self, headers):
+        return headers['Content-Length']
+
+    def get_filename(self, r):
+        try:
+            cd = self.session.get_content_disposition(r)
+        except KeyError:
+            raise NotOwnedError('You do not own this sound!')
+        if not cd:
+            return None
+        fname = re.findall('filename="(.+)"', cd)
+        if len(fname) == 0:
+            return None
+        return fname[0]
+
+
 def freesound_download(threadpool, meta_file, username, password, done_function, progress_function):
     auth_s = WebsiteAuth.FreeSound(username, password)
     downloader = Downloader(auth_s.get_sound_link(meta_file['download link']))
@@ -234,6 +271,11 @@ def freesound_download(threadpool, meta_file, username, password, done_function,
 
 def get_title_from_url(url):
     return url[url[:-2].rfind('/') + 1:]
+
+
+def get_sound_dogs_true_duration(track_id):
+    r = requests.get(f"https://www.sounddogs.com/mediaPlayer/get_sound_channel_to_by_id/{track_id}")
+    return r.json()['sound']['duration']
 
 
 def pro_sound_get_preview_auth(track_id):

@@ -1,5 +1,5 @@
 from Soundexy.Webscraping.Webscraping.WebScraperRequester import simple_get, get_with_headers
-from bs4 import BeautifulSoup, SoupStrainer
+from bs4 import BeautifulSoup
 from lxml import html as lxml_html
 from math import ceil
 from Soundexy.Indexing import SearchResults
@@ -140,7 +140,7 @@ class SoundDogsScraper(Scraper):
                                  )*100)
         result.link = 'https://sounddogs.com' + \
                       str(raw_result.xpath("td[contains(@class, 'description')]/a")[1].get('href'))
-        result.original_id = (str(raw_result.xpath("td[contains(@class, 'preview')]/a")[0].text.strip()))
+        result.original_id = (str(raw_result.get('id').strip().replace("currentMediaTr_", "")))
         result.id = 'sounddogs_' + str(result.original_id)
         return result
 
