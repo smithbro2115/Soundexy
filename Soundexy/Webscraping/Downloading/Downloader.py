@@ -40,6 +40,7 @@ class Downloader(QRunnable):
             return None
         response = self.session.get(self.url, stream=True)
         name = self.check_filename(response)
+        print(name)
         if name:
             for root, dirs, files in os.walk(self.download_path):
                 if name in files:
@@ -92,7 +93,7 @@ class Downloader(QRunnable):
             pass
 
     def get_file_progress(self):
-        if not self.file_size == -1:
+        if not self.file_size == 0:
             return 100*(self.amount_downloaded/int(self.file_size))
         else:
             return -1
@@ -167,10 +168,7 @@ class PreviewDownloader(Downloader):
 class SoundDogsPreviewDownloader(PreviewDownloader):
     @pyqtSlot()
     def run(self):
-
         super(SoundDogsPreviewDownloader, self).run()
-
-
 
 
 class AuthDownloader(Downloader):
@@ -233,19 +231,26 @@ class ProSoundDownloader(AuthDownloader):
 
 
 class SoundDogsDownloader(AuthDownloader):
+    @pyqtSlot()
     def run(self):
         try:
-            self.session = WebsiteAuth.ProSound(self.username, self.password)
+            self.session = WebsiteAuth.SoundDogs(self.username, self.password)
             super(SoundDogsDownloader, self).run()
         except WebsiteAuth.LoginError as e:
             self.signals.wrong_credentials.emit(str(e))
 
     @property
     def site_name(self):
-        return 'Pro Sound'
+        return 'Sound Dogs'
 
     def get_file_size(self, headers):
         return headers['Content-Length']
+
+    def get_download_path(self):
+        try:
+            return self.session.get_sound_link(self.result)
+        except TypeError:
+            self.signals.error.emit('You do not own this sound!')
 
     def get_filename(self, r):
         try:
@@ -254,10 +259,10 @@ class SoundDogsDownloader(AuthDownloader):
             raise NotOwnedError('You do not own this sound!')
         if not cd:
             return None
-        fname = re.findall('filename="(.+)"', cd)
+        fname = cd[29:]
         if len(fname) == 0:
             return None
-        return fname[0]
+        return fname
 
 
 def freesound_download(threadpool, meta_file, username, password, done_function, progress_function):
