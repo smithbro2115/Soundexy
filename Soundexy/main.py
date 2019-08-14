@@ -238,8 +238,8 @@ class Gui(GUI.Ui_MainWindow):
 
     def checked_if_bought(self, result):
         if result.bought:
-            self.bought_sound(result)
             self.buyButton.done()
+            self.bought_sound(result)
 
     @staticmethod
     def clear_cache():
@@ -291,9 +291,26 @@ class Gui(GUI.Ui_MainWindow):
 
     def bought_sound(self, result):
         self.searchResultsTable.replace_result(result, result)
+        self.buyButton.button.setText('Bought')
+
+    def buy_sound(self, result):
+        result.buy(self.buying_thread_pool, self.buy_error, self.buy_cancel, self.buy_started, self.buy_finished)
+
+    def buy_error(self, msg):
+        self.buy_cancel()
+        self.show_error(msg)
+
+    def buy_cancel(self):
+        self.buyButton.reset()
+
+    def buy_started(self):
+        self.buyButton.started()
+
+    def buy_finished(self):
+        self.buyButton.done()
 
     def make_buy_button(self, result):
-        self.buyButton.set_button_function(lambda: result.buy(self.buying_thread_pool, self.show_error))
+        self.buyButton.set_button_function(lambda: self.buy_sound(result))
         pyqt_utils.disconnect_all_signals(self.buyButton.signals.cancel)
         self.buyButton.signals.cancel.connect(lambda: result.cancel_buy())
         if result.bought:

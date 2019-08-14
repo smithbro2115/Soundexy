@@ -16,12 +16,11 @@ class Buyer(QRunnable):
         super(Buyer, self).__init__()
         self.signals = BuyerSigs()
         self.sound_id = sound_id
-        self.error = False
+        self.error = None
         try:
             self.session = self.get_session_type()(username, password)
         except WebsiteAuth.LoginError as e:
-            self.signals.error.emit(str(e))
-            self.error = True
+            self.error = e
         else:
             self.headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                                           'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36'}
@@ -45,6 +44,8 @@ class SoundDogsBuyer(Buyer):
         if not self.error:
             self.add_to_cart(self.sound_id)
             self.signals.finished.emit()
+        else:
+            self.signals.error.emit(str(self.error))
 
     def add_to_cart(self, sound_id):
         url = f"https://www.sounddogs.com/basket/select/Sound/{sound_id}"

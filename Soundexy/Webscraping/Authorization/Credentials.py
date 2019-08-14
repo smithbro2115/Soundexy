@@ -23,6 +23,7 @@ def get_saved_credentials(site_name):
 
 def save_credentials(user, password, site):
     config = configparser.ConfigParser()
+    config.read(downloader_config_path)
     config[site] = {}
     config[site]['User'] = user
     config[site]['Password'] = encrypt(password)

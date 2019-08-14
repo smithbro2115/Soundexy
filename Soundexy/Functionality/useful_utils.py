@@ -8,7 +8,7 @@ def try_to_remove_file(path):
     try:
         os.remove(path)
         return True
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError):
         return False
 
 
@@ -29,6 +29,12 @@ def get_yes_no_from_bool(value: bool) -> str:
 
 def get_file_type_from_path(path):
     return os.path.splitext(path)[1]
+
+
+def construct_in_different_thread(thread_pool, callback, object_to_construct, *args, **kwargs):
+    worker = Worker(object_to_construct, *args, **kwargs)
+    worker.signals.result.connect(callback)
+    thread_pool.start(worker)
 
 
 class WorkerSignals(QObject):

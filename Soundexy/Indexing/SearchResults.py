@@ -1,5 +1,6 @@
 from Soundexy.MetaData import MetaData
-from Soundexy.Functionality.useful_utils import get_app_data_folder
+from Soundexy.Functionality.useful_utils import get_app_data_folder, construct_in_different_thread, \
+    check_if_sound_is_bought_in_separate_thread
 from Soundexy.Webscraping.Authorization.Credentials import get_credentials, delete_saved_credentials, \
     get_saved_credentials
 import os
@@ -322,7 +323,7 @@ class Paid(Remote):
     def site_name(self):
         return ''
 
-    def buy(self, thread_pool, e_function):
+    def buy(self, thread_pool, e_function, c_function, s_function, f_function):
         pass
 
     def check_if_bought(self):
@@ -349,11 +350,31 @@ class SoundDogsResult(Paid):
         self.got_true_duration = False
         self._precise_duration = 0
 
-    def buy(self, thread_pool, e_function):
-        buyer = SoundDogsBuyer(self.original_id, *get_credentials(self.library)[0])
+    def buy(self, thread_pool, e_function, c_function, s_function, f_function):
+        check_if_sound_is_bought_in_separate_thread(self, lambda x: self.buy_confirmed(thread_pool,
+                                                    e_function, c_function, s_function, f_function), thread_pool)
+
+    def buy_confirmed(self, thread_pool, e_function, c_function, s_function, f_function):
+        if not self.bought:
+            self.buying = True
+            s_function()
+            credentials, accepted = get_credentials(self.library)
+            if accepted:
+                construct_in_different_thread(thread_pool, lambda x: self.buy_from_buyer(x, thread_pool, e_function,
+                                              f_function), SoundDogsBuyer, self.original_id, *credentials)
+            else:
+                self.buying = False
+                c_function()
+
+    def buy_from_buyer(self, buyer, thread_pool, e_function, f_function):
         buyer.signals.error.connect(lambda x: self.wrong_credentials(x, e_function))
-        buyer.signals.finished.connect(lambda: open_page('https://www.sounddogs.com/basket/view'))
+        buyer.signals.finished.connect(lambda: self._bought(f_function))
         thread_pool.start(buyer)
+
+    def _bought(self, f_function):
+        self.buying = False
+        f_function()
+        open_page('https://www.sounddogs.com/basket/view')
 
     @property
     def precise_duration(self):

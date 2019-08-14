@@ -144,8 +144,8 @@ class DownloadButton(ProgressButtonWithCancel):
 
 class BuyButton(ProgressButtonWithCancel):
     def __init__(self, parent=None):
-        super(BuyButton, self).__init__(parent=parent, idle_text='Buy', in_progress_text='Buying',
-                                        finished_text='Bought')
+        super(BuyButton, self).__init__(parent=parent, idle_text='Add to Cart', in_progress_text='Adding to Cart',
+                                        finished_text='Added to Cart')
 
     def started(self):
         super(BuyButton, self).started()
