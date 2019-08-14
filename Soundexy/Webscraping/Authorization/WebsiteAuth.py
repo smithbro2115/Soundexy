@@ -104,10 +104,21 @@ class SoundDogs(AuthSession):
         self.login_data = {'email': username, 'password': password}
         self.login()
 
+    def regenerate_invoice_files(self, order, items):
+        url = 'https://www.sounddogs.com/customer/regenerate_files'
+        item_sound_formats = {}
+        for item in items:
+            item_sound_formats[item['id']] = 39
+        post_data = {'invoiceId': order, 'itemSoundFormats': item_sound_formats}
+        r = self.post(url, json=post_data)
+
     def find_sound_url(self, result):
-        key_url = f"https://download.prosoundeffects.com/download.php"
-        params = {'track_id': result.original_id, 'type': 'wav', 'source': 'details'}
-        return self.session.get(key_url, params=params, headers=self.headers, allow_redirects=False).headers['location']
+        order, items = get_order_from_sound_dogs_sound(result.original_id, self)
+        key_url = f"https://www.sounddogs.com/customer/download_invoice_item_sound?invoiceItemId=" \
+            f"{get_item_from_order(result.original_id, items)['id']}"
+        self.regenerate_invoice_files(order, items)
+        print(key_url)
+        return key_url
 
     def login(self):
         with requests.Session() as s:
@@ -115,5 +126,35 @@ class SoundDogs(AuthSession):
             r = s.post(self.url, self.login_data, headers=self.headers)
             html = lxml_html.fromstring(r.content)
             if len(html.xpath('//font')) > 0:
-                    raise LoginError('Incorrect Credentials')
+                raise LoginError("Incorrect Credentials")
             self.session = s
+
+
+def get_item_from_order(sound_id, items):
+    for item in items:
+        if item['soundChannelId'] == int(sound_id):
+            return item
+
+
+def get_order_from_sound_dogs_sound(sound_id, auth_session):
+    orders = get_all_orders_from_sound_dogs(auth_session)
+    for order, items in orders.items():
+        for item in items:
+            if item['soundChannelId'] == int(sound_id):
+                return order, items
+
+
+def get_all_orders_from_sound_dogs(auth_session):
+    raw_orders = get_all_sound_dog_orders(auth_session)
+    orders = {}
+    for order in raw_orders:
+        if order['statusString'] == 'Charged':
+            orders[order['id']] = order['invoiceItems']
+    return orders
+
+
+def get_all_sound_dog_orders(auth_session):
+    headers = {'X-Requested-With': 'XMLHttpRequest'}
+    url = f"https://www.sounddogs.com/customer/order_history?page=0&orderType=0"
+    r = auth_session.get(url, headers=headers)
+    return r.json()['orders']

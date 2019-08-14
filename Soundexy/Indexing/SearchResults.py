@@ -357,4 +357,4 @@ class SoundDogsResult(Paid):
         return Downloader.get_sound_dogs_true_duration(self.original_id)
 
     def get_downloader(self):
-        return Downloader.ProSoundDownloader
+        return Downloader.SoundDogsDownloader

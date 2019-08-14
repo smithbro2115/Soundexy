@@ -74,7 +74,7 @@ class RemoteSearch(Search):
         url = self.url
         amount_of_pages = self.amount_of_pages
         keywords = self.keywords
-        page_number = 0
+        page_number = self.start_page
         if amount_of_pages > 0:
             while page_number <= amount_of_pages:
                 if self.canceled:
@@ -146,6 +146,10 @@ class FreesoundSearch(FreeSearch):
 
 
 class SoundDogsSearch(PaidSearch):
+    def __init__(self, keywords, excluded_words, thread_pool):
+        super(SoundDogsSearch, self).__init__(keywords, excluded_words, thread_pool)
+        self.start_page = 1
+
     @property
     def scraper_type(self):
         return WebScrapers.SoundDogsScraper
