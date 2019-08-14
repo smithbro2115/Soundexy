@@ -268,7 +268,6 @@ class SoundDogsDownloader(AuthDownloader):
 def get_all_sound_dogs_bought_sound_names(username, password):
     auth_s = WebsiteAuth.SoundDogs(username, password)
     r = auth_s.get("https://www.sounddogs.com/customer/order_history?page=0&orderType=0")
-    print(r, r.content)
 
 
 def get_all_charged_invoices_from_json():
@@ -297,6 +296,3 @@ def pro_sound_get_preview_auth(track_id):
     r = requests.get(f"https://download.prosoundeffects.com/ajax.php?p=download_auth&trackId="
                      f"{track_id}&source=track_list_explorer&type=&embedCode=13")
     return r.json()['content'][0]['params']
-
-
-get_all_sound_dogs_bought_sound_names('brinkmansound@gmail.com', 'Ferrari578')

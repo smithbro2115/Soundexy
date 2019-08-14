@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 import traceback
 import sys
 import os
@@ -22,6 +22,8 @@ def get_formatted_duration_from_milliseconds(milliseconds):
 def get_yes_no_from_bool(value: bool) -> str:
     if value:
         return 'Yes'
+    if value is None:
+        return ''
     return 'No'
 
 
@@ -174,3 +176,9 @@ def load_pickle_obj(path):
 def get_all_file_paths_from_dir(dir):
     for root, dirs, files in os.walk(dir):
         return files
+
+
+def check_if_sound_is_bought_in_separate_thread(result, callback, thread_pool):
+    worker = Worker(result.check_if_bought)
+    worker.signals.result.connect(lambda: callback(result))
+    thread_pool.start(worker)

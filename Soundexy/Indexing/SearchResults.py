@@ -1,9 +1,13 @@
 from Soundexy.MetaData import MetaData
 from Soundexy.Functionality.useful_utils import get_app_data_folder
-from Soundexy.Webscraping.Authorization.Credentials import get_credentials, delete_saved_credentials
+from Soundexy.Webscraping.Authorization.Credentials import get_credentials, delete_saved_credentials, \
+    get_saved_credentials
 import os
 from Soundexy.Webscraping.Downloading import Downloader
+from Soundexy.Webscraping.Buying.Buyer import is_this_sound_bought_from_sound_dogs
 from abc import abstractmethod
+from Soundexy.Webscraping.Buying.WebBrowser import open_page
+from Soundexy.Webscraping.Buying.Buyer import SoundDogsBuyer
 
 
 class Result:
@@ -262,7 +266,8 @@ class Remote(Result):
 
     def connect_downloader_signals(self, d_some_f, d_done_f, d_cancel_f, d_error_f):
         self.downloader.signals.error.connect(lambda x: self.download_error(x, d_cancel_f, d_error_f))
-        self.downloader.signals.wrong_credentials.connect(lambda x: self.wrong_credentials(x, d_cancel_f, d_error_f))
+        self.downloader.signals.wrong_credentials.connect(lambda x: self.download_wrong_credentials(x, d_cancel_f,
+                                                                                                    d_error_f))
         self.downloader.signals.downloaded_some.connect(lambda x: d_some_f(x, self.id))
         self.downloader.signals.already_exists.connect(lambda x: self._download_done(x, d_done_f))
         self.downloader.signals.download_done.connect(lambda x: self._download_done(x, d_done_f))
@@ -271,10 +276,13 @@ class Remote(Result):
         e_function(msg)
         self.cancel_download(c_function)
 
-    def wrong_credentials(self, msg, c_function, e_function):
+    def download_wrong_credentials(self, msg, c_function, e_function):
+        self.wrong_credentials(msg, e_function)
+        self.cancel_download(c_function)
+
+    def wrong_credentials(self, msg, e_function):
         e_function(msg)
         delete_saved_credentials(self.library)
-        self.cancel_download(c_function)
 
     def construct_auth_session(self):
         outcome = get_credentials(self.library)
@@ -314,7 +322,10 @@ class Paid(Remote):
     def site_name(self):
         return ''
 
-    def buy(self):
+    def buy(self, thread_pool, e_function):
+        pass
+
+    def check_if_bought(self):
         pass
 
 
@@ -338,6 +349,12 @@ class SoundDogsResult(Paid):
         self.got_true_duration = False
         self._precise_duration = 0
 
+    def buy(self, thread_pool, e_function):
+        buyer = SoundDogsBuyer(self.original_id, *get_credentials(self.library)[0])
+        buyer.signals.error.connect(lambda x: self.wrong_credentials(x, e_function))
+        buyer.signals.finished.connect(lambda: open_page('https://www.sounddogs.com/basket/view'))
+        thread_pool.start(buyer)
+
     @property
     def precise_duration(self):
         if not self.got_true_duration:
@@ -358,3 +375,11 @@ class SoundDogsResult(Paid):
 
     def get_downloader(self):
         return Downloader.SoundDogsDownloader
+
+    def check_if_bought(self):
+        try:
+            username, password = get_saved_credentials(self.library)
+            self.bought = is_this_sound_bought_from_sound_dogs(self.original_id, username, password)
+            return self.bought
+        except KeyError:
+            return False

@@ -25,6 +25,7 @@ class Gui(GUI.Ui_MainWindow):
         self.play_sound_thread_pool = QThreadPool()
         self.audio_converter_thread_pool = QThreadPool()
         self.local_search_thread_pool = QThreadPool()
+        self.buying_thread_pool = QThreadPool()
         self.local_search_thread_pool.setMaxThreadCount(1)
         self.play_sound_thread_pool.setMaxThreadCount(1)
         self.remote_search_thread_pool.setMaxThreadCount(4)
@@ -165,6 +166,8 @@ class Gui(GUI.Ui_MainWindow):
 
     def paid_sound_init(self, result: SearchResults.Paid):
         self.add_buy_button(result)
+        useful_utils.check_if_sound_is_bought_in_separate_thread(result, self.checked_if_bought,
+                                                                 self.audio_converter_thread_pool)
         self.remote_sound_init(result)
 
     def local_sound_init(self, result):
@@ -233,6 +236,11 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.load(result.path, self.pixel_time_conversion_rate)
         self.audio_player.play()
 
+    def checked_if_bought(self, result):
+        if result.bought:
+            self.bought_sound(result)
+            self.buyButton.done()
+
     @staticmethod
     def clear_cache():
         folder = useful_utils.get_app_data_folder('Cache')
@@ -281,12 +289,16 @@ class Gui(GUI.Ui_MainWindow):
             self.download_button.set_progress(result.downloader.get_file_progress())
             self.download_button.started()
 
+    def bought_sound(self, result):
+        self.searchResultsTable.replace_result(result, result)
+
     def make_buy_button(self, result):
-        self.buyButton.set_button_function(lambda: result.buy())
+        self.buyButton.set_button_function(lambda: result.buy(self.buying_thread_pool, self.show_error))
         pyqt_utils.disconnect_all_signals(self.buyButton.signals.cancel)
         self.buyButton.signals.cancel.connect(lambda: result.cancel_buy())
         if result.bought:
             self.buyButton.done()
+            self.bought_sound(result)
         if result.buying:
             self.buyButton.started()
 

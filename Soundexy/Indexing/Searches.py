@@ -3,8 +3,9 @@ from abc import abstractmethod
 from Soundexy.Functionality.useful_utils import Worker
 from Soundexy.Webscraping.Webscraping import WebScrapers
 from Soundexy.Webscraping.Authorization.Credentials import get_saved_credentials
-from Soundexy.Webscraping.Authorization.WebsiteAuth import ProSound
+from Soundexy.Webscraping.Authorization.WebsiteAuth import ProSound, LoginError
 from Soundexy.Indexing.LocalFileHandler import IndexSearch
+import traceback
 
 
 class SearchSigs(QObject):
@@ -64,28 +65,38 @@ class RemoteSearch(Search):
         return WebScrapers.PageAmountScraper
 
     def run(self):
-        site = self.page_scraper(self.keywords)
-        site.signals.sig_url.connect(self.set_url)
-        site.signals.sig_amount_of_pages.connect(self.set_amount_of_pages)
-        site.signals.sig_finished.connect(self.scrape)
-        self.thread_pool.start(site)
+        try:
+            site = self.page_scraper(self.keywords)
+            site.signals.sig_url.connect(self.set_url)
+            site.signals.sig_amount_of_pages.connect(self.set_amount_of_pages)
+            site.signals.sig_finished.connect(self.scrape)
+            self.thread_pool.start(site)
+        except:
+            traceback.print_exc()
+            self.canceled = True
+            self.emit_finished()
 
     def scrape(self):
-        url = self.url
-        amount_of_pages = self.amount_of_pages
-        keywords = self.keywords
-        page_number = self.start_page
-        if amount_of_pages > 0:
-            while page_number <= amount_of_pages:
-                if self.canceled:
-                    break
-                search = self.scraper_type(keywords, page_number, url, session=self.session)
-                search.signals.sig_results.connect(self.emit_batch)
-                search.signals.sig_finished.connect(self.emit_finished)
-                self.threads.append(search)
-                self.thread_pool.start(search)
-                page_number += 1
-        else:
+        try:
+            url = self.url
+            amount_of_pages = self.amount_of_pages
+            keywords = self.keywords
+            page_number = self.start_page
+            if amount_of_pages > 0:
+                while page_number <= amount_of_pages:
+                    if self.canceled:
+                        break
+                    search = self.scraper_type(keywords, page_number, url, session=self.session)
+                    search.signals.sig_results.connect(self.emit_batch)
+                    search.signals.sig_finished.connect(self.emit_finished)
+                    self.threads.append(search)
+                    self.thread_pool.start(search)
+                    page_number += 1
+            else:
+                self.emit_finished()
+        except:
+            traceback.print_exc()
+            self.canceled = True
             self.emit_finished()
 
     def set_url(self, url):
@@ -170,7 +181,7 @@ class ProSoundSearch(PaidSearch):
             worker = Worker(ProSound, *credentials)
             worker.signals.result.connect(self.set_session)
             self.thread_pool.start(worker)
-        except KeyError:
+        except (KeyError, LoginError):
             super(ProSoundSearch, self).scrape()
 
     @property

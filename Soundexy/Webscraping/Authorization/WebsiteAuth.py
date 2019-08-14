@@ -117,7 +117,6 @@ class SoundDogs(AuthSession):
         key_url = f"https://www.sounddogs.com/customer/download_invoice_item_sound?invoiceItemId=" \
             f"{get_item_from_order(result.original_id, items)['id']}"
         self.regenerate_invoice_files(order, items)
-        print(key_url)
         return key_url
 
     def login(self):
