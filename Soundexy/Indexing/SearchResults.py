@@ -184,9 +184,15 @@ class Remote(Result):
         else:
             self.title = title
 
+    def set_filename(self, filename):
+        index = filename.find('.')
+        if index >= 0:
+            self.file_type = filename[index:]
+        self.name = filename
+
     @property
     def meta_file(self):
-        return {'file name': self.title, 'title': self.title, 'duration': self.duration,
+        return {'file name': self.name, 'title': self.title, 'duration': self.duration,
                 'description': self.description, 'id': self.id,
                 'author': self.author, 'library': self.library, 'preview Link': self.preview,
                 'sample rate': self.sample_rate,
@@ -206,6 +212,7 @@ class Remote(Result):
         self.downloader = None
         self.downloaded = True
         self.sample_rate = self._get_sample_rate()
+        self.set_filename(os.path.basename(filename))
         self.add_to_index()
         function(self)
 

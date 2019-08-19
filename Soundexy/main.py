@@ -160,7 +160,7 @@ class Gui(GUI.Ui_MainWindow):
             self.local_sound_init(result)
             self.add_album_image_to_player(result.album_image)
         elif isinstance(result, SearchResults.Remote) and not isinstance(result, SearchResults.Paid):
-            self.remote_sound_init(result)
+            self.free_sound_init(result)
         elif isinstance(result, SearchResults.Paid):
             self.paid_sound_init(result)
 
@@ -170,8 +170,13 @@ class Gui(GUI.Ui_MainWindow):
                                                                  self.audio_converter_thread_pool)
         self.remote_sound_init(result)
 
+    def free_sound_init(self, result: SearchResults.Remote):
+        self.buyButton.setHidden(True)
+        self.remote_sound_init(result)
+
     def local_sound_init(self, result):
         self.download_button.setHidden(True)
+        self.buyButton.setHidden(True)
         self.sound_init(result)
 
     def remote_sound_init(self, result):
@@ -553,76 +558,100 @@ class Gui(GUI.Ui_MainWindow):
 
     def start_search(self):
         self.search_keywords = self.searchLineEdit
-        search_line = self.search_keywords.text()
-        current_librarys = {
-            'Free': self.search_state_free, 'Paid': self.search_state_paid, 'Local': self.search_state_local
-        }
+        if not self.search_keywords.text().strip() == '':
+            search_line = self.search_keywords.text()
+            current_librarys = {
+                'Free': self.search_state_free, 'Paid': self.search_state_paid, 'Local': self.search_state_local
+            }
+            keywords = re.sub('[^\w-]', ' ', search_line).lower().split()
+            excluded_words = []
+            for keyword in keywords:
+                if keyword.startswith('-'):
+                    excluded_words.append(keyword[1:])
+                    keywords.remove(keyword)
+                elif '-' in keyword:
+                    words = re.sub('[^\w]', ' ', keyword).split()
+                    keywords.remove(keyword)
+                    for word in words:
+                        keywords.append(word)
 
-        keywords = re.sub('[^\w-]', ' ', search_line).lower().split()
-        excluded_words = []
-        for keyword in keywords:
-            if keyword.startswith('-'):
-                excluded_words.append(keyword[1:])
-                keywords.remove(keyword)
-            elif '-' in keyword:
-                words = re.sub('[^\w]', ' ', keyword).split()
-                keywords.remove(keyword)
-                for word in words:
-                    keywords.append(word)
-
-        if self.running_search_keywords != keywords:
-            # if self.running_search:
-                # self.freesound_thread_pool.cancel(self.freesound_thread_pool)
-            self.run_search(excluded_words)
-        elif self.running_search_librarys != current_librarys:
-            self.run_search(excluded_words)
+            if self.running_search_keywords != keywords:
+                # if self.running_search:
+                    # self.freesound_thread_pool.cancel(self.freesound_thread_pool)
+                self.run_search(excluded_words)
+            elif self.running_search_librarys != current_librarys:
+                self.run_search(excluded_words)
+        else:
+            self.reset_searches()
+            self.running_search_keywords = []
 
     def run_search(self, excluded_words):
         self.start_busy_indicator_search()
-        local = self.search_state_local
-        free = self.search_state_free
-        paid = self.search_state_paid
+        local, free, paid = self.search_state_local, self.search_state_free, self.search_state_paid
         search_line = self.search_keywords.text()
         keywords = re.sub('[^\w]', ' ', search_line).lower().split()
         self.search_keywords = keywords
         self.running_search = True
         self.running_search_keywords = keywords
         self.running_search_librarys = {'Free': free, 'Paid': paid, 'Local': local}
+        self.reset_searches()
+        if local:
+            self.run_local_search(keywords, excluded_words)
+        if free:
+            self.run_free_search(keywords, excluded_words)
+        if paid:
+            self.run_paid_search(keywords, excluded_words)
+        if 1 not in (local, free, paid):
+            self.finished_search(0)
+
+    def run_local_search(self, keywords, excluded_words):
+        self.running_local_search = True
+        self.local_search = LocalFileHandler.IndexSearch(keywords, excluded_words)
+        self.local_search.signals.batch_found.connect(self.searchResultsTable.add_results_to_search_results_table)
+        self.local_search.signals.finished.connect(lambda: self.finished_search(1))
+        self.local_search_thread_pool.start(self.local_search)
+
+    def run_free_search(self, keywords, excluded_words):
+        for action in self.freeSearchCheckboxContext.actions():
+            if action.isChecked():
+                self.running_remote_search = True
+                free_search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
+                self.remote_searches.append(free_search)
+                free_search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
+                free_search.signals.finished.connect(lambda: self.finished_search(2))
+                free_search.signals.canceled.connect(lambda: self.canceled_search(2))
+                free_search.run()
+
+    def run_paid_search(self, keywords, excluded_words):
+        for action in self.paidSearchCheckboxContext.actions():
+            if action.isChecked():
+                self.running_remote_search = True
+                paid_search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
+                self.remote_searches.append(paid_search)
+                paid_search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
+                paid_search.signals.finished.connect(lambda: self.finished_search(2))
+                paid_search.signals.canceled.connect(lambda: self.canceled_search(2))
+                paid_search.run()
+
+    def clear_search_results_table(self):
         self.searchResultsTable.searchResultsTableModel.setRowCount(0)
+        self.searchResultsTable.current_results = {}
+
+    def clear_cache_in_separate_thread(self):
         clear_cache_worker = Worker(self.clear_cache)
         self.cache_thread_pool.start(clear_cache_worker)
-        self.searchResultsTable.current_results = {}
-        if self.running_local_search and self.local_search is not None:
-            self.local_search.cancel()
-        if local:
-            self.running_local_search = True
-            self.local_search = LocalFileHandler.IndexSearch(keywords, excluded_words)
-            self.local_search.signals.batch_found.connect(self.searchResultsTable.add_results_to_search_results_table)
-            self.local_search.signals.finished.connect(lambda: self.finished_search(1))
-            self.local_search_thread_pool.start(self.local_search)
+
+    def reset_searches(self):
+        self.clear_search_results_table()
+        self.clear_cache_in_separate_thread()
+        self.cancel_all_running_searches()
+
+    def cancel_all_running_searches(self):
         if self.running_remote_search:
             self.cancel_searches(self.remote_searches)
             self.remote_searches = []
-        if free:
-            for action in self.freeSearchCheckboxContext.actions():
-                if action.isChecked():
-                    self.running_remote_search = True
-                    free_search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
-                    self.remote_searches.append(free_search)
-                    free_search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
-                    free_search.signals.finished.connect(lambda: self.finished_search(2))
-                    free_search.run()
-        if paid:
-            for action in self.paidSearchCheckboxContext.actions():
-                if action.isChecked():
-                    self.running_remote_search = True
-                    paid_search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
-                    self.remote_searches.append(paid_search)
-                    paid_search.signals.found_batch.connect(self.searchResultsTable.add_results_to_search_results_table)
-                    paid_search.signals.finished.connect(lambda: self.finished_search(2))
-                    paid_search.run()
-        if 1 not in (local, free, paid):
-            self.finished_search(0)
+        if self.running_local_search and self.local_search is not None:
+            self.local_search.cancel()
 
     def cancel_searches(self, searches):
         for search in searches:
@@ -633,6 +662,16 @@ class Gui(GUI.Ui_MainWindow):
             self.running_local_search = False
         elif search_number == 2:
             if self.remote_search_thread_pool.activeThreadCount() == 0:
+                self.running_remote_search = False
+                self.remote_searches = []
+        if 1 not in (self.running_remote_search, self.running_local_search):
+            self.stop__busy_indicator_search()
+
+    def canceled_search(self, search_number):
+        if search_number == 1:
+            self.running_local_search = False
+        elif search_number == 2:
+            if 0 not in [search.canceled for search in self.remote_searches]:
                 self.running_remote_search = False
                 self.remote_searches = []
         if 1 not in (self.running_remote_search, self.running_local_search):

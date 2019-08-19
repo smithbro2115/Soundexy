@@ -87,6 +87,7 @@ class FreesoundScraper(Scraper):
                          str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
         result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
                              .find('a', {'class': 'title'}).get('title')))
+        result.name = result.title
         result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text))
         result.description = raw_result.find('div', {'class': 'sound_description'}).find('p').text
         result.library = 'Freesound'
@@ -134,6 +135,7 @@ class SoundDogsScraper(Scraper):
                                      .replace(',', ''))*1000)
         result.description = raw_result.xpath("td[contains(@class, 'description')]/a")[0].text.strip()
         result.set_title(result.description)
+        result.name = result.title
         result.channels = raw_result.xpath("td[contains(@class, 'channels')]")[0].text.strip()
         result.library = 'Sounddogs'
         result.price = int(float(raw_result.xpath("th[contains(@class, 'price')]/span")[0].text.strip().replace('$', '')
@@ -175,6 +177,7 @@ class ProSoundScraper(Scraper):
         result = SearchResults.ProSoundResult()
         result.preview = raw_result['file']['playHtml5']
         result.set_title(raw_result['title'])
+        result.name = raw_result['title']
         result.duration = ceil(float(raw_result['actualLength'])*1000)
         result.description = raw_result['description']
         result.library = 'Pro Sound'

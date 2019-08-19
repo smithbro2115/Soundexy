@@ -11,6 +11,7 @@ import traceback
 class SearchSigs(QObject):
     started = pyqtSignal()
     found_batch = pyqtSignal(list)
+    canceled = pyqtSignal()
     finished = pyqtSignal()
 
 
@@ -31,6 +32,7 @@ class Search:
         self.canceled = True
         self.cancel_all_threads()
         self.running = False
+        self.signals.canceled.emit()
 
     def emit_batch(self, results):
         if not self.canceled:
@@ -74,7 +76,7 @@ class RemoteSearch(Search):
         except:
             traceback.print_exc()
             self.canceled = True
-            self.emit_finished()
+            self.signals.canceled.emit()
 
     def scrape(self):
         try:
@@ -97,7 +99,7 @@ class RemoteSearch(Search):
         except:
             traceback.print_exc()
             self.canceled = True
-            self.emit_finished()
+            self.signals.canceled.emit()
 
     def set_url(self, url):
         self.url = url

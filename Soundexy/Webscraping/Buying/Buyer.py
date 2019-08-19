@@ -1,7 +1,4 @@
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QRunnable
-import requests
-import json
-import time
 from Soundexy.Webscraping.Authorization import WebsiteAuth
 
 # test_item = {"id": 17779649, "title": "CW002_Moody_Winds_Vast_Dark_Whistling.wav", "date": "03/27/2017",
