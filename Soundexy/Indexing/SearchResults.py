@@ -133,15 +133,21 @@ class Local(Result):
         words.append(self.path)
         return words
 
-    def search(self, search_words, excluded_words=None):
+    def search(self, search_words, required_words, excluded_words=None):
         for word in search_words:
             for keyword in self.keywords:
                 if word.lower() in keyword:
                     if excluded_words is not None:
                         if keyword.lower() in excluded_words:
                             return False
-                    return True
+                    return self.make_sure_includes(required_words)
         return False
+
+    def make_sure_includes(self, required_words):
+        for required_word in required_words:
+            if required_word not in self.keywords:
+                return False
+        return True
 
 
 class Remote(Result):

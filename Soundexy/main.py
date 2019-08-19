@@ -585,12 +585,21 @@ class Gui(GUI.Ui_MainWindow):
             self.reset_searches()
             self.running_search_keywords = []
 
+    def get_keywords(self):
+        search_line = self.search_keywords.text()
+        sanitized = re.sub('[^\w]', ' ', search_line).lower()
+        raw_keywords = re.split(''';(?=(?:[^'"]|'[^']*'|"[^"]*")*$)''', sanitized)
+        keywords = []
+        for raw_keyword in raw_keywords:
+            keywords.append(raw_keyword.strip())
+        return keywords
+
     def run_search(self, excluded_words):
         self.reset_searches()
         self.start_busy_indicator_search()
         local, free, paid = self.search_state_local, self.search_state_free, self.search_state_paid
-        search_line = self.search_keywords.text()
-        keywords = re.sub('[^\w]', ' ', search_line).lower().split()
+        keywords = self.get_keywords()
+        print(keywords)
         self.search_keywords = keywords
         self.running_search = True
         self.running_search_keywords = keywords
