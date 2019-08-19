@@ -586,6 +586,9 @@ class WaveformSlider(QSlider):
         self.current_result = result
         self.current_sound_duration = result.precise_duration
 
+    def wheelEvent(self, *args, **kwargs):
+        pass
+
     def move_to_current_time(self):
         sound_duration = self.current_sound_duration
         current_time = self.audio_player.audio_player.current_time

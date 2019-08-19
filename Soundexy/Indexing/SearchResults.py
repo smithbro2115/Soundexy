@@ -324,7 +324,7 @@ class Paid(Remote):
         return ''
 
     def buy(self, thread_pool, e_function, c_function, s_function, f_function):
-        pass
+        open_page(f"https://download.prosoundeffects.com/#!details?id={self.original_id}")
 
     def check_if_bought(self):
         pass

@@ -153,7 +153,7 @@ class Gui(GUI.Ui_MainWindow):
         sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
         result = self.searchResultsTable.current_results[sound_id]
         self.init_sound_by_type(result)
-        self.single_clicked_result = None
+        # self.single_clicked_result = None
 
     def init_sound_by_type(self, result):
         if isinstance(result, SearchResults.Local):

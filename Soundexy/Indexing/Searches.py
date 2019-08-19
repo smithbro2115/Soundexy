@@ -2,7 +2,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from abc import abstractmethod
 from Soundexy.Functionality.useful_utils import Worker
 from Soundexy.Webscraping.Webscraping import WebScrapers
-from Soundexy.Webscraping.Authorization.Credentials import get_saved_credentials
+from Soundexy.Webscraping.Authorization.Credentials import get_saved_credentials, delete_saved_credentials
 from Soundexy.Webscraping.Authorization.WebsiteAuth import ProSound, LoginError
 from Soundexy.Indexing.LocalFileHandler import IndexSearch
 import traceback
@@ -180,9 +180,16 @@ class ProSoundSearch(PaidSearch):
             credentials = get_saved_credentials('Pro Sound')
             worker = Worker(ProSound, *credentials)
             worker.signals.result.connect(self.set_session)
+            worker.signals.error.connect(self.search_login_error)
             self.thread_pool.start(worker)
         except (KeyError, LoginError):
             super(ProSoundSearch, self).scrape()
+
+    def search_login_error(self, exception):
+        if exception[0] == LoginError:
+            delete_saved_credentials('Pro Sound')
+            super(ProSoundSearch, self).scrape()
+
 
     @property
     def scraper_type(self):
