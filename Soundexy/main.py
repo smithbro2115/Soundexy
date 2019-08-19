@@ -586,6 +586,7 @@ class Gui(GUI.Ui_MainWindow):
             self.running_search_keywords = []
 
     def run_search(self, excluded_words):
+        self.reset_searches()
         self.start_busy_indicator_search()
         local, free, paid = self.search_state_local, self.search_state_free, self.search_state_paid
         search_line = self.search_keywords.text()
@@ -594,7 +595,6 @@ class Gui(GUI.Ui_MainWindow):
         self.running_search = True
         self.running_search_keywords = keywords
         self.running_search_librarys = {'Free': free, 'Paid': paid, 'Local': local}
-        self.reset_searches()
         if local:
             self.run_local_search(keywords, excluded_words)
         if free:
