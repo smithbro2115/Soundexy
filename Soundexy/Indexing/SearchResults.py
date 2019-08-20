@@ -133,7 +133,7 @@ class Local(Result):
         words.append(self.path)
         return words
 
-    def search(self, search_words, required_words, excluded_words=None):
+    def old_search(self, search_words, required_words, excluded_words=None):
         for word in search_words:
             for keyword in self.keywords:
                 if word.lower() in keyword:
@@ -142,6 +142,22 @@ class Local(Result):
                             return False
                     return self.make_sure_includes(required_words)
         return False
+
+    def search(self, search_words, required_words, excluded_words):
+        if self.make_sure_does_not_include(excluded_words):
+            if len(required_words) > 0:
+                if self.make_sure_includes(required_words):
+                    return True
+            else:
+                for search_word in search_words:
+                    if search_word in self.keywords:
+                        return True
+
+    def make_sure_does_not_include(self, exclude):
+        for excluded_word in exclude:
+            if excluded_word in self.keywords:
+                return False
+        return True
 
     def make_sure_includes(self, required_words):
         for required_word in required_words:
