@@ -178,7 +178,8 @@ class SearchHandler:
             search.cancel()
 
     def finished_search(self, search_index):
-        del self.running_searches[search_index]
+        if search_index:
+            del self.running_searches[search_index]
         if len(self.running_searches) <= 0:
             self.parent.stop__busy_indicator_search()
 
