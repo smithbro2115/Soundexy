@@ -59,8 +59,8 @@ class SearchHandler:
         libraries = []
         if self.search_state_local:
             libraries.append(self.parent.topbarLibraryLocalCheckbox.text())
-        libraries += self.get_all_checked_libraries(self.freeSearchCheckboxContext,
-                                                    self.paidSearchCheckboxContext)
+        contexts = self.get_all_checked_context_menus()
+        libraries += self.get_all_checked_libraries(*contexts)
         return libraries
 
     def start_search(self):
@@ -75,6 +75,7 @@ class SearchHandler:
 
     def run_search(self, keywords, required_keywords, unnecessary_keywords, excluded_words):
         self.reset_searches()
+        self.clear_found_label()
         self.parent.start_busy_indicator_search()
         local = self.search_state_local
         self.running_libraries = self.checked_search_libraries
@@ -176,6 +177,9 @@ class SearchHandler:
     def cancel_searches(searches):
         for search in searches:
             search.cancel()
+
+    def clear_found_label(self):
+        self.parent.messageLabel.setText("")
 
     def finished_search(self, search_index):
         if search_index:

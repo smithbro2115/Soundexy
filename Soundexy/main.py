@@ -40,7 +40,7 @@ class Gui(GUI.Ui_MainWindow):
         self.cache_thread_pool = QThreadPool()
         self.download_pool = QThreadPool()
         self.playlistTreeWidget = PlaylistTreeWidget()
-        self.searchResultsTable = SearchResultsTable()
+        self.searchResultsTable = SearchResultsTable(self)
         self.waveform = WaveformSlider(self.audio_player)
         self.audio_player.set_waveform(self.waveform)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -181,8 +181,8 @@ class Gui(GUI.Ui_MainWindow):
             if not self.current_result == result:
                 self.new_sound_meta(result)
                 self.make_waveform(result.path)
-                self.new_sound_waveform(result)
                 self.new_sound_audio_player(result)
+                self.new_sound_waveform(result)
             else:
                 self.audio_player.space_bar()
         self.current_result = result
@@ -198,6 +198,7 @@ class Gui(GUI.Ui_MainWindow):
     def new_sound_waveform(self, result):
         self.waveform.clear_waveform()
         self.waveform.load_result(result)
+        self.set_current_time()
         self.waveform.start_busy_indicator_waveform()
 
     def new_sound_audio_player(self, result):

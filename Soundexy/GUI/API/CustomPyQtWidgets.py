@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal
 import traceback
-from Soundexy.Functionality.useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool
+from Soundexy.Functionality.useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool, Worker
 import os
 from Soundexy.Indexing import LocalFileHandler
 from Soundexy.Functionality import Playlists
@@ -230,12 +230,13 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
 
 
 class SearchResultsTable(QtWidgets.QTableView):
-    def __init__(self):
+    def __init__(self, parent):
         super(SearchResultsTable, self).__init__()
         self.row_order = {'File Name': 0, 'Title': 1, 'Description': 2, 'Duration': 3,
                           'Library': 4, 'Author': 5, 'Id': 6, 'Available Locally': 7, 'Bought': 8, 'Price': 9}
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
+        self.parent_local = parent
         self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self)
         self.headers = sorted(self.row_order, key=self.row_order.get)
         self.searchResultsTableModel.headers = self.headers
@@ -301,9 +302,23 @@ class SearchResultsTable(QtWidgets.QTableView):
     def add_results_to_search_results_table(self, results):
         for result in results:
             self.current_results[result.id] = result
-            standard_items = self.make_standard_items_from_result(result)
-            self.append_row(self.make_row(standard_items))
+            items = self.make_standard_items_from_result(result)
+            self.append_row(self.make_row(items))
             # self.sort()
+        self.update_found_label()
+
+    def make_standard_items_in_separate_thread(self, result):
+        worker = Worker(self.make_standard_items_from_result, result)
+        worker.signals.result.connect(self.append_item)
+        thread_pool = QtCore.QThreadPool()
+        thread_pool.setMaxThreadCount(1)
+        thread_pool.start(worker)
+
+    def append_item(self, item):
+        self.append_row(self.make_row(item))
+
+    def update_found_label(self):
+        self.parent_local.messageLabel.setText(f"Found {self.searchResultsTableModel.rowCount()} results")
 
     def make_standard_items_from_result(self, result):
         meta_file = result.meta_file
