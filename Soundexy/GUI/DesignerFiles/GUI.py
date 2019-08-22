@@ -188,6 +188,12 @@ class Ui_MainWindow(object):
         self.line_3.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line_3.setObjectName("line_3")
         self.lowerPlayer.addWidget(self.line_3, 0, 1, 1, 1)
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.lowerPlayer.addItem(spacerItem1, 0, 3, 1, 1)
+        self.messageLabel = QtWidgets.QLabel(self.centralwidget)
+        self.messageLabel.setText("")
+        self.messageLabel.setObjectName("messageLabel")
+        self.lowerPlayer.addWidget(self.messageLabel, 0, 4, 1, 1)
         self.gridLayout.addLayout(self.lowerPlayer, 6, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
@@ -227,7 +233,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.sidebar.setCurrentIndex(0)
+        self.sidebar.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):

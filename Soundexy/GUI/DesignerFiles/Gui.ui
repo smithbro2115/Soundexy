@@ -251,7 +251,7 @@
          <enum>QTabWidget::Triangular</enum>
         </property>
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <property name="elideMode">
          <enum>Qt::ElideNone</enum>
@@ -400,6 +400,26 @@
        <widget class="Line" name="line_3">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="4">
+       <widget class="QLabel" name="messageLabel">
+        <property name="text">
+         <string/>
         </property>
        </widget>
       </item>

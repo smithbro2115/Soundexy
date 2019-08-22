@@ -578,8 +578,15 @@ class WaveformSlider(QSlider):
     def mousePressEvent(self, event):
         if self.current_result is not None:
             position = QtWidgets.QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.x(), self.width())
-            self.setValue(position)
-            self.audio_player.goto(position)
+            previous_time = self.audio_player.audio_player.current_time
+            try:
+                self.audio_player.goto(position)
+                self.setValue(position)
+            except TypeError:
+                try:
+                    self.audio_player.goto(previous_time)
+                except TypeError:
+                    print('Not loaded yet')
 
     def load_result(self, result):
         self.reset_cursor()
