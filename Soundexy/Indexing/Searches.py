@@ -229,6 +229,7 @@ class RemoteSearch(Search):
         super(RemoteSearch, self).__init__(keywords, excluded_words, thread_pool)
         self.url = ''
         self.amount_of_pages = 0
+        self.pages_done = 0
         self.start_page = 1
         self.session = None
 
@@ -284,6 +285,12 @@ class RemoteSearch(Search):
 
     def set_amount_of_pages(self, amount):
         self.amount_of_pages = amount
+
+    def emit_finished(self):
+        self.pages_done += 1
+        if self.amount_of_pages <= self.pages_done:
+            self.signals.finished.emit(self.index)
+            self.running = False
 
 
 class FreeSearch(RemoteSearch):
