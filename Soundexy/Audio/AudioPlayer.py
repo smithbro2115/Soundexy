@@ -32,15 +32,19 @@ class SoundPlayer(QRunnable):
     def __init__(self):
         super(SoundPlayer, self).__init__()
         self.path = ''
+        self._playing = False
         self.waveform = None
         self.label = None
         self.signals = SoundSigs()
+        self.pygame_player = PygamePlayer()
+        self.wav_player = WavPlayer()
         self.wav_list = ['.wav']
         self.pygame_list = ['.ogg', '.mp3', '.flac']
         self.current_result = ''
         self.pixel_time_conversion_rate = 0
         self.audio_player = AudioPlayer()
         self.audio_player.signals.error.connect(lambda x: self.signals.error.emit(x))
+        self.current_time = 0
         self._volume = 85
         self._loop = False
 
@@ -86,8 +90,12 @@ class SoundPlayer(QRunnable):
     @pyqtSlot()
     def run(self):
         while True:
-            while self.audio_player.playing and not self.audio_player.ended:
+            start = time.time()
+            playing = self.audio_player.playing
+            print(playing)
+            while playing and not self.audio_player.ended:
                 time.sleep(.003)
+                self.current_time = (time.time() - start)*1000
                 self.signals.time_changed.emit()
             time.sleep(.01)
 
@@ -98,10 +106,9 @@ class SoundPlayer(QRunnable):
 
     def get_correct_audio_player(self, path):
         _, file_type = os.path.splitext(path)
-        print(file_type)
-        if file_type == '.mp3':
-            return PygamePlayer(self.volume, self.loop)
-        return WavPlayer(self.volume, self.loop)
+        if file_type.lower() == '.mp3':
+            return self.pygame_player
+        return self.wav_player
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
         current_time = self.audio_player.current_time
@@ -137,7 +144,9 @@ class SoundPlayer(QRunnable):
         return waveform_width/sound_duration
 
     def goto(self, position):
-        self.audio_player.goto(position/self.pixel_time_conversion_rate)
+        goto_time = position/self.pixel_time_conversion_rate
+        self.audio_player.goto(goto_time)
+        self.current_time = goto_time
         self.signals.time_changed.emit()
 
     def play(self):
@@ -149,6 +158,285 @@ class AudioPlayerSigs(QObject):
 
 
 class AudioPlayer:
+    def __init__(self, volume=85, loop=False):
+        self.signals = AudioPlayerSigs()
+        self.loaded = False
+        self.segment = False
+        self._playing = False
+        self._ran_end = False
+        self._path = ''
+        self.path = ''
+        self._original_path = ''
+        self._meta_data = None
+        self._duration = 0
+        self.attempted_current_time = 0
+        self._passed_available_time = False
+        self.passed_available_time = False
+        self.passed_available_time_playing = False
+        self.busy = True
+        self._current_time_start = 0
+        self.current_time_stop = 0
+        self._current_time_stop = 0
+        self._current_time = 0
+        self.current_time = 0
+        self._loop = loop
+        self._volume = volume
+
+    def __del__(self):
+        self._meta_data = None
+
+    @property
+    def passed_available_time(self):
+        return self._passed_available_time
+
+    @passed_available_time.setter
+    def passed_available_time(self, value):
+        self._passed_available_time = value
+
+    @property
+    def loop(self):
+        return self._loop
+
+    @loop.setter
+    def loop(self, value):
+        if self.ended and value:
+            self.restart()
+        self._loop = value
+
+    @property
+    def current_time_stop(self):
+        if not self.playing or self._ran_end:
+            return self._current_time_stop
+        return time.time()
+
+    @current_time_stop.setter
+    def current_time_stop(self, value):
+        self._current_time_stop = value
+
+    @property
+    def playing(self):
+        return self._playing
+
+    @property
+    def path(self):
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        self._original_path = value
+        self._path = get_short_path_name(value)
+
+    @property
+    def meta_data(self):
+        if self.loaded:
+            return self._meta_data
+        self._meta_data = self.get_meta_file()
+        return self._meta_data
+
+    @property
+    def true_duration(self):
+        return self.meta_data['duration']
+
+    @property
+    def duration(self):
+        if self.segment:
+            return self._duration
+        return self.true_duration
+
+    @property
+    def ended(self):
+        if self.duration <= self.current_time:
+            if not self._ran_end:
+                self.end()
+            return True
+        else:
+            self._ran_end = False
+            return False
+
+    def get_meta_file(self):
+        return MetaData.get_meta_file(self._original_path)
+
+    def load(self, path):
+        self.busy = True
+        self.path = self._prepare_file(path)
+        self._meta_data = self.get_meta_file()
+        self.loaded = True
+        self._load(self.path)
+        self.busy = False
+        self.set_volume(self._volume)
+
+    def _load(self, path):
+        pass
+
+    def reload(self, path, playing):
+        self.busy = True
+        self.path = self._prepare_file(path)
+        self._meta_data = self.get_meta_file()
+        self.stop()
+        self._reload(path)
+        self.loaded = True
+        self.busy = False
+        if playing or self.passed_available_time_playing:
+            self.play()
+        if self.passed_available_time:
+            self.passed_available_time = False
+            self.goto(self.attempted_current_time)
+
+    def _reload(self, path):
+        pass
+
+    def play(self):
+        if not self.playing:
+            self._play()
+            if self.passed_available_time:
+                self.passed_available_time = False
+                self.goto(self.attempted_current_time)
+
+    def _play(self):
+        pass
+
+    def pause(self):
+        if self.playing:
+            self._pause()
+
+    def _pause(self):
+        pass
+
+    def resume(self):
+        if not self.playing:
+            self._resume()
+
+    def _resume(self):
+        pass
+
+    def stop(self):
+        if self.loaded:
+            self._reset()
+            self._stop()
+
+    def _stop(self):
+        pass
+
+    def set_volume(self, value):
+        self._set_volume(value)
+
+    def _set_volume(self, value):
+        pass
+
+    def goto(self, position):
+        self.current_time = position
+        if position > self.duration:
+            self._goto(self.duration)
+        else:
+            self._goto(position)
+
+    def _goto(self, position):
+        pass
+
+    def _reset(self):
+        self.loaded = False
+        self.loop = False
+        self.segment = False
+        self.busy = True
+        self.passed_available_time = False
+        self.current_time = 0
+
+    def end(self):
+        if self.loop:
+            self.restart()
+        self.current_time_stop = time.time()
+        self._ran_end = True
+
+    def restart(self):
+        self.goto(0)
+        self.play()
+
+    def _reload_and_return_previous_time(self, path):
+        self.busy = True
+        self.path = self._prepare_file(path)
+        self._meta_data = self.get_meta_file()
+        current_time = self._get_current_time()
+        playing = self.playing
+        ended = self.ended
+        self.stop()
+        self._reload(path)
+        self.loaded = True
+        self.busy = False
+        if (playing or self.passed_available_time_playing) and not ended:
+            self.play()
+        return current_time
+
+    def _get_current_time(self):
+        return 0
+
+    def swap_file_with_complete_file(self, path):
+        if self.passed_available_time:
+            current_time = self.attempted_current_time
+            self.reload(path, self.passed_available_time_playing)
+        else:
+            current_time = self._reload_and_return_previous_time(path)
+        self.segment = False
+        self.goto(current_time)
+
+    load_rest_of_segment = swap_file_with_complete_file
+
+    def swap_file_with_incomplete_file(self, path, duration):
+        pass
+        # current_time = self.current_time
+        # self.stop()
+        # self.current_time = current_time
+        # self.load_segment(path, duration)
+        # self.goto(current_time)
+        # self.play()
+
+    def _prepare_file(self, path):
+        return path
+
+    def load_segment(self, path, duration):
+        self.segment = True
+        self._duration = duration
+        self.load(path)
+
+import datetime
+class WavPlayer(AudioPlayer):
+    def __init__(self, *args):
+        super(WavPlayer, self).__init__(*args)
+        self._player = multi_track_player.PlayerProcess()
+
+    @property
+    def _playing(self):
+        return self._player.get_playing()
+
+    @_playing.setter
+    def _playing(self, value):
+        pass
+
+    def _play(self):
+        self._player.play()
+
+    def _pause(self):
+        print(datetime.datetime.now())
+        self._player.pause()
+
+    def _stop(self):
+        self._player.stop()
+
+    def _goto(self, position):
+        print(position)
+        self._player.goto(position)
+
+    def _load(self, path):
+        self._player.load(path)
+
+    def _reload(self, path):
+        self._stop()
+        self._load(path)
+
+    def _resume(self):
+        self._play()
+
+
+class PygameAudioPlayer:
     def __init__(self, volume=85, loop=False):
         self.signals = AudioPlayerSigs()
         self.loaded = False
@@ -436,36 +724,7 @@ class AudioPlayer:
         self.load(path)
 
 
-class WavPlayer(AudioPlayer):
-    def __init__(self, *args):
-        super(WavPlayer, self).__init__(*args)
-        self._player = multi_track_player.Player()
-
-    def _play(self):
-        self._player.play()
-
-    def _pause(self):
-        self._player.pause()
-
-    def _stop(self):
-        self._player.stop()
-
-    def _goto(self, position):
-        print(position)
-        self._player.goto(position)
-
-    def _load(self, path):
-        self._player.load(path)
-
-    def _reload(self, path):
-        self._stop()
-        self._load(path)
-
-    def _resume(self):
-        self._play()
-
-
-class PygamePlayer(AudioPlayer):
+class PygamePlayer(PygameAudioPlayer):
     def __init__(self, *args):
         super(PygamePlayer, self).__init__(*args)
         pygame.mixer.pre_init(48000, -16, 2, 1024)

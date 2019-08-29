@@ -203,8 +203,10 @@ class Gui(GUI.Ui_MainWindow):
 
     def new_sound_audio_player(self, result):
         self.audio_player.audio_player.stop()
-        self.audio_converter_worker(self.audio_player.load, result.path, self.pixel_time_conversion_rate,
-                                    finished_f=self.audio_player.play)
+        # self.audio_converter_worker(self.audio_player.load, result.path, self.pixel_time_conversion_rate,
+        #                             finished_f=self.audio_player.play)
+        self.audio_player.load(result.path, self.pixel_time_conversion_rate)
+        self.audio_player.play()
 
     def load_then_play(self, result):
         self.audio_player.load(result.path, self.pixel_time_conversion_rate)
@@ -421,7 +423,7 @@ class Gui(GUI.Ui_MainWindow):
         self.currentTimeLabel.setText(string)
 
     def set_current_time(self):
-        current_time = self.audio_player.audio_player.current_time
+        current_time = self.audio_player.current_time
         self.waveform.move_to_current_time()
         self.set_label_text(current_time)
 
