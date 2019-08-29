@@ -8,6 +8,7 @@ from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, pyqtSlot
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtWidgets import QSlider
 import mmap
+import multi_track_player
 import contextlib
 with contextlib.redirect_stdout(None):
     import pygame
@@ -96,7 +97,11 @@ class SoundPlayer(QRunnable):
         self.audio_player.load(path)
 
     def get_correct_audio_player(self, path):
-        return PygamePlayer(self.volume, self.loop)
+        _, file_type = os.path.splitext(path)
+        print(file_type)
+        if file_type == '.mp3':
+            return PygamePlayer(self.volume, self.loop)
+        return WavPlayer(self.volume, self.loop)
 
     def load_segment(self, path, true_duration, pixel_time_conversion_rate):
         current_time = self.audio_player.current_time
@@ -429,6 +434,35 @@ class AudioPlayer:
         self.segment = True
         self._duration = duration
         self.load(path)
+
+
+class WavPlayer(AudioPlayer):
+    def __init__(self, *args):
+        super(WavPlayer, self).__init__(*args)
+        self._player = multi_track_player.Player()
+
+    def _play(self):
+        self._player.play()
+
+    def _pause(self):
+        self._player.pause()
+
+    def _stop(self):
+        self._player.stop()
+
+    def _goto(self, position):
+        print(position)
+        self._player.goto(position)
+
+    def _load(self, path):
+        self._player.load(path)
+
+    def _reload(self, path):
+        self._stop()
+        self._load(path)
+
+    def _resume(self):
+        self._play()
 
 
 class PygamePlayer(AudioPlayer):
