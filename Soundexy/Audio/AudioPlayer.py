@@ -91,11 +91,10 @@ class SoundPlayer(QRunnable):
     def run(self):
         while True:
             start = time.time()
-            playing = self.audio_player.playing
-            print(playing)
-            while playing and not self.audio_player.ended:
+            current = self.current_time
+            while self.audio_player.playing and not self.audio_player.ended:
                 time.sleep(.003)
-                self.current_time = (time.time() - start)*1000
+                self.current_time = ((time.time() - start)*1000) + current
                 self.signals.time_changed.emit()
             time.sleep(.01)
 
@@ -891,7 +890,7 @@ class WaveformSlider(QSlider):
 
     def move_to_current_time(self):
         sound_duration = self.current_sound_duration
-        current_time = self.audio_player.audio_player.current_time
+        current_time = self.audio_player.current_time
         try:
             progress = current_time/sound_duration
         except ZeroDivisionError:
