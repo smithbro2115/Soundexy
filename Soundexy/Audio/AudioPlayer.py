@@ -144,6 +144,7 @@ class SoundPlayer(QRunnable):
 
     def goto(self, position):
         goto_time = position/self.pixel_time_conversion_rate
+        print(goto_time)
         self.audio_player.goto(goto_time)
         self.current_time = goto_time
         self.signals.time_changed.emit()
