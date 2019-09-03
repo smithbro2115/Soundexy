@@ -435,6 +435,9 @@ class WavPlayer(AudioPlayer):
     def _resume(self):
         self._play()
 
+    def _set_volume(self, value):
+        self._player.set_volume(value)
+
 
 class PygameAudioPlayer:
     def __init__(self, volume=85, loop=False):

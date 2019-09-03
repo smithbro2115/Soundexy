@@ -361,6 +361,22 @@
       <property name="horizontalSpacing">
        <number>10</number>
       </property>
+      <item row="0" column="5">
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>25</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
       <item row="0" column="0">
        <widget class="QSlider" name="volumeSlider">
         <property name="maximumSize">
@@ -376,10 +392,10 @@
          <string notr="true"/>
         </property>
         <property name="maximum">
-         <number>100</number>
+         <number>125</number>
         </property>
         <property name="value">
-         <number>80</number>
+         <number>100</number>
         </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -403,7 +419,14 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="3">
+      <item row="0" column="7">
+       <widget class="QLabel" name="messageLabel">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
        <spacer name="horizontalSpacer_2">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -417,9 +440,16 @@
        </spacer>
       </item>
       <item row="0" column="4">
-       <widget class="QLabel" name="messageLabel">
-        <property name="text">
-         <string/>
+       <layout class="QHBoxLayout" name="selectedChannelsLayout">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+       </layout>
+      </item>
+      <item row="0" column="3">
+       <widget class="Line" name="line_4">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
         </property>
        </widget>
       </item>

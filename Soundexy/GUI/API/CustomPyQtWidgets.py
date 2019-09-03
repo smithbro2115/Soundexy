@@ -600,6 +600,69 @@ class PlaylistTreeWidgetItem(QtWidgets.QTreeWidgetItem):
 		self.last_text = self.text(0)
 
 
+class TracksWidgetSignals(QtCore.QObject):
+	changed = pyqtSignal(list)
+
+
+class TracksWidget(QtWidgets.QWidget):
+	def __init__(self, parent):
+		super(TracksWidget, self).__init__(parent=parent)
+		layout = QtWidgets.QHBoxLayout()
+		layout.setContentsMargins(0, 0, 0, 0)
+		self.signals = TracksWidgetSignals()
+		self.setLayout(layout)
+		self.buttons = []
+		self.selected_channels = []
+
+	def load(self, amount_of_tracks: int):
+		self.reset()
+		for track in range(amount_of_tracks):
+			button = self.make_button(track)
+			self.buttons.append(button)
+			self.layout().addWidget(button)
+
+	def make_button(self, track):
+		button = TrackButton(track, f'Track {track+1}')
+		button.setCheckable(True)
+		# button.setSi
+		button.setFocusPolicy(QtCore.Qt.NoFocus)
+		button.setChecked(True)
+		button.clicked.connect(self.clicked)
+		button.doubleClicked.connect(self.double_clicked)
+		return button
+
+	def double_clicked(self, track):
+		button = self.buttons[track]
+		state = not button.isChecked()
+		button.setChecked(state)
+		for button in self.buttons:
+			if not button.track == track:
+				button.setChecked(not state)
+
+	def clicked(self):
+		self.selected_channels = []
+		for index, button in enumerate(self.buttons):
+			if button.isChecked():
+				self.selected_channels.append(index+1)
+		self.signals.changed.emit(self.selected_channels)
+
+	def reset(self):
+		for button in self.buttons:
+			self.layout().removeWidget(button)
+		self.buttons = []
+
+
+class TrackButton(QtWidgets.QPushButton):
+	doubleClicked = pyqtSignal(int)
+
+	def __init__(self, track_number, *args):
+		super(TrackButton, self).__init__(*args)
+		self.track = track_number
+
+	def mouseDoubleClickEvent(self, *args, **kwargs):
+		self.doubleClicked.emit(self.track)
+
+
 class PlaylistResultTreeWidgetItem(QtWidgets.QTreeWidgetItem):
 	def __init__(self, parent, row, result):
 		super(PlaylistResultTreeWidgetItem, self).__init__(parent, row)

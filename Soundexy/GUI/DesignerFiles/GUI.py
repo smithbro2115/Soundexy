@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\Josh\PycharmProjects\Soundexy\Soundexy\GUI\DesignerFiles\Gui.ui'
+# Form implementation generated from reading ui file 'D:\Programming\Soundexy\Soundexy\GUI\DesignerFiles\Gui.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.3
 #
@@ -170,12 +170,14 @@ class Ui_MainWindow(object):
         self.lowerPlayer = QtWidgets.QGridLayout()
         self.lowerPlayer.setHorizontalSpacing(10)
         self.lowerPlayer.setObjectName("lowerPlayer")
+        spacerItem1 = QtWidgets.QSpacerItem(20, 25, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        self.lowerPlayer.addItem(spacerItem1, 0, 5, 1, 1)
         self.volumeSlider = QtWidgets.QSlider(self.centralwidget)
         self.volumeSlider.setMaximumSize(QtCore.QSize(185, 16777215))
         self.volumeSlider.setAutoFillBackground(False)
         self.volumeSlider.setStyleSheet("")
-        self.volumeSlider.setMaximum(100)
-        self.volumeSlider.setProperty("value", 80)
+        self.volumeSlider.setMaximum(125)
+        self.volumeSlider.setProperty("value", 100)
         self.volumeSlider.setOrientation(QtCore.Qt.Horizontal)
         self.volumeSlider.setObjectName("volumeSlider")
         self.lowerPlayer.addWidget(self.volumeSlider, 0, 0, 1, 1)
@@ -188,12 +190,21 @@ class Ui_MainWindow(object):
         self.line_3.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line_3.setObjectName("line_3")
         self.lowerPlayer.addWidget(self.line_3, 0, 1, 1, 1)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.lowerPlayer.addItem(spacerItem1, 0, 3, 1, 1)
         self.messageLabel = QtWidgets.QLabel(self.centralwidget)
         self.messageLabel.setText("")
         self.messageLabel.setObjectName("messageLabel")
-        self.lowerPlayer.addWidget(self.messageLabel, 0, 4, 1, 1)
+        self.lowerPlayer.addWidget(self.messageLabel, 0, 7, 1, 1)
+        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.lowerPlayer.addItem(spacerItem2, 0, 6, 1, 1)
+        self.selectedChannelsLayout = QtWidgets.QHBoxLayout()
+        self.selectedChannelsLayout.setSpacing(0)
+        self.selectedChannelsLayout.setObjectName("selectedChannelsLayout")
+        self.lowerPlayer.addLayout(self.selectedChannelsLayout, 0, 4, 1, 1)
+        self.line_4 = QtWidgets.QFrame(self.centralwidget)
+        self.line_4.setFrameShape(QtWidgets.QFrame.VLine)
+        self.line_4.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.line_4.setObjectName("line_4")
+        self.lowerPlayer.addWidget(self.line_4, 0, 3, 1, 1)
         self.gridLayout.addLayout(self.lowerPlayer, 6, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)

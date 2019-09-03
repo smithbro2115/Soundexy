@@ -8,7 +8,8 @@ from Soundexy.Indexing import LocalFileHandler, SearchResults
 import traceback
 import os
 from Soundexy.Imaging.Wave import make_waveform
-from Soundexy.GUI.API.CustomPyQtWidgets import SearchResultsTable, DownloadButton, PlaylistTreeWidget, BuyButton
+from Soundexy.GUI.API.CustomPyQtWidgets import SearchResultsTable, DownloadButton, PlaylistTreeWidget, BuyButton, \
+    TracksWidget
 from Soundexy.Indexing.Searches import SearchHandler
 from Soundexy.Functionality import useful_utils
 
@@ -27,6 +28,7 @@ class Gui(GUI.Ui_MainWindow):
         self.play_sound_thread_pool.setMaxThreadCount(1)
         self.index_thread_pool = QThreadPool()
         self.index_thread_pool.setMaxThreadCount(1)
+        self.tracks_widget = None
         self.current_downloader = None
         self.waveform_active = False
         self.waveform_scene = QtWidgets.QGraphicsScene()
@@ -71,6 +73,8 @@ class Gui(GUI.Ui_MainWindow):
         self.window = MainWindow
         self.audio_player.set_label(self.currentTimeLabel)
         self.search_handler.setup()
+        self.tracks_widget = TracksWidget(None)
+        self.selectedChannelsLayout.addWidget(self.tracks_widget)
         MainWindow.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         # self.topbarLibraryLocalCheckbox.stateChanged.connect(self.search)
         # self.topbarLibraryFreeCheckbox.stateChanged.connect(self.search)
@@ -183,6 +187,7 @@ class Gui(GUI.Ui_MainWindow):
                 self.make_waveform(result.path)
                 self.new_sound_audio_player(result)
                 self.new_sound_waveform(result)
+                self.new_sound_track_selector(result)
             else:
                 self.audio_player.space_bar()
         self.current_result = result
@@ -207,6 +212,10 @@ class Gui(GUI.Ui_MainWindow):
         #                             finished_f=self.audio_player.play)
         self.audio_player.load(result.path, self.pixel_time_conversion_rate)
         self.audio_player.play()
+
+    def new_sound_track_selector(self, result):
+        if result.channels > 0:
+            self.tracks_widget.load(result.channels)
 
     def load_then_play(self, result):
         self.audio_player.load(result.path, self.pixel_time_conversion_rate)
