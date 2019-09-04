@@ -609,6 +609,7 @@ class TracksWidget(QtWidgets.QWidget):
 		super(TracksWidget, self).__init__(parent=parent)
 		layout = QtWidgets.QHBoxLayout()
 		layout.setContentsMargins(0, 0, 0, 0)
+		layout.setSizeConstraint(QtWidgets.QLayout.SetNoConstraint)
 		self.signals = TracksWidgetSignals()
 		self.setLayout(layout)
 		self.buttons = []
@@ -638,6 +639,7 @@ class TracksWidget(QtWidgets.QWidget):
 		for button in self.buttons:
 			if not button.track == track:
 				button.setChecked(not state)
+		self.clicked()
 
 	def clicked(self):
 		self.selected_channels = []
@@ -657,10 +659,15 @@ class TrackButton(QtWidgets.QPushButton):
 
 	def __init__(self, track_number, *args):
 		super(TrackButton, self).__init__(*args)
+		self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
 		self.track = track_number
 
 	def mouseDoubleClickEvent(self, *args, **kwargs):
 		self.doubleClicked.emit(self.track)
+	#
+	# def sizeHint(self):
+	# 	suggested = super(TrackButton, self).sizeHint()
+	# 	return QtCore.QSize(suggested.width()*2.5, suggested.height())
 
 
 class PlaylistResultTreeWidgetItem(QtWidgets.QTreeWidgetItem):

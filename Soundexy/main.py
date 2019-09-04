@@ -74,6 +74,7 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.set_label(self.currentTimeLabel)
         self.search_handler.setup()
         self.tracks_widget = TracksWidget(None)
+        self.tracks_widget.signals.changed.connect(self.audio_player.set_channels)
         self.selectedChannelsLayout.addWidget(self.tracks_widget)
         MainWindow.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         # self.topbarLibraryLocalCheckbox.stateChanged.connect(self.search)

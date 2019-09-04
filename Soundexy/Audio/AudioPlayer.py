@@ -87,6 +87,9 @@ class SoundPlayer(QRunnable):
         except TypeError:
             traceback.print_exc()
 
+    def set_channels(self, channels):
+        self.audio_player.set_channels(channels)
+
     @pyqtSlot()
     def run(self):
         while True:
@@ -437,6 +440,9 @@ class WavPlayer(AudioPlayer):
 
     def _set_volume(self, value):
         self._player.set_volume(value)
+
+    def set_channels(self, channels):
+        self._player.set_channels(channels)
 
 
 class PygameAudioPlayer:
