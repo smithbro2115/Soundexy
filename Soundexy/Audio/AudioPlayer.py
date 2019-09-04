@@ -46,6 +46,7 @@ class SoundPlayer(QRunnable):
         self.audio_player.signals.error.connect(lambda x: self.signals.error.emit(x))
         self.current_time = 0
         self._volume = 85
+        self.should_run = True
         self._loop = False
 
     @property
@@ -90,15 +91,22 @@ class SoundPlayer(QRunnable):
     def set_channels(self, channels):
         self.audio_player.set_channels(channels)
 
+    def close(self):
+        self.should_run = False
+        self.audio_player.close()
+
     @pyqtSlot()
     def run(self):
         while True:
             start = time.time()
             current = self.current_time
-            while self.audio_player.playing and not self.audio_player.ended:
+            if not self.should_run:
+                break
+            while self.should_run and self.audio_player.playing and not self.audio_player.ended:
                 time.sleep(.003)
                 self.current_time = ((time.time() - start)*1000) + current
                 self.signals.time_changed.emit()
+            print('loop')
             time.sleep(.01)
 
     def load(self, path, pixel_time_conversion_rate):
@@ -187,6 +195,9 @@ class AudioPlayer:
 
     def __del__(self):
         self._meta_data = None
+
+    def close(self):
+        pass
 
     @property
     def passed_available_time(self):
@@ -405,6 +416,9 @@ class WavPlayer(AudioPlayer):
     def __init__(self, *args):
         super(WavPlayer, self).__init__(*args)
         self._player = multi_track_player.PlayerProcess()
+
+    def close(self):
+        del self._player
 
     @property
     def _playing(self):

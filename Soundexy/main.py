@@ -623,6 +623,13 @@ class Worker(QRunnable):
                 self.signals.finished.emit()  # Done
 
 
+def exit_app():
+    app.exec_()
+    print('test')
+    ui.audio_player.close()
+    sys.exit()
+
+
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
@@ -631,4 +638,4 @@ if __name__ == "__main__":
     ui.setupUi(MainWindow)
     ui.setup_ui_additional(MainWindow)
     MainWindow.show()
-    sys.exit(app.exec_())
+    exit_app()
