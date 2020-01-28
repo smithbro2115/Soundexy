@@ -95,14 +95,20 @@ class SearchHandler:
     def run_local_search(self, search_text):
         search = IndexSearch(search_text)
         index = self.add_to_running_searches(search)
-        search.signals.batch_found.connect(self.make_results_from_hit(
-            self.parent.searchResultsTable.add_results_to_search_results_table))
+        search.signals.batch_found.connect(self.add_hits_to_search_results_table)
         search.signals.finished.connect(lambda: self.finished_search(index))
         self.local_search_thread_pool.start(search)
 
-    def make_results_from_hit(self, hits):
-        for hit in hits:
-            yield SearchResults.Local(hit)
+    def add_hits_to_search_results_table(self, hits):
+        results = self.make_results_from_hits(hits)
+        self.parent.searchResultsTable.add_results_to_search_results_table(results)
+
+    def make_results_from_hits(self, hits):
+        results = []
+        for hit in list(hits):
+            results.append(SearchResults.Local(hit))
+        return results
+
 
     def run_remote_search(self, keywords, excluded_words):
         actions = self.get_all_checked_actions(*self.get_all_checked_context_menus())

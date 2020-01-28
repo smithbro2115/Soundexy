@@ -72,16 +72,21 @@ class Local(Result):
         super(Local, self).__init__()
         self.hit = hit
         self.id = hit.docnum
+        print(self.meta_file)
         self.path = self.meta_file['path']
         self.library = self.get_library(self.path)
-        self.file_type = self.meta_file['file type']
-        self.sample_rate = self.meta_file['sample rate']
-        self.duration = self.meta_file['duration']
-        self.channels = self.meta_file['channels']
+        self.file_type = self.meta_file['file_type']
+        # self.sample_rate = self.meta_file['sample_rate']
+        # self.duration = self.meta_file['duration']
+        # self.channels = self.meta_file['channels']
 
     @property
     def meta_file(self):
         return self.hit.fields()
+
+    @meta_file.setter
+    def meta_file(self, value):
+        self._meta_file = value
 
     def populate(self, path, identification_number):
         self.id = identification_number

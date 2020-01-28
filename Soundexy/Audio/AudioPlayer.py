@@ -106,7 +106,6 @@ class SoundPlayer(QRunnable):
                 time.sleep(.003)
                 self.current_time = ((time.time() - start)*1000) + current
                 self.signals.time_changed.emit()
-            print('loop')
             time.sleep(.01)
 
     def load(self, path, pixel_time_conversion_rate):

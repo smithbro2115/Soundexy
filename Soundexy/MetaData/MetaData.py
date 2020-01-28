@@ -34,14 +34,14 @@ class MutagenFile:
 
     def populate(self):
         file = self.get_file(self.path)
-        self.meta['file name'] = self.filename
+        self.meta['file_name'] = self.filename
         self.meta['path'] = self.path
-        self.meta['sample rate'] = self.sample_rate(file)
+        self.meta['sample_rate'] = self.sample_rate(file)
         self.meta['channels'] = self.channels(file)
         self.meta['duration'] = self.duration(file)
-        self.meta['bit rate'] = self.bitrate(file)
-        self.meta['date created'] = self.date_created
-        self.meta['file type'] = self.file_type
+        self.meta['bit_rate'] = self.bitrate(file)
+        self.meta['date_created'] = self.date_created
+        self.meta['file_type'] = self.file_type
         self.meta.update(file)
 
     @staticmethod
