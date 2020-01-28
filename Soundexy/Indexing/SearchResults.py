@@ -1,4 +1,4 @@
-from Soundexy.MetaData import MetaData
+# from Soundexy.MetaData import MetaData
 from Soundexy.Functionality.useful_utils import get_app_data_folder, construct_in_different_thread, \
     check_if_sound_is_bought_in_separate_thread
 from Soundexy.Webscraping.Authorization.Credentials import get_credentials, delete_saved_credentials, \
@@ -68,21 +68,36 @@ class Result:
 
 
 class Local(Result):
+    def __init__(self, hit):
+        super(Local, self).__init__()
+        self.hit = hit
+        self.id = hit.docnum
+        self.path = self.meta_file['path']
+        self.library = self.get_library(self.path)
+        self.file_type = self.meta_file['file type']
+        self.sample_rate = self.meta_file['sample rate']
+        self.duration = self.meta_file['duration']
+        self.channels = self.meta_file['channels']
+
+    @property
+    def meta_file(self):
+        return self.hit.fields()
+
     def populate(self, path, identification_number):
         self.id = identification_number
         self.path = path
         self.library = self.get_library(path)
         self.keywords = self.get_words()
-        try:
-            self.meta_file = MetaData.get_meta_file(self.path)
-        except AttributeError:
-            return False
-        else:
-            self.file_type = self.meta_file['file type']
-            self.sample_rate = self.meta_file['sample rate']
-            self.duration = self.meta_file['duration']
-            self.channels = self.meta_file['channels']
-            return True
+        # try:
+        #     # self.meta_file = MetaData.get_meta_file(self.path)
+        # except AttributeError:
+        #     return False
+        # else:
+        #     self.file_type = self.meta_file['file type']
+        #     self.sample_rate = self.meta_file['sample rate']
+        #     self.duration = self.meta_file['duration']
+        #     self.channels = self.meta_file['channels']
+        #     return True
 
     def repopulate(self):
         self.populate(self.path, self.id)
@@ -132,38 +147,6 @@ class Local(Result):
         words = new_path_str.lower().split()
         words.append(self.path)
         return words
-
-    def old_search(self, search_words, required_words, excluded_words=None):
-        for word in search_words:
-            for keyword in self.keywords:
-                if word.lower() in keyword:
-                    if excluded_words is not None:
-                        if keyword.lower() in excluded_words:
-                            return False
-                    return self.make_sure_includes(required_words)
-        return False
-
-    def search(self, search_words, required_words, excluded_words):
-        if self.make_sure_does_not_include(excluded_words):
-            if len(required_words) > 0:
-                if self.make_sure_includes(required_words):
-                    return True
-            else:
-                for search_word in search_words:
-                    if search_word in self.keywords:
-                        return True
-
-    def make_sure_does_not_include(self, exclude):
-        for excluded_word in exclude:
-            if excluded_word in self.keywords:
-                return False
-        return True
-
-    def make_sure_includes(self, required_words):
-        for required_word in required_words:
-            if required_word not in self.keywords:
-                return False
-        return True
 
 
 class Remote(Result):
@@ -239,8 +222,9 @@ class Remote(Result):
         function(self)
 
     def _get_sample_rate(self):
-        meta = MetaData.get_meta_file(self.path)
-        return meta['sample rate']
+        # meta = MetaData.get_meta_file(self.path)
+        # return meta['sample rate']
+        return 48000
 
     def _preview_download_done(self, filename, function):
         self._file_name = filename

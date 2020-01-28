@@ -625,7 +625,6 @@ class Worker(QRunnable):
 
 def exit_app():
     app.exec_()
-    print('test')
     ui.audio_player.close()
     sys.exit()
 

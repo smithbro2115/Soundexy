@@ -4,6 +4,7 @@ import mutagen.easyid3
 from mutagen.oggvorbis import OggVorbis
 from mutagen.flac import FLAC
 from mutagen.mp3 import EasyMP3
+import time
 
 
 # TODO need to figure out how to set metadata to wav files
@@ -39,6 +40,7 @@ class MutagenFile:
         self.meta['channels'] = self.channels(file)
         self.meta['duration'] = self.duration(file)
         self.meta['bit rate'] = self.bitrate(file)
+        self.meta['date created'] = self.date_created
         self.meta['file type'] = self.file_type
         self.meta.update(file)
 
@@ -49,6 +51,10 @@ class MutagenFile:
     @property
     def filename(self):
         return os.path.basename(self.path)
+
+    @property
+    def date_created(self):
+        return time.strftime('%m-%d-%Y %H:%M', time.localtime(os.path.getctime(self.path)))
 
     @staticmethod
     def duration(file):
@@ -121,6 +127,10 @@ class WavFile:
     @property
     def filename(self):
         return os.path.basename(self.path)
+
+    @property
+    def date_created(self):
+        return time.strftime('%m-%d-%Y %H:%M', time.localtime(os.path.getctime(self.path)))
 
     @title.setter
     def title(self, title):
@@ -203,6 +213,5 @@ class Mp3File(MutagenFile):
 
 
 def _test():
-    test = Mp3File("C:\\Users\\Josh\\Downloads\\Camping Caper Rough Mix_2.mp3")
-    print(test.get_tag('artist'))
-
+    test = Mp3File("C:\\Users\\Josh\\Downloads\\2-02 71_Rescue the Captors, Part 2.mp3")
+    print(test.meta)

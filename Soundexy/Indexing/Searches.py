@@ -6,6 +6,7 @@ from Soundexy.Webscraping.Webscraping import WebScrapers
 from Soundexy.Webscraping.Authorization.Credentials import get_saved_credentials, delete_saved_credentials
 from Soundexy.Webscraping.Authorization.WebsiteAuth import ProSound, LoginError
 from Soundexy.Indexing.LocalFileHandler import IndexSearch
+from Soundexy.Indexing import SearchResults
 from Soundexy.GUI.API.CustomPyQtWidgets import SearchCheckBoxContextMenu
 import traceback
 import re
@@ -68,12 +69,12 @@ class SearchHandler:
         if not self.search_line_text.strip() == '':
             keywords, excluded_words, required_keywords, unnecessary_keywords = self.get_keywords()
             if self.running_search_keywords != keywords or self.running_libraries != self.checked_search_libraries:
-                self.run_search(keywords, required_keywords, unnecessary_keywords, excluded_words)
+                self.run_search(keywords, excluded_words)
         else:
             self.reset_searches()
             self.running_search_keywords = []
 
-    def run_search(self, keywords, required_keywords, unnecessary_keywords, excluded_words):
+    def run_search(self, keywords,  excluded_words):
         self.reset_searches()
         self.clear_found_label()
         self.parent.start_busy_indicator_search()
@@ -81,7 +82,7 @@ class SearchHandler:
         self.running_libraries = self.checked_search_libraries
         self.running_search_keywords = keywords
         if local:
-            self.run_local_search(required_keywords, unnecessary_keywords, excluded_words)
+            self.run_local_search(self.search_line_text)
         self.run_remote_search(keywords, excluded_words)
         if len(self.running_searches) <= 0:
             self.finished_search(None)
@@ -91,12 +92,17 @@ class SearchHandler:
         self.running_searches[index] = search
         return index
 
-    def run_local_search(self, required_keywords, unnecessary_keywords, excluded_words):
-        search = IndexSearch(unnecessary_keywords, required_keywords, excluded_words)
+    def run_local_search(self, search_text):
+        search = IndexSearch(search_text)
         index = self.add_to_running_searches(search)
-        search.signals.batch_found.connect(self.parent.searchResultsTable.add_results_to_search_results_table)
+        search.signals.batch_found.connect(self.make_results_from_hit(
+            self.parent.searchResultsTable.add_results_to_search_results_table))
         search.signals.finished.connect(lambda: self.finished_search(index))
         self.local_search_thread_pool.start(search)
+
+    def make_results_from_hit(self, hits):
+        for hit in hits:
+            yield SearchResults.Local(hit)
 
     def run_remote_search(self, keywords, excluded_words):
         actions = self.get_all_checked_actions(*self.get_all_checked_context_menus())
