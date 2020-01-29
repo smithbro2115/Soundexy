@@ -1,7 +1,8 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal
 import traceback
-from Soundexy.Functionality.useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool, Worker
+from Soundexy.Functionality.useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool, Worker, \
+	convert_date_time_to_formatted_date
 import os
 from Soundexy.Indexing import LocalFileHandler
 from Soundexy.Functionality import Playlists
@@ -250,6 +251,7 @@ class SearchResultsTable(QtWidgets.QTableView):
 		self.current_results = {}
 		self.horizontalHeader().setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.horizontalHeader().customContextMenuRequested.connect(self.show_context_menu)
+		self.horizontalHeader().setDefaultAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
 		self.signals = SearchResultSignals()
 		self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
 		self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -278,6 +280,10 @@ class SearchResultsTable(QtWidgets.QTableView):
 			return result
 
 	@staticmethod
+	def convert_underscores_to_space(to_convert: str):
+		return to_convert.replace("_", " ")
+
+	@staticmethod
 	def try_to_get_value_from_meta_file(value):
 		try:
 			return value
@@ -296,6 +302,8 @@ class SearchResultsTable(QtWidgets.QTableView):
 			if v == -1:
 				return "$5.00"
 			return f'${v/100:<04}'
+		elif k == 'date_created':
+			return convert_date_time_to_formatted_date(v)
 		else:
 			return v
 
@@ -332,8 +340,10 @@ class SearchResultsTable(QtWidgets.QTableView):
 			item = QtGui.QStandardItem(str(checked_for_special))
 			standard_items[k] = item
 		standard_items['Id'] = QtGui.QStandardItem(str(result.id))
+		print(result.meta_file)
 		standard_items['Available Locally'] = QtGui.QStandardItem(self.special_values('available locally',
-																					  result.available_locally))
+																					  result.meta_file[
+																						  'available_locally']))
 		return standard_items
 
 	def replace_result(self, new_result, old_result):
@@ -374,11 +384,12 @@ class SearchResultsTable(QtWidgets.QTableView):
 	def make_row(self, meta_dict, index=-1):
 		row = self.return_empty_row()
 		for k, v in meta_dict.items():
-			index = self.get_column_index(k)
+			header = self.convert_underscores_to_space(k)
+			index = self.get_column_index(header)
 			if index >= 0:
 				row[index] = v
 			else:
-				new_index = self.add_new_column(k)
+				new_index = self.add_new_column(header)
 				row.insert(new_index, v)
 		return row
 
@@ -430,6 +441,7 @@ class SearchResultsTable(QtWidgets.QTableView):
 			event.ignore()
 
 	def dropEvent(self, event):
+		print('drop event')
 		files = [u.toLocalFile() for u in event.mimeData().urls()]
 		paths = []
 		for f in files:
@@ -506,7 +518,7 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
 		self.add_result_to_playlist_tree(result, playlist)
 
 	def add_result_to_playlist_index(self, result, playlist_name):
-		index_file = LocalFileHandler.IndexFile(playlist_name, 'playlists')
+		index_file = LocalFileHandler.IndexFile(playlist_name, app_data_folder='playlists')
 		index_file.add_result_to_index(result)
 		index_file.save()
 

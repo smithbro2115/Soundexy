@@ -93,7 +93,6 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
         self.searchResultsTable.signals.drop_sig.connect(self.open_import_directory)
-        self.searchResultsTable.signals.drop_sig.connect(self.open_import_directory)
         self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
         self.audio_player.signals.time_changed.connect(self.set_current_time)
         self.volumeSlider.valueChanged.connect(self.volume_changed)
@@ -156,11 +155,10 @@ class Gui(GUI.Ui_MainWindow):
         if result.downloaded and not useful_utils.check_if_file_exists(result.path):
             result.downloaded = False
             result.delete_from_index()
-            result.add_to_index()
             self.searchResultsTable.replace_result(result, result)
         self.add_download_button(result)
         if result.downloaded or self.current_result == result:
-                self.sound_init(result)
+            self.sound_init(result)
         else:
             self.new_sound_meta(result)
             self.current_result = result
@@ -488,7 +486,8 @@ class Gui(GUI.Ui_MainWindow):
             layout.itemAt(i).widget().setParent(None)
 
     def add_metadata_to_meta_tab(self, result):
-        for t, v in result.items():
+        formatted_result = self.format_result_keys(self.format_result_values(result))
+        for t, v in formatted_result.items():
             if v is not None and v != '':
                 tl = QtWidgets.QLabel()
                 tl.setText(t.title())
@@ -511,6 +510,23 @@ class Gui(GUI.Ui_MainWindow):
                 vl.setCursor(QtCore.Qt.IBeamCursor)
                 tl.show()
                 vl.show()
+
+    @staticmethod
+    def format_result_values(meta_dict):
+        new_dict = {}
+        for key, value in meta_dict.items():
+            if key == 'date_created':
+                new_dict[key] = useful_utils.convert_date_time_to_formatted_date(value)
+            else:
+                new_dict[key] = value
+        return new_dict
+
+    @staticmethod
+    def format_result_keys(meta_dict):
+        new_dict = {}
+        for key, value in meta_dict.items():
+            new_dict[key.replace("_", " ")] = value
+        return new_dict
 
     def resize_event(self):
         if self.current_result is not None:

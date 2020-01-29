@@ -20,18 +20,19 @@ class ResultSchema(SchemaClass):
 	title = TEXT(field_boost=2.0, stored=True, analyzer=field_analyzer, sortable=True)
 	file_name = TEXT(field_boost=2.0, stored=True, analyzer=field_analyzer, sortable=True)
 	description = TEXT(stored=True, sortable=True)
-	id = ID(stored=True, sortable=True)
+	id = ID(stored=True, sortable=True, unique=True)
 	artist = TEXT(stored=True, sortable=True)
 	album = TEXT(stored=True, sortable=True)
 	library = TEXT(stored=True, sortable=True)
 	file_type = ID(stored=True, sortable=True)
+	date_created = DATETIME(stored=True, sortable=True)
 	path = ID(stored=True, unique=True, sortable=True)
 	keywords = KEYWORD(analyzer=field_analyzer)
 	album_image_path = STORED
-	duration = NUMERIC(sortable=True)
-	channels = NUMERIC(sortable=True)
-	bit_rate = NUMERIC(sortable=True)
-	sample_rate = NUMERIC(sortable=True)
+	duration = NUMERIC(sortable=True, stored=True)
+	channels = NUMERIC(sortable=True, stored=True)
+	bit_rate = NUMERIC(sortable=True, stored=True)
+	sample_rate = NUMERIC(sortable=True, stored=True)
 
 
 class RemoteSchema(ResultSchema):
@@ -51,8 +52,8 @@ def open_index(path):
 
 def write_to_index(writer, **kwargs):
 	try:
-		print('writing to index')
 		writer.update_document(**kwargs)
+		print("Writing to index")
 	except UnknownFieldError:
 		print("Unknown fields")
 		for key in kwargs.keys():

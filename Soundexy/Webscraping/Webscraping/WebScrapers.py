@@ -83,20 +83,20 @@ class FreesoundScraper(Scraper):
 
     def make_result_from_raw(self, raw_result):
         result = SearchResults.FreesoundResult()
-        result.preview = 'https://freesound.org' + \
-                         str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
+        result.meta_file["preview_link"] = 'https://freesound.org' + \
+                                           str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
         result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
                              .find('a', {'class': 'title'}).get('title')))
-        result.name = result.title
-        result.duration = ceil(float(raw_result.find('span', {'class': 'duration'}).text))
-        result.description = raw_result.find('div', {'class': 'sound_description'}).find('p').text
-        result.library = 'Freesound'
-        result.author = raw_result.find('a', {'class': 'user'}).text
-        result.link = 'https://freesound.org' + \
-                      str(raw_result.find('div', {'class': 'sound_filename'})
-                          .find('a', {'class': 'title'}).get('href'))
-        result.original_id = raw_result.get('id')
-        result.id = 'freesound_' + str(result.original_id)
+        result.file_name = result.title
+        result.meta_file["duration"] = ceil(float(raw_result.find('span', {'class': 'duration'}).text))
+        result.meta_file["description"] = raw_result.find('div', {'class': 'sound_description'}).find('p').text
+        result.meta_file["library"] = 'Freesound'
+        result.meta_file["author"] = raw_result.find('a', {'class': 'user'}).text
+        result.meta_file["download_link"] = 'https://freesound.org' + \
+                               str(raw_result.find('div', {'class': 'sound_filename'})
+                                   .find('a', {'class': 'title'}).get('href'))
+        result.meta_file["original_id"] = raw_result.get('id')
+        result.meta_file["id"] = 'freesound_' + str(result.original_id)
         return result
 
 

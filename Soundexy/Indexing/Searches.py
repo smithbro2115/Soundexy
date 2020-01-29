@@ -109,7 +109,6 @@ class SearchHandler:
             results.append(SearchResults.Local(hit))
         return results
 
-
     def run_remote_search(self, keywords, excluded_words):
         actions = self.get_all_checked_actions(*self.get_all_checked_context_menus())
         for action in actions:

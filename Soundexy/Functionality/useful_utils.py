@@ -2,6 +2,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 import traceback
 import sys
 import os
+import time
 
 
 def try_to_remove_file(path):
@@ -35,6 +36,16 @@ def construct_in_different_thread(thread_pool, callback, object_to_construct, *a
     worker = Worker(object_to_construct, *args, **kwargs)
     worker.signals.result.connect(callback)
     thread_pool.start(worker)
+
+
+def convert_date_time_to_formatted_date(date_time):
+    try:
+        return date_time.strftime('%#m/%#d/%Y %#I:%M %p')
+    except ValueError:
+        try:
+            return date_time.strftime('%-m/%-d/%Y %-I:%M %p')
+        except ValueError:
+            date_time.strftime('%m/%d/%Y %I:%M %p')
 
 
 class WorkerSignals(QObject):

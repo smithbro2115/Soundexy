@@ -13,36 +13,19 @@ from Soundexy.Webscraping.Buying.Buyer import SoundDogsBuyer
 
 class Result:
     def __init__(self):
-        self._meta_file = None
-        self.meta_file = None
-        self.title = ''
-        self.name = ''
-        self.duration = 0
-        self.description = ''
-        self.id = None
-        self.author = ''
-        self.library = ''
-        self.channels = 0
-        self.file_type = ''
-        self.path = ''
-        self.bitrate = None
-        self.keywords = []
-        self.album_image = None
-        self.sample_rate = 48000
+        self.meta_file = {}
         self.index_path = ''
         self.index_file_name = ''
+
+    def __getattr__(self, item):
+        try:
+            return self.meta_file[item]
+        except KeyError:
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{item}'")
 
     @property
     def precise_duration(self):
         return self.duration
-
-    @property
-    def meta_file(self):
-        return self._meta_file
-
-    @meta_file.setter
-    def meta_file(self, value):
-        self._meta_file = value
 
     def __eq__(self, other):
         try:
@@ -59,26 +42,17 @@ class Result:
     def available_locally(self):
         return True
 
-    def get_dict_of_all_attributes(self):
-        return {'Filename': self._meta_file.filename, 'Title': self.title,
-                'Duration': str(self.duration) + ' ms', 'Description': self.description, 'ID': self.id,
-                'Author': self.author, 'Library': self.library, 'Channels': self.channels,
-                'File Type': self.file_type, 'File Path': self.path, 'Bit Rate': self.bitrate,
-                'Keywords': self.keywords, 'Sample Rate': self.sample_rate, 'Available Locally': self.available_locally}
-
 
 class Local(Result):
     def __init__(self, hit):
         super(Local, self).__init__()
+        self._meta_file = None
         self.hit = hit
-        self.id = hit.docnum
-        print(self.meta_file)
-        self.path = self.meta_file['path']
-        self.library = self.get_library(self.path)
-        self.file_type = self.meta_file['file_type']
-        # self.sample_rate = self.meta_file['sample_rate']
-        # self.duration = self.meta_file['duration']
-        # self.channels = self.meta_file['channels']
+        self.id = f"local_{hit.docnum}"
+        self.docnum = hit.docnum
+        self.library = self.get_library(self.meta_file['path'])
+        self.sample_rate = self.meta_file['sample_rate']
+        self.duration = self.meta_file['duration']
 
     @property
     def meta_file(self):
@@ -124,7 +98,7 @@ class Local(Result):
         self.meta_file.set_tag(tag, value)
         self.repopulate()
         from Soundexy.Indexing.LocalFileHandler import IndexFile
-        index = IndexFile(self.index_file_name, self.index_path)
+        index = IndexFile(self.index_file_name)
         index.changed_meta_data(self)
 
     def get_words(self):
@@ -158,24 +132,21 @@ class Remote(Result):
     def __init__(self):
         super(Remote, self).__init__()
         self.download_path = f"{get_app_data_folder('downloads')}"
-        self.index_path = 'obj'
-        self.preview = ''
-        self.link = ''
-        self.index_file_name = 'downloaded_index'
+        self.meta_file['available_locally'] = False
+        self.index_path = 'index'
+        self.index_file_name = 'downloaded'
         self.downloader = None
         self.downloading = False
         self.downloaded = False
-        self.original_id = 0
-
-    @property
-    def preview_link(self):
-        return self.meta_file['preview Link']
 
     def check_if_already_downloaded(self):
-        from Soundexy.Indexing.LocalFileHandler import IndexFile
-        for result in IndexFile(self.index_file_name, self.index_path).index:
-            if self == result:
-                return result
+        from Soundexy.Indexing.LocalFileHandler import IndexSearch
+        search = IndexSearch(f"id:{self.id}", index_name=self.index_file_name)
+        results = search.search()
+        if len(results) > 0:
+            self.meta_file = results[0].fields()
+            print(self.meta_file)
+            return self
 
     @property
     def available_locally(self):
@@ -189,39 +160,36 @@ class Remote(Result):
     def set_title(self, title):
         index = title.find('.')
         if index >= 0:
-            self.file_type = title[index:]
-            self.title = title[:index]
+            self.meta_file['file_type'] = title[index:]
+            self.meta_file['title'] = title[:index]
         else:
-            self.title = title
+            self.meta_file['title'] = title
 
     def set_filename(self, filename):
         index = filename.find('.')
         if index >= 0:
-            self.file_type = filename[index:]
-        self.name = filename
+            self.meta_file['file_type'] = filename[index:]
+        self.meta_file['file_name'] = filename
 
-    @property
-    def meta_file(self):
-        return {'file name': self.name, 'title': self.title, 'duration': self.duration,
-                'description': self.description, 'id': self.id,
-                'author': self.author, 'library': self.library, 'preview Link': self.preview,
-                'sample rate': self.sample_rate,
-                'file type': self.file_type, 'download link': self.link, 'available locally': self.downloaded}
-
-    @meta_file.setter
-    def meta_file(self, value):
-        self._meta_file = value
+    @staticmethod
+    def try_to_set_variable_from_dict(dictionary, key):
+        try:
+            return dictionary[key]
+        except KeyError:
+            return None
 
     def get_downloaded_index(self):
         from Soundexy.Indexing.LocalFileHandler import IndexFile
-        return IndexFile(self.index_file_name, self.index_path)
+        from Soundexy.Indexing.Indexing import RemoteSchema
+        return IndexFile(self.index_file_name, schema=RemoteSchema)
 
     def _download_done(self, filename, function):
-        self.path = filename
+        self.meta_file['path'] = filename
         self.downloading = False
         self.downloader = None
         self.downloaded = True
-        self.sample_rate = self._get_sample_rate()
+        self.meta_file['sample_rate'] = self._get_sample_rate()
+        self.meta_file['available_locally'] = True
         self.set_filename(os.path.basename(filename))
         self.add_to_index()
         function(self)

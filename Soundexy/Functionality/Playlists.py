@@ -59,7 +59,7 @@ def add_all_playlist_items(tree):
     for playlist_file in playlist_files:
         if playlist_file.endswith('.pkl'):
             playlist_name = playlist_file[:-4]
-            results = LocalFileHandler.IndexFile(playlist_name, 'playlists').index
+            results = LocalFileHandler.IndexFile(playlist_name, app_data_folder='playlists').index
             playlist_item = tree.add_playlist_to_tree([playlist_name])
             tree.add_all_result_items(results, playlist_item)
         else:

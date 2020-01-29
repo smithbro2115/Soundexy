@@ -54,22 +54,22 @@ class AuthSession(QRunnable):
 
 
 class FreeSound(AuthSession):
-        def __init__(self, username, password):
-            super(FreeSound, self).__init__(username, password)
-            self.url = 'https://freesound.org/home/login/?next=/'
-            self.headers['Referer'] = 'https://freesound.org/home/login/?next=/'
-            self.token_id_form = ['csrfmiddlewaretoken', 'input', 'name']
-            self.login()
-            self.base_url = 'http://freesound.org'
+    def __init__(self, username, password):
+        super(FreeSound, self).__init__(username, password)
+        self.url = 'https://freesound.org/home/login/?next=/'
+        self.headers['Referer'] = 'https://freesound.org/home/login/?next=/'
+        self.token_id_form = ['csrfmiddlewaretoken', 'input', 'name']
+        self.login()
+        self.base_url = 'http://freesound.org'
 
-        def get_sound_page_html(self, url):
-            response = self.session.get(url, headers=self.headers)
-            return response.content
+    def get_sound_page_html(self, url):
+        response = self.session.get(url, headers=self.headers)
+        return response.content
 
-        def find_sound_url(self, result):
-            html = self.get_sound_page_html(result.meta_file['download link'])
-            s = BeautifulSoup(html, 'html.parser')
-            return self.base_url + s.find('a', attrs={'id': 'download_button'})['href']
+    def find_sound_url(self, result):
+        html = self.get_sound_page_html(result.meta_file['download_link'])
+        s = BeautifulSoup(html, 'html.parser')
+        return self.base_url + s.find('a', attrs={'id': 'download_button'})['href']
 
 
 class ProSound(AuthSession):
