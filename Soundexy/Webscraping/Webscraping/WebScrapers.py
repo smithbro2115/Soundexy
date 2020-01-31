@@ -129,21 +129,21 @@ class SoundDogsScraper(Scraper):
 
     def make_result_from_raw(self, raw_result):
         result = SearchResults.SoundDogsResult()
-        result.preview = 'https://sounddogs.com' + \
+        result.meta_file["preview_link"] = 'https://sounddogs.com' + \
                          str(raw_result.xpath("td[contains(@class, 'preview')]/a")[0].get('href'))
-        result.duration = ceil(float(raw_result.xpath("td[contains(@class, 'duration')]/text()")[0].strip()
+        result.meta_file["duration"] = ceil(float(raw_result.xpath("td[contains(@class, 'duration')]/text()")[0].strip()
                                      .replace(',', ''))*1000)
-        result.description = raw_result.xpath("td[contains(@class, 'description')]/a")[0].text.strip()
+        result.meta_file["description"] = raw_result.xpath("td[contains(@class, 'description')]/a")[0].text.strip()
         result.set_title(result.description)
-        result.name = result.title
-        result.channels = raw_result.xpath("td[contains(@class, 'channels')]")[0].text.strip()
-        result.library = 'Sounddogs'
-        result.price = int(float(raw_result.xpath("th[contains(@class, 'price')]/span")[0].text.strip().replace('$', '')
+        result.meta_file["file_name"] = result.title
+        result.meta_file["channels"] = raw_result.xpath("td[contains(@class, 'channels')]")[0].text.strip()
+        result.meta_file["library"] = 'Sounddogs'
+        result.meta_file["price"] = int(float(raw_result.xpath("th[contains(@class, 'price')]/span")[0].text.strip().replace('$', '')
                                  )*100)
-        result.link = 'https://sounddogs.com' + \
+        result.meta_file["download_link"] = 'https://sounddogs.com' + \
                       str(raw_result.xpath("td[contains(@class, 'description')]/a")[1].get('href'))
-        result.original_id = (str(raw_result.get('id').strip().replace("currentMediaTr_", "")))
-        result.id = 'sounddogs_' + str(result.original_id)
+        result.meta_file["original_id"] = (str(raw_result.get('id').strip().replace("currentMediaTr_", "")))
+        result.meta_file["id"] = 'sounddogs_' + str(result.original_id)
         return result
 
 
@@ -175,19 +175,19 @@ class ProSoundScraper(Scraper):
 
     def make_result_from_raw(self, raw_result):
         result = SearchResults.ProSoundResult()
-        result.preview = raw_result['file']['playHtml5']
+        result.meta_file["preview_link"] = raw_result['file']['playHtml5']
         result.set_title(raw_result['title'])
-        result.name = raw_result['title']
-        result.duration = ceil(float(raw_result['actualLength'])*1000)
-        result.description = raw_result['description']
-        result.library = 'Pro Sound'
-        result.file_type = 'wav'
-        result.author = raw_result['artist']['name']
-        result.link = raw_result['file']['waveform']
-        result.original_id = raw_result['id']
-        result.price = int(raw_result['price'])
-        result.bought = bool(raw_result['can_download'])
-        result.id = 'prosound_' + str(raw_result['id'])
+        result.meta_file["file_name"] = raw_result['title']
+        result.meta_file["duration"] = ceil(float(raw_result['actualLength'])*1000)
+        result.meta_file["description"] = raw_result['description']
+        result.meta_file["library"] = 'Pro Sound'
+        result.meta_file["file_type"] = 'wav'
+        result.meta_file["author"] = raw_result['artist']['name']
+        result.meta_file["download_link"] = raw_result['file']['waveform']
+        result.meta_file["original_id"] = raw_result['id']
+        result.meta_file["price"] = int(raw_result['price'])
+        result.meta_file["bought"] = bool(raw_result['can_download'])
+        result.meta_file["id"] = 'prosound_' + str(raw_result['id'])
         return result
 
 
@@ -240,6 +240,10 @@ class FreesoundPageAmountScraper(PageAmountScraper):
 
 
 class ProSoundPageAmountScraper(PageAmountScraper):
+    @property
+    def ajax_nonce_key(self):
+        pass
+
     def make_url(self):
         url = 'https://download.prosoundeffects.com/ajax.php?p=track_info&show=30&s='
         for keyword in self.keywords:
@@ -248,6 +252,7 @@ class ProSoundPageAmountScraper(PageAmountScraper):
 
     def get_amount_of_pages(self):
         json = get_with_headers(self.url).json()
+        print(json)
         return ceil(json['content'][0]['facets']['tracks']/30)
 
     @pyqtSlot()
@@ -282,6 +287,11 @@ class SoundDogsPageAmountScraper(PageAmountScraper):
         self.signals.sig_url.emit(self.url)
         self.signals.sig_finished.emit()
 
+
+raw_html = get_with_headers("https://download.prosoundeffects.com/").content
+tree = lxml_html.fromstring(raw_html)
+script_tags = tree.xpath('//head/script')
+print(script_tags)
 
 # thread_pool = QThreadPool()
 # scraper = SoundDogsPageAmountScraper(['gobblygooo'])
