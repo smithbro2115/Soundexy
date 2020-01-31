@@ -3,6 +3,7 @@ import traceback
 import sys
 import os
 import time
+import UserDict
 
 
 def try_to_remove_file(path):
@@ -86,6 +87,25 @@ class Worker(QRunnable):
         finally:
             if not self.interrupt:
                 self.signals.finished.emit()  # Done
+
+
+class DictExpired(Exception):
+    pass
+
+
+class ExpiringDict(UserDict):
+    def __init__(self, expire_time_minutes=1440):
+        self.expire_time_minutes = expire_time_minutes
+        self.time_since_last_set = None
+
+    def __getitem__(self, item):
+        if not (time.time() - self.time_since_last_set)/60 > self.expire_time_minutes:
+            return super(ExpiringDict, self).__getitem__(item)
+        raise DictExpired
+
+    def __setitem__(self, key, value):
+        self.time_since_last_set = time.time()
+        return super(ExpiringDict, self).__setitem__(key, value)
 
 
 def downsample_wav(src, dst, inrate=44100, outrate=16000, inchannels=2, outchannels=1):

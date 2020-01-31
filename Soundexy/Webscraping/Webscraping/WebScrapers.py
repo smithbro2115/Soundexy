@@ -1,9 +1,13 @@
 from Soundexy.Webscraping.Webscraping.WebScraperRequester import simple_get, get_with_headers
+from Soundexy.Functionality.useful_utils import DictExpired, ExpiringDict
 from bs4 import BeautifulSoup
 from lxml import html as lxml_html
 from math import ceil
 from Soundexy.Indexing import SearchResults
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
+import re
+import abc
+import time
 
 
 # TODO add the rest of the websites
@@ -11,6 +15,67 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 
 class TestObject:
     pass
+
+
+class AjaxNonceURL:
+    ajax_credentials = ExpiringDict()
+    time_of_last_nonce_generation = 0
+
+    def __init__(self, base_url):
+        self.base_url = base_url
+
+    def __str__(self):
+        try:
+            return f"{self.base_url}&ajaxNonceKey={self.ajax_nonce_key}&ajaxNonce={self.ajax_nonce}"
+        except DictExpired:
+            self.__class__.ajax_credentials = {}
+
+    @property
+    def ajax_nonce_key(self):
+        return self.get_credentials('ajaxNonceKey')
+
+    @property
+    def ajax_nonce(self):
+        return self.get_credentials('ajaxNonce')
+
+    def get_credentials(self, key):
+        try:
+            return self.ajax_credentials[key]
+        except KeyError:
+            self.__class__.ajax_credentials = self.fetch_credentials()
+            self.__class__.time_of_last_nonce_generation = time.time()
+            return self.get_credentials(key)
+
+    @abc.abstractmethod
+    def fetch_credentials(self) -> dict:
+        pass
+
+
+class ProSoundAjaxNonceURL(AjaxNonceURL):
+    def fetch_credentials(self):
+        raw_html = get_with_headers("https://download.prosoundeffects.com/").content
+        return self.parse_nonce_credentials_from_raw_html(raw_html)
+
+    def parse_nonce_credentials_from_raw_html(self, raw_html):
+        tree = lxml_html.fromstring(raw_html)
+        script_tags = tree.xpath('//head/script')
+        for script_tag in script_tags:
+            potential_credentials = self.parse_nonce_credentials_from_script_tag(script_tag)
+            if potential_credentials:
+                return potential_credentials
+
+    @staticmethod
+    def parse_nonce_credentials_from_script_tag(script_tag):
+        script_string = lxml_html.tostring(script_tag).decode()
+        if "Nonce" in script_string:
+            strings = re.findall(r'"([A-Za-z0-9_\./\\-]*)"', script_string)
+            ajax_nonce_credentials = {}
+            for i, string in enumerate(strings):
+                if string == "ajaxNonceKey":
+                    ajax_nonce_credentials[string] = strings[i + 1]
+                elif string == "ajaxNonce":
+                    ajax_nonce_credentials[string] = strings[i + 1]
+            return ajax_nonce_credentials
 
 
 class WebsiteSigs(QObject):
@@ -240,24 +305,21 @@ class FreesoundPageAmountScraper(PageAmountScraper):
 
 
 class ProSoundPageAmountScraper(PageAmountScraper):
-    @property
-    def ajax_nonce_key(self):
-        pass
-
     def make_url(self):
         url = 'https://download.prosoundeffects.com/ajax.php?p=track_info&show=30&s='
         for keyword in self.keywords:
             url = url + '+' + keyword
-        return url
+        nonce_url = ProSoundAjaxNonceURL(url)
+        return nonce_url
 
     def get_amount_of_pages(self):
         json = get_with_headers(self.url).json()
-        print(json)
         return ceil(json['content'][0]['facets']['tracks']/30)
 
     @pyqtSlot()
     def run(self):
         self.url = self.make_url()
+        print(self.url)
         self.amount_of_pages = self.get_amount_of_pages()
         self.signals.sig_amount_of_pages.emit(self.amount_of_pages)
         self.signals.sig_url.emit(self.url)
@@ -288,13 +350,8 @@ class SoundDogsPageAmountScraper(PageAmountScraper):
         self.signals.sig_finished.emit()
 
 
-raw_html = get_with_headers("https://download.prosoundeffects.com/").content
-tree = lxml_html.fromstring(raw_html)
-script_tags = tree.xpath('//head/script')
-print(script_tags)
-
 # thread_pool = QThreadPool()
-# scraper = SoundDogsPageAmountScraper(['gobblygooo'])
+# scraper = ProSoundPageAmountScraper(['gobblygooo'])
 # scraper.signals.sig_amount_of_pages.connect(print)
 # thread_pool.start(scraper)
 #
