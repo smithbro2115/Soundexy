@@ -3,7 +3,7 @@ import traceback
 import sys
 import os
 import time
-import UserDict
+from collections import UserDict
 
 
 def try_to_remove_file(path):
@@ -95,8 +95,9 @@ class DictExpired(Exception):
 
 class ExpiringDict(UserDict):
     def __init__(self, expire_time_minutes=1440):
+        super(ExpiringDict, self).__init__()
         self.expire_time_minutes = expire_time_minutes
-        self.time_since_last_set = None
+        self.time_since_last_set = time.time()
 
     def __getitem__(self, item):
         if not (time.time() - self.time_since_last_set)/60 > self.expire_time_minutes:

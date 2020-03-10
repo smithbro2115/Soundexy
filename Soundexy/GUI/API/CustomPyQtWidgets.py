@@ -4,7 +4,6 @@ import traceback
 from Soundexy.Functionality.useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool, Worker, \
 	convert_date_time_to_formatted_date
 import os
-from Soundexy.Indexing import LocalFileHandler
 from Soundexy.Functionality import Playlists
 from Soundexy.GUI.API.CustomPyQtFunctionality import InternalMoveMimeData, PlaylistItemDelegate, show_are_you_sure
 from Soundexy.GUI.API import pyqt_utils
@@ -340,10 +339,9 @@ class SearchResultsTable(QtWidgets.QTableView):
 			item = QtGui.QStandardItem(str(checked_for_special))
 			standard_items[k] = item
 		standard_items['Id'] = QtGui.QStandardItem(str(result.id))
-		print(result.meta_file)
 		standard_items['Available Locally'] = QtGui.QStandardItem(self.special_values('available locally',
-																					  result.meta_file[
-																						  'available_locally']))
+																						result.meta_file[
+																							'available_locally']))
 		return standard_items
 
 	def replace_result(self, new_result, old_result):
@@ -518,9 +516,10 @@ class PlaylistTreeWidget(QtWidgets.QTreeWidget):
 		self.add_result_to_playlist_tree(result, playlist)
 
 	def add_result_to_playlist_index(self, result, playlist_name):
-		index_file = LocalFileHandler.IndexFile(playlist_name, app_data_folder='playlists')
-		index_file.add_result_to_index(result)
-		index_file.save()
+		# index_file = LocalFileHandler.IndexFile(playlist_name, app_data_folder='playlists')
+		# index_file.add_result_to_index(result)
+		# index_file.save()
+		pass
 
 	def add_result_to_playlist_tree(self, result, playlist_item):
 		return PlaylistResultTreeWidgetItem(playlist_item, [result.meta_file['file name']], result)

@@ -53,6 +53,7 @@ class Local(Result):
         self.library = self.get_library(self.meta_file['path'])
         self.sample_rate = self.meta_file['sample_rate']
         self.duration = self.meta_file['duration']
+        self.meta_file['available_locally'] = True
 
     @property
     def meta_file(self):
@@ -64,9 +65,10 @@ class Local(Result):
 
     def populate(self, path, identification_number):
         self.id = identification_number
-        self.path = path
-        self.library = self.get_library(path)
-        self.keywords = self.get_words()
+        self.meta_file['path'] = path
+        self.meta_file['library'] = self.get_library(path)
+        self.meta_file['keywords'] = self.get_words()
+        self.meta_file['available_locally'] = True
         # try:
         #     # self.meta_file = MetaData.get_meta_file(self.path)
         # except AttributeError:
@@ -137,7 +139,7 @@ class Remote(Result):
         self.index_file_name = 'downloaded'
         self.downloader = None
         self.downloading = False
-        self.downloaded = False
+        self.meta_file['downloaded'] = False
 
     def check_if_already_downloaded(self):
         from Soundexy.Indexing.LocalFileHandler import IndexSearch
@@ -145,7 +147,6 @@ class Remote(Result):
         results = search.search()
         if len(results) > 0:
             self.meta_file = results[0].fields()
-            print(self.meta_file)
             return self
 
     @property
@@ -187,7 +188,7 @@ class Remote(Result):
         self.meta_file['path'] = filename
         self.downloading = False
         self.downloader = None
-        self.downloaded = True
+        self.meta_file['downloaded'] = True
         self.meta_file['sample_rate'] = self._get_sample_rate()
         self.meta_file['available_locally'] = True
         self.set_filename(os.path.basename(filename))
@@ -290,20 +291,9 @@ class FreesoundResult(Remote):
 class Paid(Remote):
     def __init__(self):
         super(Paid, self).__init__()
-        self.bought = False
         self.buying = False
-        self.price = 0
-
-    @property
-    def meta_file(self):
-        m = super(Paid, self).meta_file
-        m['bought'] = self.bought
-        m['price'] = self.price
-        return m
-
-    @meta_file.setter
-    def meta_file(self, value):
-        self._meta_file = value
+        self.meta_file['bought'] = False
+        self.meta_file['price'] = 0
 
     @property
     def site_name(self):
@@ -320,7 +310,7 @@ class ProSoundResult(Paid):
     @property
     def preview_link(self):
         auth = Downloader.pro_sound_get_preview_auth(self.original_id)
-        return f"{self.meta_file['preview Link']}?{auth}"
+        return f"{self.meta_file['preview_link']}?{auth}"
 
     @property
     def site_name(self):
@@ -386,7 +376,7 @@ class SoundDogsResult(Paid):
     def check_if_bought(self):
         try:
             username, password = get_saved_credentials(self.library)
-            self.bought = is_this_sound_bought_from_sound_dogs(self.original_id, username, password)
+            self.meta_file['bought'] = is_this_sound_bought_from_sound_dogs(self.original_id, username, password)
             return self.bought
         except KeyError:
             return False

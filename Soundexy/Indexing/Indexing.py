@@ -22,6 +22,7 @@ class ResultSchema(SchemaClass):
 	description = TEXT(stored=True, sortable=True)
 	id = ID(stored=True, sortable=True, unique=True)
 	artist = TEXT(stored=True, sortable=True)
+	author = TEXT(stored=True, sortable=True)
 	album = TEXT(stored=True, sortable=True)
 	library = TEXT(stored=True, sortable=True)
 	file_type = ID(stored=True, sortable=True)
@@ -47,23 +48,22 @@ def create_index(path, schema):
 
 
 def open_index(path):
-	return open_dir(path)
+	try:
+		return open_dir(path)
+	except AttributeError:
+		return open_dir(path)
 
 
 def write_to_index(writer, **kwargs):
 	try:
 		writer.update_document(**kwargs)
-		print("Writing to index")
 	except UnknownFieldError:
-		print("Unknown fields")
 		for key in kwargs.keys():
 			try:
 				writer.add_field(key, STORED)
-				print(f"Added {key} to the schema")
 			except FieldConfigurationError:
 				pass
 			except Exception:
-				print("schema error")
 				raise SchemaModifiedWhileWriting
 		write_to_index(writer, **kwargs)
 
@@ -73,15 +73,15 @@ def save_index(writer):
 
 
 def construct_query(index: w_index.FileIndex, query_string: str):
-	parser = qparser.MultifieldParser(['title', 'file_name', 'description', 'author', 'library', 'album'],
-									  schema=index.schema)
+	parser = qparser.MultifieldParser(['title', 'file_name', 'description', 'author', 'library', 'album', 'artist'],
+										schema=index.schema)
 	parser.remove_plugin_class(qparser.WildcardPlugin)
 	op = qparser.OperatorsPlugin(Not="-", Or=",")
 	parser.replace_plugin(op)
 	return parser.parse(query_string)
 
 
-def search_index(index: w_index.FileIndex, query, limit=10, sort_by=None):
+def search_index(index: w_index.FileIndex, query, limit=None, sort_by=None):
 	results = index.searcher().search(query, limit=limit, sortedby=sort_by)
 	return results
 

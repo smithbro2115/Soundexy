@@ -104,6 +104,7 @@ class Gui(GUI.Ui_MainWindow):
         self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
         self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
         self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
+        self.indexer.signals.saving.connect(self.set_index_progress_dialog_to_saving)
         self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 1, 1)
         self.mainWidget.insertWidget(0, self.searchResultsTable)
@@ -130,7 +131,7 @@ class Gui(GUI.Ui_MainWindow):
     def init_sound_by_type(self, result):
         if isinstance(result, SearchResults.Local):
             self.local_sound_init(result)
-            self.add_album_image_to_player(result.album_image)
+            # self.add_album_image_to_player(result.album_image_path)
         elif isinstance(result, SearchResults.Remote) and not isinstance(result, SearchResults.Paid):
             self.free_sound_init(result)
         elif isinstance(result, SearchResults.Paid):
@@ -383,6 +384,12 @@ class Gui(GUI.Ui_MainWindow):
         self.index_progress_dialog.setMinimum(0)
         self.index_progress_dialog.setValue(0)
         self.index_progress_dialog.show()
+
+    def set_index_progress_dialog_to_saving(self, amount_of_files):
+        if amount_of_files > 1:
+            self.index_progress_dialog.setLabelText(f"Saving {amount_of_files:,} files")
+        elif amount_of_files == 1:
+            self.index_progress_dialog.setLabelText(f"Saving 1 file")
 
     def add_to_index_progress_dialog(self, title):
         self.index_progress_dialog.setLabelText(title)

@@ -145,7 +145,6 @@ class WavFile:
         self.meta['file name'] = self.filename
         self.meta['path'] = self.path
         self.meta['file type'] = 'wav'
-        print(self.date_created)
         self.meta['date_created'] = self.date_created
         _file = sf.SoundFile(self.path)
         try:

@@ -4,6 +4,7 @@ import os
 from Soundexy.Functionality.useful_utils import get_app_data_folder
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable
 from Soundexy.Webscraping.Authorization import WebsiteAuth
+from Soundexy.Webscraping.Webscraping.WebScrapers import ProSoundAjaxNonceURL
 from abc import abstractmethod
 
 
@@ -40,7 +41,6 @@ class Downloader(QRunnable):
             return None
         response = self.session.get(self.url, stream=True)
         name = self.check_filename(response)
-        print(name)
         if name:
             for root, dirs, files in os.walk(self.download_path):
                 if name in files:
@@ -129,7 +129,6 @@ class PreviewDownloader(Downloader):
 
     def find_file_type_regex(self, url):
         try:
-            print(url)
             file_type = re.search(r'(?<=\.)(.*?\?)', url)
             return self.find_file_type_from_url(file_type.group(0))
         except AttributeError:
@@ -294,6 +293,7 @@ def get_sound_dogs_true_duration(track_id):
 
 
 def pro_sound_get_preview_auth(track_id):
-    r = requests.get(f"https://download.prosoundeffects.com/ajax.php?p=download_auth&trackId="
-                     f"{track_id}&source=track_list_explorer&type=&embedCode=13")
+    url = ProSoundAjaxNonceURL(base_url=f"https://download.prosoundeffects.com/ajax.php?p=download_auth&trackId="
+                                        f"{track_id}&source=track_list_explorer&type=&embedCode=13")
+    r = requests.get(url)
     return r.json()['content'][0]['params']

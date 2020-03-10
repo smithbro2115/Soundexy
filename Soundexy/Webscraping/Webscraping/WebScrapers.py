@@ -24,6 +24,9 @@ class AjaxNonceURL:
     def __init__(self, base_url):
         self.base_url = base_url
 
+    def __add__(self, other):
+        return self.__str__() + other
+
     def __str__(self):
         try:
             return f"{self.base_url}&ajaxNonceKey={self.ajax_nonce_key}&ajaxNonce={self.ajax_nonce}"
@@ -201,7 +204,7 @@ class SoundDogsScraper(Scraper):
         result.meta_file["description"] = raw_result.xpath("td[contains(@class, 'description')]/a")[0].text.strip()
         result.set_title(result.description)
         result.meta_file["file_name"] = result.title
-        result.meta_file["channels"] = raw_result.xpath("td[contains(@class, 'channels')]")[0].text.strip()
+        result.meta_file["channels"] = int(raw_result.xpath("td[contains(@class, 'channels')]")[0].text.strip())
         result.meta_file["library"] = 'Sounddogs'
         result.meta_file["price"] = int(float(raw_result.xpath("th[contains(@class, 'price')]/span")[0].text.strip().replace('$', '')
                                  )*100)
@@ -304,7 +307,15 @@ class FreesoundPageAmountScraper(PageAmountScraper):
         self.signals.sig_finished.emit()
 
 
+class ProSoundSigs(WebsiteSigs):
+    sig_url = pyqtSignal(ProSoundAjaxNonceURL)
+
+
 class ProSoundPageAmountScraper(PageAmountScraper):
+    def __init__(self, keywords):
+        super(ProSoundPageAmountScraper, self).__init__(keywords)
+        self.signals = ProSoundSigs()
+
     def make_url(self):
         url = 'https://download.prosoundeffects.com/ajax.php?p=track_info&show=30&s='
         for keyword in self.keywords:
@@ -319,7 +330,6 @@ class ProSoundPageAmountScraper(PageAmountScraper):
     @pyqtSlot()
     def run(self):
         self.url = self.make_url()
-        print(self.url)
         self.amount_of_pages = self.get_amount_of_pages()
         self.signals.sig_amount_of_pages.emit(self.amount_of_pages)
         self.signals.sig_url.emit(self.url)

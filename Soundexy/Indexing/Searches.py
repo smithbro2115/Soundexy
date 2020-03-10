@@ -105,7 +105,7 @@ class SearchHandler:
 
     def make_results_from_hits(self, hits):
         results = []
-        for hit in list(hits):
+        for hit in hits:
             results.append(SearchResults.Local(hit))
         return results
 
@@ -182,11 +182,14 @@ class SearchHandler:
         self.cancel_all_running_searches()
 
     def cancel_all_running_searches(self):
-        self.cancel_searches(self.running_searches)
+        try:
+            self.cancel_searches(self.running_searches)
+        except RuntimeError:
+            self.cancel_all_running_searches()
 
     @staticmethod
     def cancel_searches(searches):
-        for search in searches:
+        for search in searches.values():
             search.cancel()
 
     def clear_found_label(self):
@@ -296,6 +299,7 @@ class RemoteSearch(Search):
             self.signals.canceled.emit(self.index)
 
     def set_url(self, url):
+        self.url = url
         self.url = url
 
     def set_amount_of_pages(self, amount):
