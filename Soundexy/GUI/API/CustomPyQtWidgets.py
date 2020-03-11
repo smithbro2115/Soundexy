@@ -259,6 +259,8 @@ class SearchResultsTable(QtWidgets.QTableView):
 		self.horizontalHeader().setSectionsMovable(True)
 		self.verticalHeader().setVisible(False)
 		self.setColumnHidden(self.get_column_index('id'), True)
+		self.processing_thread_pool = QtCore.QThreadPool()
+		self.processing_thread_pool.setMaxThreadCount(1)
 
 	def show_context_menu(self, event):
 		context = SearchResultTableHeaderContextMenu(self)
@@ -272,13 +274,6 @@ class SearchResultsTable(QtWidgets.QTableView):
 		self.setColumnHidden(header_index, not checked)
 
 	@staticmethod
-	def convert_none_into_space(result):
-		if result is None:
-			return ''
-		else:
-			return result
-
-	@staticmethod
 	def convert_underscores_to_space(to_convert: str):
 		return to_convert.replace("_", " ")
 
@@ -289,65 +284,27 @@ class SearchResultsTable(QtWidgets.QTableView):
 		except AttributeError:
 			return ''
 
-	@staticmethod
-	def special_values(k, v):
-		if k == 'duration':
-			return get_formatted_duration_from_milliseconds(v)
-		elif k == 'available locally':
-			return get_yes_no_from_bool(v)
-		elif k == 'bought':
-			return get_yes_no_from_bool(v)
-		elif k == 'price':
-			if v == -1:
-				return "$5.00"
-			return f'${v/100:<04}'
-		elif k == 'date_created':
-			return convert_date_time_to_formatted_date(v)
-		else:
-			return v
-
 	def add_results_to_search_results_table(self, results):
 		for result in results:
 			self.current_results[result.id] = result
-			items = self.make_standard_items_from_result(result)
-			self.append_row(self.make_row(items))
-			# self.sort()
-		self.update_found_label()
-
-	def make_standard_items_in_separate_thread(self, result):
-		worker = Worker(self.make_standard_items_from_result, result)
-		worker.signals.result.connect(self.append_item)
-		thread_pool = QtCore.QThreadPool()
-		thread_pool.setMaxThreadCount(1)
-		thread_pool.start(worker)
+		self.make_standard_items_in_separate_thread(results)
+		# self.sort()
 
 	def append_item(self, item):
 		self.append_row(self.make_row(item))
 
+	def append_items(self, items):
+		for item in items:
+			self.append_item(item)
+		self.update_found_label()
+
 	def update_found_label(self):
 		self.parent_local.messageLabel.setText(f"Found {self.searchResultsTableModel.rowCount()} results")
-
-	def make_standard_items_from_result(self, result):
-		meta_file = result.meta_file
-		standard_items = {}
-		for k, v in meta_file.items():
-			if isinstance(v, list):
-				readable_version = self.convert_none_into_space(', '.join(v))
-			else:
-				readable_version = self.convert_none_into_space(v)
-			checked_for_special = self.special_values(k, readable_version)
-			item = QtGui.QStandardItem(str(checked_for_special))
-			standard_items[k] = item
-		standard_items['Id'] = QtGui.QStandardItem(str(result.id))
-		standard_items['Available Locally'] = QtGui.QStandardItem(self.special_values('available locally',
-																						result.meta_file[
-																							'available_locally']))
-		return standard_items
 
 	def replace_result(self, new_result, old_result):
 		current_index = self.currentIndex()
 		index = self.searchResultsTableModel.get_row_from_id(old_result.id)
-		new_row = self.make_row(self.make_standard_items_from_result(new_result))
+		new_row = self.make_row(self.make_standard_item_from_result(new_result))
 		self.current_results[old_result.id] = None
 		self.current_results[new_result.id] = new_result
 		try:
@@ -699,4 +656,52 @@ class SearchCheckBoxContextMenu(QtWidgets.QMenu):
 			action.setChecked(True)
 			action.setData(search)
 
+
+def make_standard_items_from_results(results):
+	items = []
+	for result in results:
+		items.append(make_standard_item_from_result(result))
+	return items
+
+
+def make_standard_item_from_result(result):
+	meta_file = result.meta_file
+	standard_items = {}
+	for k, v in meta_file.items():
+		if isinstance(v, list):
+			readable_version = convert_none_into_space(', '.join(v))
+		else:
+			readable_version = convert_none_into_space(v)
+		checked_for_special = special_values(k, readable_version)
+		item = QtGui.QStandardItem(str(checked_for_special))
+		standard_items[k] = item
+	standard_items['Id'] = QtGui.QStandardItem(str(result.id))
+	standard_items['Available Locally'] = QtGui.QStandardItem(special_values('available locally',
+																					result.meta_file[
+																						'available_locally']))
+	return standard_items
+
+
+def special_values(k, v):
+	if k == 'duration':
+		return get_formatted_duration_from_milliseconds(v)
+	elif k == 'available locally':
+		return get_yes_no_from_bool(v)
+	elif k == 'bought':
+		return get_yes_no_from_bool(v)
+	elif k == 'price':
+		if v == -1:
+			return "$5.00"
+		return f'${v/100:<04}'
+	elif k == 'date_created':
+		return convert_date_time_to_formatted_date(v)
+	else:
+		return v
+
+
+def convert_none_into_space(result):
+	if result is None:
+		return ''
+	else:
+		return result
 

@@ -81,7 +81,7 @@ def construct_query(index: w_index.FileIndex, query_string: str):
 	return parser.parse(query_string)
 
 
-def search_index(index: w_index.FileIndex, query, limit=None, sort_by=None):
+def search_index(index: w_index.FileIndex, query, limit=100000, sort_by=None):
 	results = index.searcher().search(query, limit=limit, sortedby=sort_by)
 	return results
 

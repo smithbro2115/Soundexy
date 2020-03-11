@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5 import QtCore
 from abc import abstractmethod
 from Soundexy.Functionality.useful_utils import Worker
@@ -7,9 +7,10 @@ from Soundexy.Webscraping.Authorization.Credentials import get_saved_credentials
 from Soundexy.Webscraping.Authorization.WebsiteAuth import ProSound, LoginError
 from Soundexy.Indexing.LocalFileHandler import IndexSearch
 from Soundexy.Indexing import SearchResults
-from Soundexy.GUI.API.CustomPyQtWidgets import SearchCheckBoxContextMenu
-import traceback
+from Soundexy.GUI.API.CustomPyQtWidgets import SearchCheckBoxContextMenu, make_standard_items_from_results
+import time
 import re
+import traceback
 import shlex
 
 
@@ -20,8 +21,11 @@ class SearchHandler:
         self.running_search_keywords = []
         self.local_search = None
         self.running_libraries = []
+        self.running_processor = SearchHitProcessor()
+        self.running_processor.signals.batch_done.connect(self.parent.searchResultsTable.append_items)
         self.running_searches = {}
         self.local_search_thread_pool = QtCore.QThreadPool()
+        self.processor_thread_pool = QtCore.QThreadPool()
         self.remote_search_thread_pool = QtCore.QThreadPool()
         self.local_search_thread_pool.setMaxThreadCount(1)
         self.freeSearchCheckboxContext = None
@@ -100,14 +104,17 @@ class SearchHandler:
         self.local_search_thread_pool.start(search)
 
     def add_hits_to_search_results_table(self, hits):
-        results = self.make_results_from_hits(hits)
-        self.parent.searchResultsTable.add_results_to_search_results_table(results)
+        self.make_results_from_hits_in_thread(hits)
 
-    def make_results_from_hits(self, hits):
-        results = []
-        for hit in hits:
-            results.append(SearchResults.Local(hit))
-        return results
+    def make_results_from_hits_in_thread(self, hits):
+        try:
+            self.running_processor.add_to_queue(hits)
+        except ProcessorCanceled:
+            self.running_processor = SearchHitProcessor()
+            self.running_processor.signals.batch_done.connect(self.parent.searchResultsTable.append_items)
+            self.make_results_from_hits_in_thread(hits)
+        if self.processor_thread_pool.activeThreadCount() == 0:
+            self.processor_thread_pool.start(self.running_processor)
 
     def run_remote_search(self, keywords, excluded_words):
         actions = self.get_all_checked_actions(*self.get_all_checked_context_menus())
@@ -182,6 +189,7 @@ class SearchHandler:
         self.cancel_all_running_searches()
 
     def cancel_all_running_searches(self):
+        self.running_processor.canceled = True
         try:
             self.cancel_searches(self.running_searches)
         except RuntimeError:
@@ -406,3 +414,43 @@ class ProSoundSearch(PaidSearch):
     @property
     def page_scraper(self):
         return WebScrapers.ProSoundPageAmountScraper
+
+
+class ProcessorCanceled(Exception):
+    pass
+
+
+class SearchHitProcessorSignals(QObject):
+    batch_done = pyqtSignal(list)
+
+
+class SearchHitProcessor(QtCore.QRunnable):
+    def __init__(self):
+        super(SearchHitProcessor, self).__init__()
+        self.signals = SearchHitProcessorSignals()
+        self.queue = []
+        self.canceled = False
+
+    def add_to_queue(self, hits):
+        if self.canceled:
+            raise ProcessorCanceled
+        else:
+            self.queue.append(hits)
+
+    @pyqtSlot()
+    def run(self):
+        while not self.canceled:
+            try:
+                results = self.make_results_from_hits(self.queue.pop(0))
+                items = make_standard_items_from_results(results)
+                if not self.canceled:
+                    self.signals.batch_done.emit(items)
+            except IndexError:
+                time.sleep(.01)
+
+    @staticmethod
+    def make_results_from_hits(hits):
+        results = []
+        for hit in hits:
+            results.append(SearchResults.Local(hit))
+        return results
