@@ -2,7 +2,7 @@ from whoosh.index import create_in, open_dir
 from whoosh.fields import *
 from whoosh.analysis import StemmingAnalyzer, CharsetFilter, SpaceSeparatedTokenizer
 from whoosh.support.charset import accent_map, charset_table_to_dict, default_charset
-from whoosh import index as w_index, qparser, query as w_query, writing as w_writing
+from whoosh import index as w_index, qparser, query as w_query, writing as w_writing, sorting
 from whoosh.searching import ResultsPage
 from Soundexy.Functionality.useful_utils import get_app_data_folder
 from Soundexy.MetaData import MetaData
@@ -81,8 +81,11 @@ def construct_query(index: w_index.FileIndex, query_string: str):
 	return parser.parse(query_string)
 
 
-def search_index(index: w_index.FileIndex, query, limit=100000, sort_by=None):
-	results = index.searcher().search(query, limit=limit, sortedby=sort_by)
+def search_index(index: w_index.FileIndex, query, limit=100000, sort_by=None, sort_reverse=False):
+	sort = None
+	if sort_by:
+		sort = sorting.FieldFacet(sort_by)
+	results = index.searcher().search(query, limit=limit, sortedby=sort)
 	return results
 
 
@@ -102,6 +105,11 @@ def get_local_index(path):
 	except w_index.EmptyIndexError:
 		index = create_index(path, ResultSchema())
 	return index
+
+
+def get_headers(path):
+	index = get_local_index(path)
+	return index.schema.stored_names()
 
 
 def make_document(path):

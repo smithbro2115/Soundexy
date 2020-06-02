@@ -3,7 +3,7 @@ from Soundexy.GUI.DesignerFiles import GUI
 import qdarkstyle
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThreadPool, QRunnable, pyqtSignal, pyqtSlot, QObject
-from Soundexy.Audio.AudioPlayer import SoundPlayer, WaveformSlider
+from Soundexy.Audio.AudioPlayer import TimeChecker, WaveformSlider, WavPlayer
 from Soundexy.Indexing import LocalFileHandler, SearchResults
 import traceback
 import os
@@ -24,8 +24,10 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_converter_thread_pool = QThreadPool()
         self.local_search_thread_pool = QThreadPool()
         self.buying_thread_pool = QThreadPool()
+        self.time_checking_thread_pool = QThreadPool()
         self.local_search_thread_pool.setMaxThreadCount(1)
         self.play_sound_thread_pool.setMaxThreadCount(1)
+        self.time_checking_thread_pool.setMaxThreadCount(1)
         self.index_thread_pool = QThreadPool()
         self.index_thread_pool.setMaxThreadCount(1)
         self.tracks_widget = None
@@ -37,14 +39,17 @@ class Gui(GUI.Ui_MainWindow):
         self.pixel_time_conversion_rate = 0
         self.previous_time = 0
         self.current_time = 0
-        self.audio_player = SoundPlayer()
+        self.audio_player = WavPlayer()
+        self.time_checker = TimeChecker(self.audio_player)
+        self.time_checker.signals.time_changed.connect(self.set_current_time)
+        self.time_checking_thread_pool.start(self.time_checker)
         self.current_result = None
         self.cache_thread_pool = QThreadPool()
         self.download_pool = QThreadPool()
         self.playlistTreeWidget = PlaylistTreeWidget()
         self.searchResultsTable = SearchResultsTable(self)
         self.waveform = WaveformSlider(self.audio_player)
-        self.audio_player.set_waveform(self.waveform)
+        # self.audio_player.set_waveform(self.waveform)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -71,7 +76,7 @@ class Gui(GUI.Ui_MainWindow):
 
     def setup_ui_additional(self, MainWindow):
         self.window = MainWindow
-        self.audio_player.set_label(self.currentTimeLabel)
+        # self.audio_player.set_label(self.currentTimeLabel)
         self.search_handler.setup()
         self.tracks_widget = TracksWidget(None)
         self.tracks_widget.signals.changed.connect(self.audio_player.set_channels)
@@ -93,19 +98,19 @@ class Gui(GUI.Ui_MainWindow):
         self.searchResultsTable.clicked.connect(self.single_clicked_row)
         self.searchResultsTable.doubleClicked.connect(self.double_clicked_row)
         self.searchResultsTable.signals.drop_sig.connect(self.open_import_directory)
-        self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
-        self.audio_player.signals.time_changed.connect(self.set_current_time)
+        # self.audio_player.signals.reset_cursor.connect(self.reset_cursor)
+        # self.audio_player.signals.time_changed.connect(self.set_current_time)
         self.volumeSlider.valueChanged.connect(self.volume_changed)
         self.loopCheckBox.stateChanged.connect(self.loop_changed)
         self.volumeSlider.setStyleSheet("""QSlider::sub-page:horizontal {
                                         background-color: #287399;
                                         }""")
-        self.audio_player.signals.error.connect(self.show_error)
+        # self.audio_player.signals.error.connect(self.show_error)
         self.indexer.signals.started_adding_items.connect(self.open_add_to_index_progress_dialog)
         self.indexer.signals.added_item.connect(self.add_to_index_progress_dialog)
         self.indexer.signals.finished_adding_items.connect(self.close_index_progress_dialog)
         self.indexer.signals.saving.connect(self.set_index_progress_dialog_to_saving)
-        self.play_sound_thread_pool.start(self.audio_player)
+        # self.play_sound_thread_pool.start(self.audio_player)
         self.player.layout().addWidget(self.waveform, 1, 1)
         self.mainWidget.insertWidget(0, self.searchResultsTable)
         self.searchLineEdit.setStyleSheet("""
@@ -121,10 +126,7 @@ class Gui(GUI.Ui_MainWindow):
         self.download_button.setHidden(True)
 
     def double_clicked_row(self, signal):
-        row_index = signal.row()
-        id_column_index = self.searchResultsTable.row_order['Id']
-        sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
-        result = self.searchResultsTable.current_results[sound_id]
+        result = self.searchResultsTable.get_result_from_table_index(signal)
         self.init_sound_by_type(result)
         # self.single_clicked_result = None
 
@@ -139,18 +141,28 @@ class Gui(GUI.Ui_MainWindow):
 
     def paid_sound_init(self, result: SearchResults.Paid):
         self.add_buy_button(result)
-        useful_utils.check_if_sound_is_bought_in_separate_thread(result, self.checked_if_bought,
-                                                                 self.audio_converter_thread_pool)
+        self.check_if_sound_is_bought(result)
         self.remote_sound_init(result)
+
+    def check_if_sound_is_bought(self, result):
+        worker = Worker(result.check_if_bought)
+        worker.signals.result.connect(lambda x: self.refresh_results_model() if x else None)
+        self.audio_converter_thread_pool.start(worker)
+
+    def refresh_results_model(self):
+        self.searchResultsTable.model().layoutChanged.emit()
 
     def free_sound_init(self, result: SearchResults.Remote):
         self.buyButton.setHidden(True)
         self.remote_sound_init(result)
 
     def local_sound_init(self, result):
-        self.download_button.setHidden(True)
-        self.buyButton.setHidden(True)
-        self.sound_init(result)
+        if useful_utils.check_if_file_exists(result.path):
+            self.download_button.setHidden(True)
+            self.buyButton.setHidden(True)
+            self.sound_init(result)
+        else:
+            self.show_error("That file doesn't seem to exist, make sure the correct drive is connected")
 
     def remote_sound_init(self, result):
         if result.downloaded and not useful_utils.check_if_file_exists(result.path):
@@ -161,36 +173,27 @@ class Gui(GUI.Ui_MainWindow):
         if result.downloaded or self.current_result == result:
             self.sound_init(result)
         else:
-            self.new_sound_meta(result)
-            self.current_result = result
-            try:
-                self.pixel_time_conversion_rate = self.waveform.maximum() / result.precise_duration
-            except ZeroDivisionError:
-                self.show_error("This sound can't be played because it has no duration")
-            else:
-                self.audio_player.preload(result.precise_duration, self.pixel_time_conversion_rate)
-                self.new_sound_waveform(result)
-                self.current_downloader = self.current_result.download_preview(self.cache_thread_pool,
-                                                                               self.current_downloader,
-                                                                               self.downloaded_ready_for_preview,
-                                                                               self.preview_download_done,
-                                                                               self.preview_download_already_exists)
+            self.sound_init(result, remote_load=True)
 
-    def sound_init(self, result):
+    def sound_init(self, result, remote_load=False):
         try:
-            self.pixel_time_conversion_rate = self.waveform.maximum() / result.meta_file['duration']
+            self.pixel_time_conversion_rate = self.waveform.maximum() / result.precise_duration
         except ZeroDivisionError:
             self.show_error("This sound can't be played because it has no duration")
         else:
-            if not self.current_result == result:
-                self.new_sound_meta(result)
-                self.make_waveform(result.path)
-                self.new_sound_audio_player(result)
-                self.new_sound_waveform(result)
-                self.new_sound_track_selector(result)
+            if self.current_result != result:
+                self._load_sound(result, remote_load)
             else:
-                self.audio_player.space_bar()
+                self.spacebar()
         self.current_result = result
+
+    def _load_sound(self, result, remote_load=False):
+        self.new_sound_meta(result)
+        if not remote_load:
+            self.make_waveform(result.path)
+            self.new_sound_track_selector(result)
+        self.new_sound_audio_player(result, remote_load)
+        self.new_sound_waveform(result)
 
     def new_sound_meta(self, result):
         self.clear_meta_tab()
@@ -206,11 +209,15 @@ class Gui(GUI.Ui_MainWindow):
         self.set_current_time()
         self.waveform.start_busy_indicator_waveform()
 
-    def new_sound_audio_player(self, result):
-        self.audio_player.audio_player.stop()
+    def new_sound_audio_player(self, result, remote_load=False):
+        self.audio_player.stop()
         # self.audio_converter_worker(self.audio_player.load, result.path, self.pixel_time_conversion_rate,
         #                             finished_f=self.audio_player.play)
-        self.audio_player.load(result.path, self.pixel_time_conversion_rate)
+        if remote_load:
+            self.audio_player.load(result.preview_link, self.pixel_time_conversion_rate,
+                                   precise_duration=result.precise_duration)
+        else:
+            self.audio_player.load(result.path, self.pixel_time_conversion_rate)
         self.audio_player.play()
 
     def new_sound_track_selector(self, result):
@@ -221,10 +228,9 @@ class Gui(GUI.Ui_MainWindow):
         self.audio_player.load(result.path, self.pixel_time_conversion_rate)
         self.audio_player.play()
 
-    def checked_if_bought(self, result):
+    def set_buy_button_status(self, result):
         if result.bought:
             self.buyButton.done()
-            self.bought_sound(result)
 
     @staticmethod
     def clear_cache():
@@ -238,10 +244,7 @@ class Gui(GUI.Ui_MainWindow):
                 print(e)
 
     def single_clicked_row(self, signal):
-        row_index = signal.row()
-        id_column_index = self.searchResultsTable.row_order['Id']
-        sound_id = self.searchResultsTable.searchResultsTableModel.data(signal.sibling(row_index, id_column_index))
-        self.single_clicked_result = self.searchResultsTable.current_results[sound_id]
+        self.single_clicked_result = self.searchResultsTable.get_result_from_table_index(signal)
 
     def single_clicked_playlist_result(self, result):
         self.single_clicked_result = result
@@ -300,7 +303,6 @@ class Gui(GUI.Ui_MainWindow):
         self.buyButton.signals.cancel.connect(lambda: result.cancel_buy())
         if result.bought:
             self.buyButton.done()
-            self.bought_sound(result)
         if result.buying:
             self.buyButton.started()
 
@@ -313,10 +315,11 @@ class Gui(GUI.Ui_MainWindow):
         self.buyButton.reset()
         self.download_button.setVisible(False)
         self.buyButton.setVisible(False)
-        self.searchResultsTable.replace_result(self.current_result, self.current_result)
+        self.searchResultsTable.model().layoutChanged.emit()
         self.current_result = None
 
     def reset_waveform(self):
+        self.waveform.stop__busy_indicator_waveform()
         self.waveform.clear_sound()
 
     def downloaded_some(self, progress, result_id):
@@ -330,8 +333,14 @@ class Gui(GUI.Ui_MainWindow):
     def download_done(self, new_result):
         if self.current_result == new_result:
             self.download_button.done()
-            self.audio_converter_worker(self.audio_player.audio_player.swap_file_with_complete_file, new_result.path)
-        self.searchResultsTable.replace_result(new_result, new_result)
+            playing = self.audio_player.playing
+            player_time = self.audio_player.current_time
+            self.pixel_time_conversion_rate = self.waveform.maximum() / new_result.precise_duration
+            self._load_sound(new_result)
+            self.audio_player.goto_time(player_time.total_seconds()*1000)
+            if playing:
+                self.audio_player.play()
+        self.searchResultsTable.model().layoutChanged.emit()
 
     def converting_audio_done(self, result, new_path):
         result.path = new_path
@@ -339,22 +348,8 @@ class Gui(GUI.Ui_MainWindow):
         result.add_to_index()
         self.download_done(result)
 
-    def preview_download_already_exists(self, path):
-        self.make_waveform(path)
-        self.audio_converter_worker(self.audio_player.load, path, self.pixel_time_conversion_rate,
-                                    finished_f=self.audio_player.play)
-
-    def downloaded_ready_for_preview(self, sound_path):
-        # self.make_waveform(sound_path)
-        self.audio_converter_worker(self.audio_player.load_segment, sound_path,
-                                    self.current_result.meta_file['duration'], self.pixel_time_conversion_rate)
-
-    def preview_download_done(self, path):
-        self.audio_converter_worker(self.audio_player.audio_player.load_rest_of_segment, path)
-        self.make_waveform(path)
-
     def volume_changed(self):
-        self.audio_player.volume = self.volumeSlider.value()
+        self.audio_player.set_volume(self.volumeSlider.value())
 
     def loop_changed(self):
         self.audio_player.loop = self.loopCheckBox.checkState()
@@ -412,7 +407,7 @@ class Gui(GUI.Ui_MainWindow):
             if self.current_result != self.single_clicked_result:
                 self.init_sound_by_type(self.single_clicked_result)
             else:
-                self.audio_player.space_bar()
+                self.audio_player.interact()
         elif self.single_clicked_result is not None:
             self.init_sound_by_type(self.single_clicked_result)
 
@@ -438,7 +433,7 @@ class Gui(GUI.Ui_MainWindow):
         self.currentTimeLabel.setText(string)
 
     def set_current_time(self):
-        current_time = self.audio_player.current_time
+        current_time = self.audio_player.current_time.total_seconds() * 1000
         self.waveform.move_to_current_time()
         self.set_label_text(current_time)
 
@@ -536,10 +531,7 @@ class Gui(GUI.Ui_MainWindow):
         return new_dict
 
     def resize_event(self):
-        if self.current_result is not None:
-            self.pixel_time_conversion_rate = (
-                self.audio_player.calculate_px_time_conversion_rate(self.waveform.maximum(),
-                                                                    self.current_result.meta_file['duration']))
+        pass
 
     def get_waveform_width_minus_margin(self):
         horizontal_margin = self.waveform.contentsMargins().left() + self.waveform.contentsMargins().right()

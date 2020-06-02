@@ -1,0 +1,5 @@
+from pathlib import Path
+
+path = Path("https://freesound.org/data/previews/328/328165_5121236-lq.mp3")
+
+print(path.is_file())

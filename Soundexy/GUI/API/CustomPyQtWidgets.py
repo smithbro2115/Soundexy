@@ -1,14 +1,15 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal
 import traceback
-from Soundexy.Functionality.useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool, Worker, \
-	convert_date_time_to_formatted_date
+from Soundexy.Functionality.useful_utils import get_formatted_duration_from_milliseconds, get_yes_no_from_bool, \
+	convert_date_time_to_formatted_date, convert_underscores_to_space, get_app_data_folder
 import os
 from Soundexy.Functionality import Playlists
 from Soundexy.GUI.API.CustomPyQtFunctionality import InternalMoveMimeData, PlaylistItemDelegate, show_are_you_sure
 from Soundexy.GUI.API import pyqt_utils
 from Soundexy.GUI.DesignerFiles import loginDialog
 import qdarkstyle
+from Soundexy.Indexing.Indexing import get_headers
 
 
 class ProgressButton(QtWidgets.QWidget):
@@ -166,17 +167,20 @@ class BuyButton(ProgressButtonWithCancel):
 class SearchResultTableHeaderContextMenu(QtWidgets.QMenu):
 	def __init__(self, parent):
 		super(SearchResultTableHeaderContextMenu, self).__init__(parent)
-		self.model = parent.searchResultsTableModel
+		try:
+			self.model = parent.model().sourceModel()
+		except AttributeError:
+			self.model = parent.model()
 		self.main = parent
 		self.make_actions()
 
 	def make_actions(self):
-		for header_index in range(self.model.columnCount()):
-			is_visible = not self.main.isColumnHidden(header_index)
-			action = self.addAction(self.main.headers[header_index])
+		for i, column in enumerate(self.model.columns):
+			is_visible = not self.main.isColumnHidden(i)
+			action = self.addAction(self.model.headerData(i, QtCore.Qt.Horizontal, QtCore.Qt.DisplayRole))
 			action.setCheckable(True)
 			action.setChecked(is_visible)
-			action.setData(header_index)
+			action.setData(i)
 
 
 class SearchResultSignals(QtCore.QObject):
@@ -184,31 +188,81 @@ class SearchResultSignals(QtCore.QObject):
 	meta_edit = pyqtSignal(dict)
 
 
-class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
-	def __init__(self, table_view):
+class SelectiveReadOnlyColumnModel(QtCore.QAbstractTableModel):
+	def __init__(self, results, table_view):
 		super(SelectiveReadOnlyColumnModel, self).__init__()
 		self.read_only_columns = []
-		self.current_results = {}
+		self.columns = []
+		self.current_results = results
 		self.table_view = table_view
+		self.table_view.horizontalHeader().setSectionsClickable(True)
 
 	def set_read_only_columns(self, column_indexes):
 		self.read_only_columns = column_indexes
 
+	def rowCount(self, parent=None, *args, **kwargs):
+		return len(self.current_results)
+
+	def columnCount(self, parent=None, *args, **kwargs):
+		return len(self.columns)
+
 	def flags(self, QModelIndex):
-		base_flags = QtGui.QStandardItemModel.flags(self, QModelIndex)
+		base_flags = QtCore.QAbstractTableModel.flags(self, QModelIndex)
 		if QModelIndex.column() in self.read_only_columns:
 			return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 		else:
 			return base_flags
 
-	def setData(self, QModelIndex, Any, role=None):
-		row_id = self.get_id_from_row(QModelIndex.row())
-		meta_label = self.horizontalHeaderItem(QModelIndex.column()).text().lower()
-		if self.change_result_meta(self.table_view.current_results[row_id], {meta_label: Any}):
-			super(SelectiveReadOnlyColumnModel, self).setData(QModelIndex, Any, role)
+	def headerData(self, p_int, Qt_Orientation, role=None):
+		if Qt_Orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+			return convert_underscores_to_space(self.columns[p_int].title())
+
+	def data(self, index, role=None):
+		row = self.current_results[index.row()]
+		column = self.columns[index.column()]
+		try:
+			if role == QtCore.Qt.DisplayRole:
+				data = str(self.check_for_special_value_format(column, row.meta_file[column]))
+				return data
+		except KeyError:
+			return None
+
+	@staticmethod
+	def check_for_special_value_format(column, value):
+		if column == 'duration':
+			return get_formatted_duration_from_milliseconds(value)
+		elif column == 'available_locally':
+			return get_yes_no_from_bool(value)
+		elif column == 'bought':
+			return get_yes_no_from_bool(value)
+		elif column == 'price':
+			if value == -1:
+				return "$5.00"
+			return f'${value / 100:<04}'
+		elif column == 'date_created':
+			return convert_date_time_to_formatted_date(value)
+		else:
+			return value
+
+	def setData(self, index, value, role=QtCore.Qt.EditRole):
+		row_id = self.get_id_from_row(index.row())
+		meta_label = self.horizontalHeaderItem(index.column()).text().lower()
+		if self.change_result_meta(self.table_view.current_results[row_id], {meta_label: value}):
+			# super(SelectiveReadOnlyColumnModel, self).setData(index, value, role)
 			return True
 		else:
 			return False
+
+	def get_result(self, index):
+		return self.current_results[index.row()]
+
+	def insertRows(self, row_i, count, parent=None, *args, **kwargs):
+		self.beginInsertRows(QtCore.QModelIndex(), row_i, (row_i + count) - 1)
+		self.current_results += kwargs['rows']
+		self.endInsertRows()
+		if self.rowCount() > 15000:
+			self.table_view.horizontalHeader().setSectionsClickable(False)
+		return True
 
 	@staticmethod
 	def change_result_meta(result, meta: dict):
@@ -220,32 +274,59 @@ class SelectiveReadOnlyColumnModel(QtGui.QStandardItemModel):
 				traceback.print_exc()
 				return False
 
-	def get_id_from_row(self, row_number: int) -> str:
-		return self.index(row_number, self.table_view.get_column_index('id')).data()
-
 	def get_row_from_id(self, id_number):
 		for row_number in range(self.rowCount()):
 			if self.get_id_from_row(row_number) == id_number:
 				return row_number
 
+	def clear_rows(self):
+		self.clear()
+		self.setRowCount(0)
+
+
+class SearchResultsItemModel(SelectiveReadOnlyColumnModel):
+	def __init__(self, results, table_view):
+		super(SearchResultsItemModel, self).__init__(results, table_view)
+		self.columns = ['file_name', 'title', 'description', 'duration', 'library', 'artist', 'id', 'available_locally',
+						'bought', 'price']
+		try:
+			self.columns = self.merge_headers(self.columns, get_headers(f"{get_app_data_folder('index')}/local"))
+		except FileNotFoundError:
+			pass
+		self.set_read_only_columns([self.get_column_index('Duration'),
+									self.get_column_index('Library'),
+									self.get_column_index('Available Locally'),
+									self.get_column_index('Id')])
+
+	@staticmethod
+	def merge_headers(*args):
+		headers = []
+		for arg in args:
+			for header in arg:
+				if header not in headers:
+					headers.append(header)
+		return headers
+
+	def get_column_index(self, header):
+		for index, column in enumerate(self.columns):
+			if column.lower() == header.lower():
+				return index
+		else:
+			return -1
+
+	def get_id_from_row(self, row_number: int) -> str:
+		return self.index(row_number, self.get_column_index('id')).data()
+
 
 class SearchResultsTable(QtWidgets.QTableView):
 	def __init__(self, parent):
 		super(SearchResultsTable, self).__init__()
-		self.row_order = {'File Name': 0, 'Title': 1, 'Description': 2, 'Duration': 3,
-						  'Library': 4, 'Author': 5, 'Id': 6, 'Available Locally': 7, 'Bought': 8, 'Price': 9}
 		self.setAcceptDrops(True)
 		self.setDragEnabled(True)
+		self.necessary_columns = ['file_name', 'title', 'description', 'duration', 'library', 'artist',
+								  'available_locally', 'bought', 'price']
 		self.parent_local = parent
-		self.searchResultsTableModel = SelectiveReadOnlyColumnModel(self)
-		self.headers = sorted(self.row_order, key=self.row_order.get)
-		self.searchResultsTableModel.headers = self.headers
-		self.searchResultsTableModel.setHorizontalHeaderLabels(self.searchResultsTableModel.headers)
-		self.searchResultsTableModel.setColumnCount(10)
-		self.searchResultsTableModel.set_read_only_columns([self.get_column_index('Duration'),
-															self.get_column_index('Library'),
-															self.get_column_index('Available Locally'),
-															self.get_column_index('Id')])
+		self.searchResultsTableModel = SearchResultsItemModel([], self)
 		self.setModel(self.searchResultsTableModel)
 		self.current_results = {}
 		self.horizontalHeader().setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -258,9 +339,26 @@ class SearchResultsTable(QtWidgets.QTableView):
 		self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers | QtWidgets.QAbstractItemView.SelectedClicked)
 		self.horizontalHeader().setSectionsMovable(True)
 		self.verticalHeader().setVisible(False)
-		self.setColumnHidden(self.get_column_index('id'), True)
 		self.processing_thread_pool = QtCore.QThreadPool()
 		self.processing_thread_pool.setMaxThreadCount(1)
+		self.hide_unnecessary_columns()
+
+	def switch_model(self, model):
+		self.setModel(model)
+
+	def go_to_empty_model(self):
+		model = SearchResultsItemModel([], self)
+		self.switch_model(model)
+
+	def hide_unnecessary_columns(self):
+		for i, column in enumerate(self.model().columns):
+			if column not in self.necessary_columns:
+				self.hideColumn(i)
+
+	def get_result_from_table_index(self, index):
+		proxy_index = self.model().index(index.row(), index.column())
+		source_index = self.model().mapToSource(proxy_index)
+		return self.model().sourceModel().get_result(source_index)
 
 	def show_context_menu(self, event):
 		context = SearchResultTableHeaderContextMenu(self)
@@ -274,32 +372,14 @@ class SearchResultsTable(QtWidgets.QTableView):
 		self.setColumnHidden(header_index, not checked)
 
 	@staticmethod
-	def convert_underscores_to_space(to_convert: str):
-		return to_convert.replace("_", " ")
-
-	@staticmethod
 	def try_to_get_value_from_meta_file(value):
 		try:
 			return value
 		except AttributeError:
 			return ''
 
-	def add_results_to_search_results_table(self, results):
-		for result in results:
-			self.current_results[result.id] = result
-		self.make_standard_items_in_separate_thread(results)
-		# self.sort()
-
-	def append_item(self, item):
-		self.append_row(self.make_row(item))
-
-	def append_items(self, items):
-		for item in items:
-			self.append_item(item)
-		self.update_found_label()
-
 	def update_found_label(self):
-		self.parent_local.messageLabel.setText(f"Found {self.searchResultsTableModel.rowCount()} results")
+		self.parent_local.messageLabel.setText(f"Found {self.model().sourceModel().rowCount()} results")
 
 	def replace_result(self, new_result, old_result):
 		current_index = self.currentIndex()
@@ -312,9 +392,6 @@ class SearchResultsTable(QtWidgets.QTableView):
 			self.setCurrentIndex(current_index)
 		except TypeError:
 			pass
-
-	def append_row(self, row):
-		self.searchResultsTableModel.appendRow(row)
 
 	def add_row_at(self, row, index):
 		self.searchResultsTableModel.insertRow(index, row)
@@ -335,37 +412,6 @@ class SearchResultsTable(QtWidgets.QTableView):
 		for i in range(0, self.searchResultsTableModel.columnCount(), 1):
 			row.append(QtGui.QStandardItem(''))
 		return row
-
-	def make_row(self, meta_dict, index=-1):
-		row = self.return_empty_row()
-		for k, v in meta_dict.items():
-			header = self.convert_underscores_to_space(k)
-			index = self.get_column_index(header)
-			if index >= 0:
-				row[index] = v
-			else:
-				new_index = self.add_new_column(header)
-				row.insert(new_index, v)
-		return row
-
-	def get_column_index(self, header):
-		header_count = self.searchResultsTableModel.columnCount()
-		for x in range(0, header_count, 1):
-			header_text = self.searchResultsTableModel.horizontalHeaderItem(x).text().lower()
-			if header_text == header.lower():
-				return x
-		else:
-			return -1
-
-	def add_new_column(self, header, hidden=True):
-		self.row_order[header.title()] = len(self.row_order.keys())
-		self.headers = sorted(self.row_order, key=self.row_order.get)
-		self.searchResultsTableModel.setColumnCount(self.searchResultsTableModel.columnCount())
-		self.searchResultsTableModel.setHorizontalHeaderLabels(self.headers)
-		new_index = self.searchResultsTableModel.columnCount()
-		if hidden:
-			self.setColumnHidden(new_index - 1, True)
-		return new_index
 
 	def get_mime_data(self):
 		result = self.current_results[self.searchResultsTableModel.get_id_from_row(self.currentIndex().row())]
@@ -402,6 +448,11 @@ class SearchResultsTable(QtWidgets.QTableView):
 		for f in files:
 			paths.append(f)
 		self.signals.drop_sig.emit(paths)
+
+
+class SearchResultsTableHeader(QtWidgets.QHeaderView):
+	def sectionClicked(self, p_int):
+		print(self.parent())
 
 
 class LoginDialogSigs(QtCore.QObject):
@@ -591,7 +642,7 @@ class TracksWidget(QtWidgets.QWidget):
 			self.layout().addWidget(button)
 
 	def make_button(self, track):
-		button = TrackButton(track, f'Track {track+1}')
+		button = TrackButton(track, f'Track {track + 1}')
 		button.setCheckable(True)
 		# button.setSi
 		button.setFocusPolicy(QtCore.Qt.NoFocus)
@@ -613,12 +664,13 @@ class TracksWidget(QtWidgets.QWidget):
 		self.selected_channels = []
 		for index, button in enumerate(self.buttons):
 			if button.isChecked():
-				self.selected_channels.append(index+1)
+				self.selected_channels.append(index + 1)
 		self.signals.changed.emit(self.selected_channels)
 
 	def reset(self):
 		for button in self.buttons:
 			self.layout().removeWidget(button)
+			button.deleteLater()
 		self.buttons = []
 
 
@@ -632,10 +684,10 @@ class TrackButton(QtWidgets.QPushButton):
 
 	def mouseDoubleClickEvent(self, *args, **kwargs):
 		self.doubleClicked.emit(self.track)
-	#
-	# def sizeHint(self):
-	# 	suggested = super(TrackButton, self).sizeHint()
-	# 	return QtCore.QSize(suggested.width()*2.5, suggested.height())
+#
+# def sizeHint(self):
+# 	suggested = super(TrackButton, self).sizeHint()
+# 	return QtCore.QSize(suggested.width()*2.5, suggested.height())
 
 
 class PlaylistResultTreeWidgetItem(QtWidgets.QTreeWidgetItem):
@@ -675,10 +727,11 @@ def make_standard_item_from_result(result):
 		checked_for_special = special_values(k, readable_version)
 		item = QtGui.QStandardItem(str(checked_for_special))
 		standard_items[k] = item
+	standard_items["File Name"] = QtGui.QStandardItem(meta_file['file_name'])
 	standard_items['Id'] = QtGui.QStandardItem(str(result.id))
 	standard_items['Available Locally'] = QtGui.QStandardItem(special_values('available locally',
-																					result.meta_file[
-																						'available_locally']))
+																			 result.meta_file[
+																				 'available_locally']))
 	return standard_items
 
 
@@ -692,7 +745,7 @@ def special_values(k, v):
 	elif k == 'price':
 		if v == -1:
 			return "$5.00"
-		return f'${v/100:<04}'
+		return f'${v / 100:<04}'
 	elif k == 'date_created':
 		return convert_date_time_to_formatted_date(v)
 	else:
@@ -704,4 +757,3 @@ def convert_none_into_space(result):
 		return ''
 	else:
 		return result
-

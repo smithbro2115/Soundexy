@@ -7,7 +7,8 @@ from Soundexy.Webscraping.Authorization.Credentials import get_saved_credentials
 from Soundexy.Webscraping.Authorization.WebsiteAuth import ProSound, LoginError
 from Soundexy.Indexing.LocalFileHandler import IndexSearch
 from Soundexy.Indexing import SearchResults
-from Soundexy.GUI.API.CustomPyQtWidgets import SearchCheckBoxContextMenu, make_standard_items_from_results
+from Soundexy.GUI.API.CustomPyQtWidgets import SearchCheckBoxContextMenu, make_standard_items_from_results, \
+    SearchResultsItemModel
 import time
 import re
 import traceback
@@ -21,13 +22,14 @@ class SearchHandler:
         self.running_search_keywords = []
         self.local_search = None
         self.running_libraries = []
-        self.running_processor = SearchHitProcessor()
-        self.running_processor.signals.batch_done.connect(self.parent.searchResultsTable.append_items)
+        self.running_processor = SearchHitProcessor(self.parent.searchResultsTable.current_results, self.parent)
+        self.running_processor.signals.batch_done.connect(self.parent.searchResultsTable.switch_model)
         self.running_searches = {}
         self.local_search_thread_pool = QtCore.QThreadPool()
         self.processor_thread_pool = QtCore.QThreadPool()
         self.remote_search_thread_pool = QtCore.QThreadPool()
-        self.local_search_thread_pool.setMaxThreadCount(1)
+        self.local_search_thread_pool.setMaxThreadCount(2)
+        self.remote_search_thread_pool.setMaxThreadCount(4)
         self.freeSearchCheckboxContext = None
         self.paidSearchCheckboxContext = None
 
@@ -69,7 +71,7 @@ class SearchHandler:
         return libraries
 
     def start_search(self):
-        self.search_line_text = self.parent.searchLineEdit.text()
+        self.search_line_text = re.escape(self.parent.searchLineEdit.text())
         if not self.search_line_text.strip() == '':
             keywords, excluded_words, required_keywords, unnecessary_keywords = self.get_keywords()
             if self.running_search_keywords != keywords or self.running_libraries != self.checked_search_libraries:
@@ -97,7 +99,9 @@ class SearchHandler:
         return index
 
     def run_local_search(self, search_text):
-        search = IndexSearch(search_text)
+        sort_column = self.parent.searchResultsTable.model().columns[
+            self.parent.searchResultsTable.horizontalHeader().sortIndicatorSection()]
+        search = IndexSearch(search_text, sort_by=sort_column)
         index = self.add_to_running_searches(search)
         search.signals.batch_found.connect(self.add_hits_to_search_results_table)
         search.signals.finished.connect(lambda: self.finished_search(index))
@@ -108,11 +112,21 @@ class SearchHandler:
 
     def make_results_from_hits_in_thread(self, hits):
         try:
-            self.running_processor.add_to_queue(hits)
+            self.running_processor.add_to_local_queue(hits)
         except ProcessorCanceled:
-            self.running_processor = SearchHitProcessor()
-            self.running_processor.signals.batch_done.connect(self.parent.searchResultsTable.append_items)
+            self.running_processor = SearchHitProcessor(self.parent.searchResultsTable.current_results, self.parent)
+            self.running_processor.signals.batch_done.connect(self.parent.searchResultsTable.switch_model)
             self.make_results_from_hits_in_thread(hits)
+        if self.processor_thread_pool.activeThreadCount() == 0:
+            self.processor_thread_pool.start(self.running_processor)
+
+    def add_to_processor_remote_queue(self, results):
+        try:
+            self.running_processor.add_to_remote_queue(results)
+        except ProcessorCanceled:
+            self.running_processor = SearchHitProcessor(self.parent.searchResultsTable.current_results, self.parent)
+            self.running_processor.signals.batch_done.connect(self.parent.searchResultsTable.switch_model)
+            self.add_to_processor_remote_queue(results)
         if self.processor_thread_pool.activeThreadCount() == 0:
             self.processor_thread_pool.start(self.running_processor)
 
@@ -121,7 +135,7 @@ class SearchHandler:
         for action in actions:
             search = action.data()(keywords, excluded_words, self.remote_search_thread_pool)
             index = self.add_to_running_searches(search)
-            search.signals.found_batch.connect(self.parent.searchResultsTable.add_results_to_search_results_table)
+            search.signals.found_batch.connect(self.add_to_processor_remote_queue)
             search.signals.finished.connect(self.finished_search)
             search.signals.canceled.connect(self.finished_search)
             search.run(index)
@@ -179,14 +193,20 @@ class SearchHandler:
             libraries.append(action.text())
         return libraries
 
-    def clear_search_results_table(self):
-        self.parent.searchResultsTable.searchResultsTableModel.setRowCount(0)
-        self.parent.searchResultsTable.current_results = {}
+    @staticmethod
+    def clear_search_results_table(table, current_results):
+        current_results.clear()
+        table.go_to_empty_model()
 
     def reset_searches(self):
-        self.clear_search_results_table()
-        self.parent.clear_cache_in_separate_thread()
+        # worker = Worker(self.clear_search_results_table,
+        #                 self.parent.searchResultsTable,
+        #                 self.parent.searchResultsTable.current_results)
+        # self.processor_thread_pool.start(worker)
+        # current_results.clear()
         self.cancel_all_running_searches()
+        self.parent.searchResultsTable.go_to_empty_model()
+        self.parent.clear_cache_in_separate_thread()
 
     def cancel_all_running_searches(self):
         self.running_processor.canceled = True
@@ -208,6 +228,7 @@ class SearchHandler:
             del self.running_searches[search_index]
         if len(self.running_searches) <= 0:
             self.parent.stop__busy_indicator_search()
+            self.running_processor.search_done = True
 
 
 class SearchSigs(QObject):
@@ -345,13 +366,14 @@ class PaidSearch(RemoteSearch):
 
 
 class LocalSearch(Search):
-    def __init__(self, keywords, excluded_words, thread_pool):
+    def __init__(self, keywords, excluded_words, thread_pool, sort_by):
         super(LocalSearch, self).__init__(keywords, excluded_words, thread_pool)
         self.excluded_words = excluded_words
+        self.sort_by = sort_by
 
     def run(self, index):
         self.index = index
-        search = IndexSearch(self.keywords, self.excluded_words)
+        search = IndexSearch(self.keywords, self.excluded_words, sort_by=self.sort_by)
         search.signals.batch_found.connect(self.emit_batch)
         search.signals.finished.connect(self.emit_finished)
         self.thread_pool.start(search)
@@ -421,36 +443,93 @@ class ProcessorCanceled(Exception):
 
 
 class SearchHitProcessorSignals(QObject):
-    batch_done = pyqtSignal(list)
+    batch_done = pyqtSignal(SearchResultsItemModel)
+    finished = pyqtSignal()
 
 
 class SearchHitProcessor(QtCore.QRunnable):
-    def __init__(self):
+    def __init__(self, current_results, parent):
         super(SearchHitProcessor, self).__init__()
         self.signals = SearchHitProcessorSignals()
-        self.queue = []
+        self.local_queue = []
+        self.remote_queue = []
+        self.counter = 0
         self.canceled = False
+        self.search_done = False
+        self.parent = parent
+        self.model = SearchResultsItemModel([], parent.searchResultsTable)
+        self.sort_model = QtCore.QSortFilterProxyModel()
+        self.sort_model.setSourceModel(self.model)
+        parent.searchResultsTable.setModel(self.sort_model)
+        self.current_results = current_results
 
-    def add_to_queue(self, hits):
+    @property
+    def next_in_local_queue(self):
+        try:
+            return self.local_queue.pop(0)
+        except IndexError:
+            return []
+
+    @property
+    def next_in_remote_queue(self):
+        try:
+            return self.remote_queue.pop(0)
+        except IndexError:
+            return []
+
+    def cancel(self):
+        self.canceled = True
+
+    def add_to_local_queue(self, hits):
         if self.canceled:
             raise ProcessorCanceled
         else:
-            self.queue.append(hits)
+            self.local_queue.append(hits)
+
+    def add_to_remote_queue(self, results):
+        if self.canceled:
+            raise ProcessorCanceled
+        else:
+            try:
+                if len(self.remote_queue[-1]) < 50:
+                    self.remote_queue[-1] += results
+                else:
+                    self.remote_queue.append(results)
+            except IndexError:
+                self.remote_queue.append(results)
 
     @pyqtSlot()
     def run(self):
         while not self.canceled:
-            try:
-                results = self.make_results_from_hits(self.queue.pop(0))
-                items = make_standard_items_from_results(results)
+            self.run_local()
+            self.run_remote()
+            time.sleep(.1)
+
+    def run_local(self):
+        hits = self.next_in_local_queue
+        if len(hits) > 0:
+            results = self.make_results_from_hits(hits)
+            if not self.canceled:
+                self.add_to_model(results)
+
+    def run_remote(self):
+        try:
+            if len(self.remote_queue[0]) >= 50 or self.search_done:
                 if not self.canceled:
-                    self.signals.batch_done.emit(items)
-            except IndexError:
-                time.sleep(.01)
+                    self.add_to_model(self.next_in_remote_queue)
+        except IndexError:
+            pass
+
+    def add_to_model(self, results):
+        self.model.insertRows(self.model.rowCount(), len(results), rows=results)
+        self.parent.searchResultsTable.update_found_label()
 
     @staticmethod
     def make_results_from_hits(hits):
         results = []
         for hit in hits:
-            results.append(SearchResults.Local(hit))
+            try:
+                results.append(SearchResults.Local(hit))
+            except KeyError:
+                pass
         return results

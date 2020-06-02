@@ -1,6 +1,6 @@
-# from Soundexy.MetaData import MetaData
+from Soundexy.MetaData import MetaData
 from Soundexy.Functionality.useful_utils import get_app_data_folder, construct_in_different_thread, \
-    check_if_sound_is_bought_in_separate_thread
+    check_if_sound_is_bought_in_separate_thread, DeleteThread
 from Soundexy.Webscraping.Authorization.Credentials import get_credentials, delete_saved_credentials, \
     get_saved_credentials
 import os
@@ -191,6 +191,7 @@ class Remote(Result):
         self.meta_file['downloaded'] = True
         self.meta_file['sample_rate'] = self._get_sample_rate()
         self.meta_file['available_locally'] = True
+        self.meta_file.update(normalize_meta_dict(MetaData.get_meta_file(filename).meta))
         self.set_filename(os.path.basename(filename))
         self.add_to_index()
         function(self)
@@ -211,10 +212,14 @@ class Remote(Result):
         function()
 
     def delete_download(self, function):
-        self.downloaded = False
+        thread = DeleteThread(self.meta_file['path'])
+        del self.meta_file['path']
+        self.meta_file['downloaded'] = False
+        del self.meta_file['sample_rate']
+        self.meta_file['available_locally'] = False
         function()
         self.delete_from_index()
-        os.remove(self.path)
+        thread.start()
 
     def delete_from_index(self):
         index = self.get_downloaded_index()
@@ -380,3 +385,13 @@ class SoundDogsResult(Paid):
             return self.bought
         except KeyError:
             return False
+
+
+def normalize_meta_dict(meta_dict):
+    new_dict = {}
+    for key, value in meta_dict.items():
+        if isinstance(value, list):
+            new_dict[key.replace(" ", "_")] = value[0]
+        else:
+            new_dict[key.replace(" ", "_")] = value
+    return new_dict

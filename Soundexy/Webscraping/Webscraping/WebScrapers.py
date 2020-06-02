@@ -1,13 +1,10 @@
 from Soundexy.Webscraping.Webscraping.WebScraperRequester import simple_get, get_with_headers
-from Soundexy.Functionality.useful_utils import DictExpired, ExpiringDict
+from Soundexy.Webscraping.Authorization.WebsiteAuth import ProSoundAjaxNonceURL
 from bs4 import BeautifulSoup
 from lxml import html as lxml_html
 from math import ceil
 from Soundexy.Indexing import SearchResults
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
-import re
-import abc
-import time
 
 
 # TODO add the rest of the websites
@@ -15,70 +12,6 @@ import time
 
 class TestObject:
     pass
-
-
-class AjaxNonceURL:
-    ajax_credentials = ExpiringDict()
-    time_of_last_nonce_generation = 0
-
-    def __init__(self, base_url):
-        self.base_url = base_url
-
-    def __add__(self, other):
-        return self.__str__() + other
-
-    def __str__(self):
-        try:
-            return f"{self.base_url}&ajaxNonceKey={self.ajax_nonce_key}&ajaxNonce={self.ajax_nonce}"
-        except DictExpired:
-            self.__class__.ajax_credentials = {}
-
-    @property
-    def ajax_nonce_key(self):
-        return self.get_credentials('ajaxNonceKey')
-
-    @property
-    def ajax_nonce(self):
-        return self.get_credentials('ajaxNonce')
-
-    def get_credentials(self, key):
-        try:
-            return self.ajax_credentials[key]
-        except KeyError:
-            self.__class__.ajax_credentials = self.fetch_credentials()
-            self.__class__.time_of_last_nonce_generation = time.time()
-            return self.get_credentials(key)
-
-    @abc.abstractmethod
-    def fetch_credentials(self) -> dict:
-        pass
-
-
-class ProSoundAjaxNonceURL(AjaxNonceURL):
-    def fetch_credentials(self):
-        raw_html = get_with_headers("https://download.prosoundeffects.com/").content
-        return self.parse_nonce_credentials_from_raw_html(raw_html)
-
-    def parse_nonce_credentials_from_raw_html(self, raw_html):
-        tree = lxml_html.fromstring(raw_html)
-        script_tags = tree.xpath('//head/script')
-        for script_tag in script_tags:
-            potential_credentials = self.parse_nonce_credentials_from_script_tag(script_tag)
-            if potential_credentials:
-                return potential_credentials
-
-    @staticmethod
-    def parse_nonce_credentials_from_script_tag(script_tag):
-        script_string = lxml_html.tostring(script_tag).decode()
-        if "Nonce" in script_string:
-            strings = re.findall(r'"([A-Za-z0-9_\./\\-]*)"', script_string)
-            ajax_nonce_credentials = {}
-            for i, string in enumerate(strings):
-                if string == "ajaxNonceKey":
-                    ajax_nonce_credentials[string] = strings[i + 1]
-                elif string == "ajaxNonce":
-                    ajax_nonce_credentials[string] = strings[i + 1]
-            return ajax_nonce_credentials
 
 
 class WebsiteSigs(QObject):
@@ -152,7 +85,7 @@ class FreesoundScraper(Scraper):
     def make_result_from_raw(self, raw_result):
         result = SearchResults.FreesoundResult()
         result.meta_file["preview_link"] = 'https://freesound.org' + \
-                                           str(raw_result.find('a', {'class': 'ogg_file'}).get('href'))
+                                           str(raw_result.find('a', {'class': 'mp3_file'}).get('href'))
         result.set_title(str(raw_result.find('div', {'class': 'sound_filename'})
                              .find('a', {'class': 'title'}).get('title')))
         result.file_name = result.title
@@ -197,7 +130,7 @@ class SoundDogsScraper(Scraper):
 
     def make_result_from_raw(self, raw_result):
         result = SearchResults.SoundDogsResult()
-        result.meta_file["preview_link"] = 'https://sounddogs.com' + \
+        result.meta_file["preview_link"] = 'https://www.sounddogs.com' + \
                          str(raw_result.xpath("td[contains(@class, 'preview')]/a")[0].get('href'))
         result.meta_file["duration"] = ceil(float(raw_result.xpath("td[contains(@class, 'duration')]/text()")[0].strip()
                                      .replace(',', ''))*1000)
@@ -338,7 +271,7 @@ class ProSoundPageAmountScraper(PageAmountScraper):
 
 class SoundDogsPageAmountScraper(PageAmountScraper):
     def make_url(self):
-        url = 'https://sounddogs.com/search?keywords='
+        url = 'https://www.sounddogs.com/search?keywords='
         for index, keyword in enumerate(self.keywords):
             if index > 0:
                 url = url + '+' + keyword

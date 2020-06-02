@@ -145,20 +145,24 @@ class WavFile:
         self.meta['file name'] = self.filename
         self.meta['path'] = self.path
         self.meta['file type'] = 'wav'
-        self.meta['date_created'] = self.date_created
-        _file = sf.SoundFile(self.path)
         try:
-            self.duration = round((len(_file) / _file.samplerate)*1000)
-            self.meta['duration'] = self.duration
-        except AttributeError:
-            print('Sound has no length')
-            raise AttributeError
+            self.meta['date_created'] = self.date_created
+            _file = sf.SoundFile(self.path)
+        except FileNotFoundError:
+            pass
         else:
-            self.channels = _file.channels
-            self.sample_rate = _file.samplerate
-            self.meta['channels'] = self.channels
-            self.meta['sample rate'] = self.sample_rate
-        _file.close()
+            try:
+                self.duration = round((len(_file) / _file.samplerate)*1000)
+                self.meta['duration'] = self.duration
+            except AttributeError:
+                print('Sound has no length')
+                raise AttributeError
+            else:
+                self.channels = _file.channels
+                self.sample_rate = _file.samplerate
+                self.meta['channels'] = self.channels
+                self.meta['sample rate'] = self.sample_rate
+            _file.close()
 
     @property
     def file_type(self):

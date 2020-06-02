@@ -4,6 +4,7 @@ import sys
 import os
 import time
 from collections import UserDict
+from threading import Thread
 
 
 def try_to_remove_file(path):
@@ -87,6 +88,24 @@ class Worker(QRunnable):
         finally:
             if not self.interrupt:
                 self.signals.finished.emit()  # Done
+
+
+class DeleteThread(Thread):
+    def __init__(self, delete_path, retry_attempts=10):
+        super(DeleteThread, self).__init__()
+        self.delete_path = delete_path
+        self.retry_attempts = retry_attempts
+        self.times_attempted = 0
+
+    def run(self) -> None:
+        while self.times_attempted <= self.retry_attempts:
+            try:
+                os.remove(self.delete_path)
+                print(f"Deleted: {self.delete_path}")
+                break
+            except PermissionError:
+                self.times_attempted += 1
+            time.sleep(1)
 
 
 class DictExpired(Exception):
@@ -181,6 +200,10 @@ def get_app_data_folder(folder):
     return make_folder_if_it_does_not_exist(soundexy_path, folder)
 
 
+def convert_underscores_to_space(to_convert: str):
+    return to_convert.replace("_", " ")
+
+
 def add_file_if_it_does_not_exist(path):
     open(path, 'a').close()
 
@@ -218,5 +241,8 @@ def get_all_file_paths_from_dir(dir):
 
 def check_if_sound_is_bought_in_separate_thread(result, callback, thread_pool):
     worker = Worker(result.check_if_bought)
-    worker.signals.result.connect(lambda: callback(result))
-    thread_pool.start(worker)
+    try:
+        worker.signals.result.connect(lambda: callback(result))
+        thread_pool.start(worker)
+    except NameError:
+        pass

@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'D:\Programming\Soundexy\Soundexy\GUI\DesignerFiles\Gui.ui'
+# Form implementation generated from reading ui file 'Gui.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.3
+# Created by: PyQt5 UI code generator 5.13.0
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -58,6 +60,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.searchLineEdit = QtWidgets.QLineEdit(self.centralwidget)
+        self.searchLineEdit.setMaximumSize(QtCore.QSize(250, 16777215))
         self.searchLineEdit.setAcceptDrops(False)
         self.searchLineEdit.setObjectName("searchLineEdit")
         self.horizontalLayout.addWidget(self.searchLineEdit)
@@ -143,7 +146,7 @@ class Ui_MainWindow(object):
         self.metaArea.setWidgetResizable(True)
         self.metaArea.setObjectName("metaArea")
         self.metaAreaContents = QtWidgets.QWidget()
-        self.metaAreaContents.setGeometry(QtCore.QRect(0, 0, 274, 258))
+        self.metaAreaContents.setGeometry(QtCore.QRect(0, 0, 98, 28))
         self.metaAreaContents.setObjectName("metaAreaContents")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.metaAreaContents)
         self.verticalLayout_3.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
@@ -276,4 +279,3 @@ class Ui_MainWindow(object):
         self.actionPlay.setShortcut(_translate("MainWindow", "Space"))
         self.actionImport_Directory.setText(_translate("MainWindow", "Import Directory"))
         self.actionImport_Audio_File.setText(_translate("MainWindow", "Import Audio File"))
-
