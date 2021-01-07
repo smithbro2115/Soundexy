@@ -2,7 +2,7 @@ PyQt5==5.11.3
 QDarkStyle==2.5.4
 beautifulsoup4==4.6.3
 pygame==1.9.4
-lxml==4.4.0
+lxml==4.6.2
 requests==2.19.1
 cryptography==2.6.1
 SoundFile==0.10.2
